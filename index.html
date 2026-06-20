@@ -307,7 +307,9 @@ function ordersOf(c){ return (ORDERS[String(c.id)]||[]).slice().sort((a,b)=>(''+
 function hasLan1(c){ return c.tt==='da_chot' || Number(c.dt)>0; }
 function soLanMua(c){ return (hasLan1(c)?1:0) + ordersOf(c).length; }
 function tongChiTieu(c){ return (Number(c.dt)||0) + ordersOf(c).reduce((s,o)=>s+(Number(o.so_tien)||0),0); }
-function lanMuaBadge(c){ const n=soLanMua(c); return n>1?` <span title="Đã mua ${n} lần" style="background:#fde68a;color:#92400e;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap">🛒 ${n} lần</span>`:''; }
+function lanMuaBadge(c){ const n=soLanMua(c); if(n<1) return '';
+  const st = n>=2 ? 'background:#fde68a;color:#92400e' : 'background:#eef2f0;color:#5a6b64';
+  return ` <span title="Đã mua ${n} lần" style="${st};font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap">🛒 ${n} lần</span>`; }
 function orderHistoryHTML(c){
   const list=ordersOf(c); const n=soLanMua(c); const total=tongChiTieu(c);
   let h=`<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:14px">
