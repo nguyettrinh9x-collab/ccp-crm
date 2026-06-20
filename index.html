@@ -863,6 +863,7 @@ function renderList(){
       <select id="fl-qg" onchange="renderList()"><option value="">Tất cả quốc gia</option>${[...new Set(DATA.map(d=>d.quoc_gia))].map(q=>`<option>${q}</option>`).join('')}</select>
       <select id="fl-benh" onchange="renderList()">${opt(BENH,'Tất cả bệnh lý')}</select>
       <select id="fl-tt" onchange="renderList()">${opt(STATUS,'Tất cả trạng thái')}</select>
+      <select id="fl-chot" onchange="renderList()"><option value="">Đã &amp; chưa chốt</option><option value="chot">✅ Đã chốt</option><option value="chua">⏳ Chưa chốt</option></select>
       <select id="fl-follow" onchange="renderList()"><option value="">Mọi ngày follow</option><option value="today">Hôm nay</option><option value="over">Quá hạn</option></select>
     </div>
     <div class="card" style="padding:0" id="list-table"></div>`;
@@ -873,10 +874,13 @@ function renderList(){
   const fMkt=fullView()?(document.getElementById('fl-mkt')?.value||''):'';
   const fQg=document.getElementById('fl-qg').value, fBenh=document.getElementById('fl-benh').value;
   const fTt=document.getElementById('fl-tt').value, fFollow=document.getElementById('fl-follow').value;
+  const fChot=document.getElementById('fl-chot')?.value||'';
   let rows=myData().filter(c=>{
     if(!inDateRange('list',c)) return false;
     if(fSale && c.owner!==fSale) return false;
     if(fMkt && c.mkt!==fMkt) return false;
+    if(fChot==='chot' && c.tt!=='da_chot') return false;
+    if(fChot==='chua' && c.tt==='da_chot') return false;
     if(fQg && c.quoc_gia!==fQg) return false;
     if(fBenh && c.benh!==fBenh) return false;
     if(fTt && c.tt!==fTt) return false;
@@ -885,7 +889,11 @@ function renderList(){
     if(s && !(`${c.ten} ${c.phone} ${c.ghi}`.toLowerCase().includes(s))) return false;
     return true;
   });
-  let t=`<table><tr><th>Khách</th><th>Quốc gia</th><th>Nguồn</th><th>Bệnh lý</th><th>SP</th><th>Mức</th><th>Trạng thái</th><th>Follow</th>${fullView()?'<th>MKT</th><th>Sale</th>':''}<th>DT</th></tr>`;
+  const _mine=myData(); const _nChot=_mine.filter(c=>c.tt==='da_chot').length; const _nChua=_mine.length-_nChot;
+  let t=`<div style="padding:10px 14px;font-size:13px;border-bottom:1px solid var(--line);background:var(--cream)">
+    ✅ Đã chốt: <b style="color:var(--won)">${_nChot}</b> &nbsp;·&nbsp; ⏳ Chưa chốt: <b style="color:#b07d00">${_nChua}</b>
+    &nbsp;·&nbsp; Hiển thị: <b>${rows.length}</b></div>
+    <table><tr><th>Khách</th><th>Quốc gia</th><th>Nguồn</th><th>Bệnh lý</th><th>SP</th><th>Mức</th><th>Trạng thái</th><th>Follow</th>${fullView()?'<th>MKT</th><th>Sale</th>':''}<th>DT</th></tr>`;
   if(!rows.length) t+=`<tr><td colspan="10" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
   rows.forEach(c=>{
     const f=flag(c); const fd= !c.follow?'—':
