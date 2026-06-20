@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCP CRM — Demo</title>
+<style>
+  :root{
+    --teal:#3f7d72; --teal-dark:#2f5d55; --sage:#8fb3a6; --cream:#f6f2e9;
+    --bg:#f3f5f4; --card:#ffffff; --line:#e3e8e6; --text:#22302c; --muted:#6b7c76;
+    --hot:#e8553a; --warn:#f4b740; --over:#e23d3d; --won:#2f9e6e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,Arial,sans-serif}
+  body{background:var(--bg);color:var(--text);font-size:14px}
+  /* ---------- LOGIN ---------- */
+  #login{position:fixed;inset:0;background:linear-gradient(135deg,var(--teal),var(--teal-dark));
+    display:flex;align-items:center;justify-content:center}
+  .login-card{background:#fff;border-radius:18px;padding:40px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center}
+  .logo{font-size:26px;font-weight:800;color:var(--teal);letter-spacing:1px}
+  .logo small{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-top:4px}
+  .login-card input{width:100%;padding:11px 13px;margin-top:12px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+  .login-card button{width:100%;margin-top:16px;padding:12px;border:0;border-radius:10px;background:var(--teal);color:#fff;font-weight:600;cursor:pointer}
+  .hint{margin-top:18px;font-size:12px;color:var(--muted);text-align:left;background:var(--cream);padding:10px 12px;border-radius:10px;line-height:1.6}
+  /* ---------- APP LAYOUT ---------- */
+  #app{display:none;min-height:100vh}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;background:var(--teal-dark);color:#dce9e5;padding:20px 0;display:flex;flex-direction:column}
+  .sidebar .logo{color:#fff;padding:0 22px 16px;text-align:left}
+  .nav a{display:flex;align-items:center;gap:11px;padding:12px 22px;color:#cfe0db;text-decoration:none;font-weight:500;cursor:pointer;border-left:3px solid transparent}
+  .nav a:hover{background:rgba(255,255,255,.06)}
+  .nav a.active{background:rgba(255,255,255,.12);border-left-color:var(--sage);color:#fff}
+  .nav .ic{width:18px;text-align:center}
+  .sidebar .foot{margin-top:auto;padding:14px 22px;border-top:1px solid rgba(255,255,255,.12);font-size:12px}
+  .sidebar .foot b{color:#fff}
+  .logout{margin-top:8px;color:#ffd9d0;cursor:pointer;font-size:12px}
+  .main{margin-left:230px;padding:26px 30px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .topbar h1{font-size:21px}
+  .badge{background:var(--cream);color:var(--teal-dark);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
+  /* alert banner */
+  #alertbar{background:#fff4e0;border:1px solid var(--warn);color:#8a6400;padding:11px 16px;border-radius:10px;margin-bottom:18px;font-size:13px;display:none}
+  /* ---------- CARDS / KPI ---------- */
+  .grid{display:grid;gap:16px}
+  .kpi-grid{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .kpi .lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .kpi .val{font-size:26px;font-weight:800;color:var(--teal-dark)}
+  .kpi .val.red{color:var(--over)} .kpi .val.green{color:var(--won)} .kpi .val.amber{color:#cf9300}
+  h2.sec{font-size:15px;margin:24px 0 12px}
+  /* ---------- TABLE ---------- */
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
+  th,td{padding:10px 12px;text-align:left;font-size:13px;border-bottom:1px solid var(--line)}
+  th{background:var(--cream);color:var(--teal-dark);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+  tr:last-child td{border-bottom:0}
+  .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+  .row-hot{box-shadow:inset 4px 0 0 var(--hot)}
+  .row-warn{background:#fffbf0} .row-over{background:#fdeeee} .row-won{background:#eefaf3}
+  .tag-nong{background:#fde3dd;color:var(--hot)} .tag-am{background:#fdf0d8;color:#b07d00} .tag-lanh{background:#e4eef5;color:#3b6e92}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+  /* ---------- FILTERS / FORM ---------- */
+  .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .filters select,.filters input{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff}
+  .filters input.search{flex:1;min-width:200px}
+  form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit}
+  .full{grid-column:1/3}
+  .btn{padding:11px 22px;border:0;border-radius:10px;background:var(--teal);color:#fff;font-weight:600;cursor:pointer;font-size:14px}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--text)}
+  .view{display:none} .view.active{display:block}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:12px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .sw{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .bar{height:9px;background:var(--cream);border-radius:6px;overflow:hidden}
+  .bar>div{height:100%;background:var(--teal)}
+  .empty{color:var(--muted);text-align:center;padding:24px}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <div class="login-card">
+    <div class="logo">CCP CRM<small>Hệ thống chăm sóc khách hàng chủ động</small></div>
+    <input id="u" placeholder="Tài khoản" autocomplete="off">
+    <input id="p" type="password" placeholder="Mật khẩu">
+    <button onclick="login()">Đăng nhập</button>
+    <div class="hint">
+      Đăng nhập bằng <b>email + mật khẩu</b> đã tạo trên Supabase.<br>
+      (Admin tạo tài khoản cho từng nhân sự — xem hướng dẫn deploy.)
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <div class="sidebar">
+    <div class="logo">CCP CRM</div>
+    <nav class="nav" id="nav">
+      <a data-v="dashboard" class="active"><span class="ic">📊</span> Dashboard</a>
+      <a data-v="care"><span class="ic">🎯</span> Trung tâm chăm sóc</a>
+      <a data-v="add"><span class="ic">➕</span> Thêm khách hàng</a>
+      <a data-v="list"><span class="ic">📋</span> Danh sách khách hàng</a>
+      <a data-v="today"><span class="ic">✅</span> Việc cần làm hôm nay</a>
+      <a data-v="report"><span class="ic">📈</span> Báo cáo</a>
+      <a data-v="marketing"><span class="ic">📣</span> Báo cáo Marketing</a>
+      <a data-v="team"><span class="ic">👥</span> Sale team</a>
+      <a data-v="settings"><span class="ic">⚙️</span> Cài đặt</a>
+      <a data-v="perms"><span class="ic">🔐</span> Tài khoản & Phân quyền</a>
+      <a data-v="trash"><span class="ic">♻️</span> Thùng rác</a>
+    </nav>
+    <div class="foot">
+      Đăng nhập: <b id="who"></b><br><span id="role"></span>
+      <div class="logout" onclick="logout()">↩ Đăng xuất</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <h1 id="title">Dashboard</h1>
+      <span class="badge" id="todaytag"></span>
+    </div>
+    <div id="alertbar"></div>
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="v-dashboard"></div>
+    <!-- CARE CENTER -->
+    <div class="view" id="v-care"></div>
+    <!-- ADD -->
+    <div class="view" id="v-add"></div>
+    <!-- LIST -->
+    <div class="view" id="v-list"></div>
+    <!-- TODAY -->
+    <div class="view" id="v-today"></div>
+    <!-- REPORT -->
+    <div class="view" id="v-report"></div>
+    <!-- MARKETING -->
+    <div class="view" id="v-marketing"></div>
+    <!-- TEAM -->
+    <div class="view" id="v-team"></div>
+    <!-- SETTINGS -->
+    <div class="view" id="v-settings"></div>
+    <!-- PERMS -->
+    <div class="view" id="v-perms"></div>
+    <!-- TRASH -->
+    <div class="view" id="v-trash"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============ DỮ LIỆU MẪU ============ */
+const USERS = {
+  owner:{pass:'123', name:'Chủ tài khoản', role:'owner', id:'OWN'},
+  admin:{pass:'123', name:'Quản lý (Admin)', role:'admin', id:'A'},
+  bao:  {pass:'123', name:'Bảo',    role:'sale', id:'bao'},
+  phuc: {pass:'123', name:'Phúc',   role:'sale', id:'phuc'},
+  tien: {pass:'123', name:'Tiên',   role:'sale', id:'tien'},
+  ttien:{pass:'123', name:'T.Tiên', role:'sale', id:'ttien'},
+  hoe:  {pass:'123', name:'Hòe',    role:'sale', id:'hoe'},
+  yen:  {pass:'123', name:'Yến',    role:'sale', id:'yen'},
+  nguyet:{pass:'123', name:'Nguyệt', role:'marketing', id:'nguyet'},
+  duy:  {pass:'123', name:'Duy',    role:'marketing', id:'duy'},
+  viet: {pass:'123', name:'Việt',   role:'marketing', id:'viet'},
+};
+const SALES = {bao:'Bảo', phuc:'Phúc', tien:'Tiên', ttien:'T.Tiên', hoe:'Hòe', yen:'Yến'};
+// Tất cả các mục có thể phân quyền
+const ALL_MODULES = [
+  ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
+  ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
+  ['marketing','BC Marketing'],['team','Sale team'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
+];
+// Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
+const DEFAULT_PERMS = {
+  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
+  sale: ['dashboard','care','add','list','today'],
+  marketing:['dashboard','care','list','marketing'],
+};
+// Quyền hiện tại của từng tài khoản — Admin/Chủ chỉnh trên trang Tài khoản & Phân quyền
+let PERMS = {
+  owner:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
+  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
+  bao:  ['dashboard','care','add','list','today'],
+  phuc: ['dashboard','care','add','list','today'],
+  tien: ['dashboard','care','add','list','today'],
+  ttien:['dashboard','care','add','list','today'],
+  hoe:  ['dashboard','care','add','list','today'],
+  yen:  ['dashboard','care','add','list','today'],
+  nguyet:['dashboard','care','list','marketing'],
+  duy:  ['dashboard','care','list','marketing'],
+  viet: ['dashboard','care','list','marketing'],
+};
+const today = new Date('2026-06-19'); // ngày demo
+const D = n => { const d=new Date(today); d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10); };
+
+const STATUS = {moi_vao:'Mới vào',da_tu_van:'Đã tư vấn',da_bao_gia:'Đã báo giá',
+  hen_follow:'Hẹn follow',da_chot:'Đã chốt',khong_phan_hoi:'Không phản hồi',tu_choi:'Từ chối',qua_han:'Quá hạn'};
+const BENH = {pcos:'PCOS',u_xo:'U xơ tử cung',tac_voi:'Tắc vòi trứng',amh_thap:'AMH thấp',
+  noi_tiet:'Nội tiết kém',tinh_trung_yeu:'Tinh trùng yếu',muon_thai:'Muốn có thai tự nhiên',khac:'Khác'};
+const NGUON = {facebook:'Facebook',tiktok:'TikTok',pancake:'Pancake',website:'Website',whatsapp:'WhatsApp',khac:'Khác'};
+
+/* Nhân sự MKT (người kéo lead) */
+const MKT = {nguyet:'Nguyệt', duy:'Duy', viet:'Việt'};
+
+/* ====== BẢN TRẮNG ======
+   Chưa có khách hàng. Chị nhập sau bằng:
+   • nút "📥 Nhập file" (Excel/CSV) trong trang Thêm khách hàng, hoặc
+   • form "Thêm khách hàng" để nhập tay từng khách.
+   Team (Sale/MKT) đã được thiết lập sẵn. */
+let DATA = [];
+
+/* Chi phí marketing theo nguồn + MKT (USD) - demo */
+let SPEND = [];  // chưa có chi phí marketing — nhập ở trang Báo cáo Marketing
+
+/* ============ AUTH ============ */
+let ME = null;
+let TRASH = [];  // khách đã xoá (chỉ admin xem & khôi phục)
+// Bộ lọc khoảng ngày dùng chung cho nhiều trang (mỗi trang 1 state)
+const FILTERS = {
+  dash:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'thang_nay' },
+  list:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'all' },
+  report:{ start:null, end:null, field:'tao', open:false, calBase:null, def:'all' },
+  mkt:   { start:null, end:null, field:'tao', open:false, calBase:null, def:'all' },
+  team:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'all' },
+};
+function login(){
+  const u=document.getElementById('u').value.trim().toLowerCase();
+  const p=document.getElementById('p').value.trim();
+  const acc=USERS[u];
+  if(!acc || acc.pass!==p){ alert('Sai tài khoản hoặc mật khẩu. Dùng tài khoản demo bên dưới.'); return; }
+  if(acc.active===false){ alert('Tài khoản này đã bị khóa. Liên hệ Admin để mở lại.'); return; }
+  ME=acc; ME.uname=u;
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('who').textContent=acc.name;
+  const roleLbl={owner:'Quyền: Chủ tài khoản (toàn quyền)',admin:'Quyền: Toàn quyền',sale:'Quyền: Sale',marketing:'Quyền: Marketing'};
+  document.getElementById('role').textContent= roleLbl[acc.role];
+  document.getElementById('todaytag').textContent='Hôm nay: '+today.toLocaleDateString('vi-VN');
+  applyMenu();
+  const allowed=PERMS[u]||[];
+  go(allowed.includes('dashboard')?'dashboard':(allowed[0]||'dashboard')); renderAll();
+}
+// Hiện/ẩn menu theo quyền được cấp cho người đang đăng nhập
+function applyMenu(){
+  const allowed=PERMS[ME.uname]||[];
+  document.querySelectorAll('#nav a').forEach(a=>a.style.display=allowed.includes(a.dataset.v)?'flex':'none');
+}
+function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
+
+/* ============ HELPER ============ */
+function fullView(){ return ME.role==='admin'||ME.role==='marketing'||ME.role==='owner'; }
+function myData(){ return fullView()?DATA:DATA.filter(d=>d.owner===ME.id); }
+function flag(c){
+  if(c.tt==='da_chot') return 'won';
+  if(!c.follow) return '';
+  if(c.follow < D(-1)) return 'over';   // quá hạn ≥2 ngày
+  if(c.follow < D(0))  return 'over';   // quá hạn 1 ngày
+  if(c.follow === D(0))return 'warn';   // đến hạn hôm nay
+  return '';
+}
+function rowClass(c){
+  const f=flag(c); let cls='';
+  if(c.muc==='nong'&&c.tt!=='da_chot') cls+=' row-hot';
+  if(f==='warn')cls+=' row-warn'; if(f==='over')cls+=' row-over'; if(f==='won')cls+=' row-won';
+  return cls;
+}
+function mucPill(m){return `<span class="pill tag-${m}">${m==='nong'?'🔥 Nóng':m==='am'?'☀️ Ấm':'❄️ Lạnh'}</span>`;}
+function benhLabel(c){return c.benh_list||BENH[c.benh]||'—';}
+function phoneCell(c){return (c.phone||c.email||'')+(c.has_wa&&c.phone?' 💬':'');}
+/* ====== SỬA / XOÁ THÔNG TIN KHÁCH ====== */
+function canEdit(c){ return fullView() || c.owner===ME.id; }
+function canDelete(c){ return ME.role==='owner' || ME.role==='admin' || c.owner===ME.id; }
+function deleteCustomer(id){
+  const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
+  if(!canDelete(c)){ alert('Bạn không có quyền xoá khách này.'); return; }
+  if(!confirm('Đưa khách "'+c.ten+'" vào thùng rác? Admin có thể khôi phục lại.')) return;
+  c.da_xoa=true; const i=DATA.findIndex(x=>String(x.id)===String(id)); if(i>=0)DATA.splice(i,1); TRASH.unshift(c);
+  alert('🗑️ Đã chuyển "'+c.ten+'" vào thùng rác'); renderAll();
+}
+/* ====== THÙNG RÁC (chỉ admin) ====== */
+function renderTrash(){
+  const el=document.getElementById('v-trash'); if(!el)return;
+  if(!(ME.role==='owner'||ME.role==='admin')){ el.innerHTML='<div class="card empty">Chỉ Admin xem được thùng rác.</div>'; return; }
+  let html=`<p style="color:var(--muted);font-size:13px;margin-bottom:12px">Khách bị xoá nằm ở đây. Admin có thể <b>♻️ Khôi phục</b> để lấy lại, hoặc <b>xoá vĩnh viễn</b>.</p>`;
+  if(!TRASH.length){ el.innerHTML=html+'<div class="card empty">Thùng rác trống 🎉</div>'; return; }
+  html+=`<div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Khách</th><th>SĐT</th><th>Quốc gia</th><th>Bệnh lý</th><th>Trạng thái</th><th>MKT</th><th>Sale</th><th>Thao tác</th></tr>`;
+  TRASH.forEach(c=>{
+    html+=`<tr><td><b>${c.ten}</b></td><td>${c.phone||'—'}</td><td>${c.quoc_gia||'—'}</td>
+      <td>${benhLabel(c)}</td><td>${STATUS[c.tt]||c.tt}</td><td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>
+      <td style="white-space:nowrap"><button class="btn" style="padding:4px 10px;font-size:12px" onclick="restoreCustomer('${c.id}')">♻️ Khôi phục</button>
+      <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--over)" onclick="purgeCustomer('${c.id}')">Xoá vĩnh viễn</button></td></tr>`;
+  });
+  el.innerHTML=html+`</table></div>`;
+}
+function restoreCustomer(id){ const c=TRASH.find(x=>String(x.id)===String(id)); if(!c)return;
+  c.da_xoa=false; const i=TRASH.findIndex(x=>String(x.id)===String(id)); if(i>=0)TRASH.splice(i,1); DATA.unshift(c);
+  alert('♻️ Đã khôi phục "'+c.ten+'"'); renderAll(); }
+function purgeCustomer(id){ const c=TRASH.find(x=>String(x.id)===String(id)); if(!c)return;
+  if(!confirm('Xoá VĨNH VIỄN "'+c.ten+'"? Không khôi phục được nữa.'))return;
+  const i=TRASH.findIndex(x=>String(x.id)===String(id)); if(i>=0)TRASH.splice(i,1);
+  alert('Đã xoá vĩnh viễn.'); renderAll(); }
+function editCustomer(id){
+  const c=DATA.find(x=>String(x.id)===String(id)); if(!c){alert('Không tìm thấy khách.');return;}
+  if(!canEdit(c)){ alert('Bạn không có quyền sửa khách này.'); return; }
+  const esc=s=>(''+(s||'')).replace(/"/g,'&quot;');
+  const opt=(o,sel)=>Object.entries(o).map(([k,v])=>`<option value="${k}" ${k===sel?'selected':''}>${v}</option>`).join('');
+  let ov=document.getElementById('edit-overlay');
+  if(!ov){ ov=document.createElement('div'); ov.id='edit-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px';
+    document.body.appendChild(ov); }
+  ov.style.display='flex';
+  ov.innerHTML=`<div class="card" style="max-width:780px;width:100%;margin:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2 class="sec" style="margin:0">✏️ Sửa thông tin khách</h2>
+      <button class="btn ghost" style="padding:5px 12px" onclick="closeEdit()">✕ Đóng</button></div>
+    <form onsubmit="saveEdit(event,'${c.id}')"><div class="form-grid">
+      <div><label>Tên khách *</label><input id="e-ten" required value="${esc(c.ten)}"></div>
+      <div><label>SĐT / WhatsApp</label><input id="e-phone" value="${esc(c.phone)}">
+        <label style="display:flex;gap:8px;font-weight:400;margin-top:6px"><input type="checkbox" id="e-wa" style="width:auto" ${c.has_wa?'checked':''}> 💬 Đã kết nối WhatsApp</label></div>
+      <div><label>Email</label><input id="e-email" value="${esc(c.email)}"></div>
+      <div><label>Quốc gia</label><input id="e-qg" value="${esc(c.quoc_gia)}"></div>
+      <div><label>Nguồn khách</label><select id="e-nguon">${opt(NGUON,c.nguon)}</select></div>
+      <div><label>MKT phụ trách</label><select id="e-mkt"><option value="">—</option>${opt(MKT,c.mkt)}</select></div>
+      <div><label>Sale chăm khách</label><select id="e-owner">${opt(SALES,c.owner)}</select></div>
+      <div><label>Mức độ khách</label><select id="e-muc"><option value="nong" ${c.muc==='nong'?'selected':''}>🔥 Nóng</option><option value="am" ${c.muc==='am'?'selected':''}>☀️ Ấm</option><option value="lanh" ${c.muc==='lanh'?'selected':''}>❄️ Lạnh</option></select></div>
+      <div><label>Trạng thái</label><select id="e-tt">${opt(STATUS,c.tt)}</select></div>
+      <div><label>Ngày follow tiếp theo</label><input id="e-follow" type="date" value="${c.follow||''}"></div>
+      <div><label>Bệnh lý chính</label><select id="e-benh">${opt(BENH,c.benh)}</select></div>
+      <div><label>Doanh thu (USD)</label><input id="e-dt" type="number" value="${Number(c.dt)||0}"></div>
+      <div class="full"><label>Sản phẩm quan tâm</label><input id="e-sp" value="${esc(c.sp)}"></div>
+      <div class="full"><label>Ghi chú tư vấn</label><textarea id="e-ghi" rows="3">${(''+(c.ghi||'')).replace(/</g,'&lt;')}</textarea></div>
+      <div class="full" style="display:flex;gap:8px"><button class="btn" type="submit">💾 Lưu thay đổi</button>
+        <button type="button" class="btn ghost" onclick="closeEdit()">Hủy</button></div>
+    </div></form></div>`;
+}
+function closeEdit(){ const ov=document.getElementById('edit-overlay'); if(ov)ov.style.display='none'; }
+function collectEdit(){ const g=x=>document.getElementById(x).value; const benh=g('e-benh');
+  return { ten:g('e-ten'), phone:g('e-phone'), has_wa:document.getElementById('e-wa').checked, email:g('e-email'),
+    quoc_gia:g('e-qg'), nguon:g('e-nguon'), mkt:g('e-mkt')||null, owner:g('e-owner'), muc:g('e-muc'), tt:g('e-tt'),
+    follow:g('e-follow')||null, benh:benh, benh_list:BENH[benh]||'', dt:Number(g('e-dt'))||0, sp:g('e-sp'), ghi:g('e-ghi'), ngay_capnhat:D(0) }; }
+function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
+  Object.assign(c, collectEdit()); if(c.tt==='da_chot'&&!c.loai_don)c.loai_don=c.khach_cu?'upsell':'moi';
+  closeEdit(); alert('✅ Đã lưu thay đổi'); renderAll(); }
+
+/* ============ NAV ============ */
+const TITLES={dashboard:'Dashboard',care:'Trung tâm chăm sóc',add:'Thêm khách hàng',list:'Danh sách khách hàng',
+  today:'Việc cần làm hôm nay',report:'Báo cáo ngày',marketing:'Báo cáo Marketing',team:'Sale team',settings:'Cài đặt',perms:'Tài khoản & Phân quyền',trash:'Thùng rác — khôi phục khách đã xoá'};
+document.getElementById('nav').addEventListener('click',e=>{
+  const a=e.target.closest('a'); if(!a)return; go(a.dataset.v);
+});
+function go(v){
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.v===v));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('v-'+v).classList.add('active');
+  document.getElementById('title').textContent=TITLES[v];
+}
+
+/* ============ RENDER ============ */
+function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTeam();renderSettings();renderPerms();renderTrash(); }
+
+function renderAlert(){
+  const due=myData().filter(c=>flag(c)==='warn').length;
+  const over=myData().filter(c=>flag(c)==='over').length;
+  const bar=document.getElementById('alertbar');
+  if(due||over){ bar.style.display='block';
+    bar.innerHTML=`🔔 Bạn có <b>${due}</b> khách cần follow hôm nay và <b style="color:#e23d3d">${over}</b> khách <b>quá hạn</b>. `+
+      `<a style="color:#8a6400;font-weight:700;cursor:pointer" onclick="go('today')">Xem việc cần làm →</a>`;
+  } else bar.style.display='none';
+}
+
+/* ====== BỘ LỌC KHOẢNG NGÀY (presets + lịch 2 tháng) ====== */
+function dstr(dt){return dt.toISOString().slice(0,10);}
+function addDays(dt,n){const x=new Date(dt);x.setUTCDate(x.getUTCDate()+n);return x;}
+function monthStart(dt){return new Date(Date.UTC(dt.getUTCFullYear(),dt.getUTCMonth(),1));}
+const PRESETS=[
+ {k:'hom_nay',l:'Hôm nay',g:t=>[dstr(t),dstr(t)]},
+ {k:'hom_qua',l:'Hôm qua',g:t=>[dstr(addDays(t,-1)),dstr(addDays(t,-1))]},
+ {k:'tuan_nay',l:'Tuần này',g:t=>{const o=(t.getUTCDay()===0?6:t.getUTCDay()-1);return [dstr(addDays(t,-o)),dstr(t)];}},
+ {k:'tuan_truoc',l:'Tuần trước',g:t=>{const o=(t.getUTCDay()===0?6:t.getUTCDay()-1);const mon=addDays(t,-o-7);return [dstr(mon),dstr(addDays(mon,6))];}},
+ {k:'7ngay',l:'7 ngày trước',g:t=>[dstr(addDays(t,-6)),dstr(t)]},
+ {k:'thang_nay',l:'Tháng này',g:t=>[dstr(monthStart(t)),dstr(t)]},
+ {k:'thang_truoc',l:'Tháng trước',g:t=>{const y=t.getUTCFullYear(),m=t.getUTCMonth();return [dstr(new Date(Date.UTC(y,m-1,1))),dstr(new Date(Date.UTC(y,m,0)))];}},
+ {k:'30ngay',l:'30 ngày trước',g:t=>[dstr(addDays(t,-29)),dstr(t)]},
+ {k:'60ngay',l:'60 ngày trước',g:t=>[dstr(addDays(t,-59)),dstr(t)]},
+];
+function reRender(key){ ({dash:renderDash,list:renderList,report:renderReport,mkt:renderMarketing,team:renderTeam}[key])(); }
+// Tính chỉ số 1 nhóm khách: số khách, thị trường, tỷ lệ tương tác/chốt, DT mới/chăm sóc/tổng
+function saleStats(sd){
+  const total=sd.length;
+  const interacted=sd.filter(c=>['da_tu_van','da_bao_gia','hen_follow','da_chot'].includes(c.tt)).length;
+  const won=sd.filter(c=>c.tt==='da_chot');
+  const dtMoi=won.filter(c=>c.loai_don==='moi').reduce((s,c)=>s+c.dt,0);
+  const dtCu =won.filter(c=>c.loai_don==='upsell').reduce((s,c)=>s+c.dt,0);
+  const markets=[...new Set(sd.map(c=>c.quoc_gia).filter(Boolean))];
+  return {total, won:won.length, dtMoi, dtCu, dtTong:dtMoi+dtCu, markets,
+    rTuongtac: total?Math.round(interacted/total*100):0,
+    rChot: total?Math.round(won.length/total*100):0};
+}
+function applyPreset(key,k){const f=FILTERS[key];const r=PRESETS.find(x=>x.k===k).g(today);f.start=r[0];f.end=r[1];f.calBase=monthStart(new Date(r[0]));reRender(key);}
+function toggleFilter(key){FILTERS[key].open=!FILTERS[key].open;reRender(key);}
+function setField(key,fl){FILTERS[key].field=fl;reRender(key);}
+function navCal(key,n){const f=FILTERS[key];const b=f.calBase||monthStart(today);f.calBase=new Date(Date.UTC(b.getUTCFullYear(),b.getUTCMonth()+n,1));reRender(key);}
+function pickDay(key,ds){const f=FILTERS[key];
+  if(!f.start||(f.start&&f.end)){f.start=ds;f.end=null;}
+  else{ if(ds>=f.start)f.end=ds; else {f.end=f.start;f.start=ds;} }
+  reRender(key);}
+function clearFilter(key){const f=FILTERS[key];f.start=null;f.end=null;f.open=false;f.calBase=null;reRender(key);}
+function getSel(key){const f=FILTERS[key]; if(f.start&&f.end)return{s:f.start,e:f.end}; if(f.start)return{s:f.start,e:f.start}; return null;}
+function getRange(key){
+  const sel=getSel(key); if(sel) return sel;
+  if(FILTERS[key].def==='all') return {s:'0000-01-01',e:'9999-12-31'};
+  const r=PRESETS.find(x=>x.k==='thang_nay').g(today); return {s:r[0],e:r[1]};
+}
+function rangeLabel(key){const sel=getSel(key); if(sel) return sel.s+' → '+sel.e;
+  return FILTERS[key].def==='all' ? 'Tất cả thời gian' : (()=>{const r=getRange(key);return r.s+' → '+r.e;})();}
+function calMonthHTML(key,base){
+  const y=base.getUTCFullYear(),m=base.getUTCMonth();
+  const dim=new Date(Date.UTC(y,m+1,0)).getUTCDate();
+  const first=new Date(Date.UTC(y,m,1));
+  const lead=(first.getUTCDay()===0?6:first.getUTCDay()-1);
+  const sel=getSel(key); const s=sel?sel.s:null, e=sel?sel.e:null;
+  let cells='';
+  for(let i=0;i<lead;i++)cells+='<div></div>';
+  for(let d=1;d<=dim;d++){
+    const ds=dstr(new Date(Date.UTC(y,m,d)));
+    const inR=sel&&ds>=s&&ds<=e, isEnd=(ds===s||ds===e), isToday=ds===dstr(today);
+    let st='padding:7px 0;text-align:center;border-radius:7px;cursor:pointer;font-size:13px;';
+    if(inR) st+= isEnd?'background:var(--teal);color:#fff;font-weight:700;':'background:var(--cream);';
+    if(isToday&&!inR) st+='box-shadow:inset 0 0 0 1px var(--sage);';
+    cells+=`<div style="${st}" onclick="pickDay('${key}','${ds}')">${d}</div>`;
+  }
+  return `<div style="flex:1">
+    <div style="text-align:center;font-weight:700;margin-bottom:8px">Thg ${String(m+1).padStart(2,'0')}  ${y}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:11px;color:var(--muted);margin-bottom:4px">
+      ${['T2','T3','T4','T5','T6','T7','CN'].map(x=>`<div style="text-align:center">${x}</div>`).join('')}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${cells}</div></div>`;
+}
+function renderDateFilterBar(key){
+  const f=FILTERS[key];
+  const fieldLbl=f.field==='capnhat'?'Thời gian cập nhật':'Thời gian tạo';
+  const sel=getSel(key);
+  const base=f.calBase||monthStart(sel?new Date(sel.s):today);
+  const next=new Date(Date.UTC(base.getUTCFullYear(),base.getUTCMonth()+1,1));
+  let pop='';
+  if(f.open){
+    pop=`<div style="position:absolute;z-index:50;top:48px;left:0;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 50px rgba(0,0,0,.18);padding:14px;display:flex;gap:14px;width:700px;max-width:92vw">
+      <div style="width:140px;border-right:1px solid var(--line);padding-right:8px">
+        ${PRESETS.map(p=>`<div onclick="applyPreset('${key}','${p.k}')" style="padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">${p.l}</div>`).join('')}
+        <div onclick="clearFilter('${key}')" style="padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--muted);margin-top:6px;border-top:1px solid var(--line)">Tất cả thời gian</div>
+      </div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px">
+          <div><b>Từ:</b> ${sel?sel.s:'—'}</div><div><b>Đến:</b> ${sel?sel.e:'—'}</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <button class="btn ghost" style="padding:3px 12px" onclick="navCal('${key}',-1)">‹</button>
+          <span style="font-size:12px;color:var(--muted)">Bấm chọn ngày bắt đầu rồi ngày kết thúc</span>
+          <button class="btn ghost" style="padding:3px 12px" onclick="navCal('${key}',1)">›</button></div>
+        <div style="display:flex;gap:16px">${calMonthHTML(key,base)}${calMonthHTML(key,next)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
+          <div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12px">
+            <div onclick="setField('${key}','tao')" style="padding:6px 12px;cursor:pointer;${f.field==='tao'?'background:var(--teal);color:#fff':''}">Thời gian tạo</div>
+            <div onclick="setField('${key}','capnhat')" style="padding:6px 12px;cursor:pointer;${f.field==='capnhat'?'background:var(--teal);color:#fff':''}">Thời gian cập nhật</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost" style="padding:7px 16px" onclick="clearFilter('${key}')">Đặt lại</button>
+            <button class="btn" style="padding:7px 18px" onclick="toggleFilter('${key}')">Lọc</button>
+          </div>
+        </div>
+      </div></div>`;
+  }
+  return `<div style="position:relative;margin-bottom:14px">
+    <button class="btn ghost" style="padding:10px 16px" onclick="toggleFilter('${key}')">📅 ${rangeLabel(key)} · ${fieldLbl} ▾</button>${pop}</div>`;
+}
+// Lọc 1 khách theo khoảng ngày của 1 trang
+function inDateRange(key,c){const rg=getRange(key);const ds=FILTERS[key].field==='capnhat'?(c.ngay_capnhat||c.ngay_tao):c.ngay_tao;return ds>=rg.s&&ds<=rg.e;}
+
+function renderDash(){
+  const d=myData();
+  const isAdmin=ME.role==='admin';
+  const paid=c=>['facebook','tiktok','pancake','whatsapp'].includes(c.nguon);
+
+  const leadMkt=d.filter(paid).length;
+  const dtMoi=d.filter(c=>c.tt==='da_chot'&&c.loai_don==='moi').reduce((s,c)=>s+c.dt,0);
+  const dtCu =d.filter(c=>c.tt==='da_chot'&&c.loai_don==='upsell').reduce((s,c)=>s+c.dt,0);
+
+  const daoLai = d.filter(c=>['da_tu_van','da_bao_gia','hen_follow','khong_phan_hoi'].includes(c.tt));
+  const upsale = d.filter(c=>c.khach_cu&&c.ngay_upsale&&c.ngay_upsale<=D(0)&&c.tt!=='da_chot');
+  const khachMoi = d.filter(c=>c.tt==='moi_vao');
+
+  // ----- THEO KHOẢNG NGÀY ĐÃ CHỌN -----
+  const dp=d.filter(c=>inDateRange('dash',c));
+  const interacted=dp.filter(c=>['da_tu_van','da_bao_gia','hen_follow','da_chot'].includes(c.tt)).length;
+  const rate=dp.length?Math.round(interacted/dp.length*100):0;
+  const chotKy=dp.filter(c=>c.tt==='da_chot').length;
+  const revKy=dp.filter(c=>c.tt==='da_chot').reduce((s,c)=>s+c.dt,0);
+
+  let html=renderDateFilterBar('dash')+`<div class="grid kpi-grid">
+    <div class="card kpi"><div class="lbl">Khách trong kỳ</div><div class="val">${dp.length}</div></div>
+    <div class="card kpi"><div class="lbl">Đã tương tác</div><div class="val">${interacted}<span style="font-size:13px;color:var(--muted)"> / ${dp.length}</span></div></div>
+    <div class="card kpi"><div class="lbl">Tỷ lệ tương tác</div><div class="val amber">${rate}%</div>
+      <div class="bar" style="margin-top:8px"><div style="width:${rate}%"></div></div></div>
+    <div class="card kpi"><div class="lbl">Doanh thu trong kỳ</div><div class="val green">$${revKy}<span style="font-size:13px;color:var(--muted)"> · ${chotKy} đơn</span></div></div>
+  </div>`;
+
+  // ----- 1 · DỮ LIỆU SALE -----
+  const salesRows = isAdmin ? Object.entries(SALES) : [[ME.id, ME.name]];
+  html+=`<h2 class="sec">1 · Dữ liệu Sale</h2><div class="card" style="padding:0"><table>
+    <tr><th>Sale</th><th>Tổng khách</th><th>Đang chăm</th><th>Đã chốt</th><th>Doanh thu</th><th>Tỷ lệ chốt</th></tr>`;
+  salesRows.forEach(([id,name])=>{
+    const sd=DATA.filter(c=>c.owner===id);
+    const cham=sd.filter(c=>['da_tu_van','da_bao_gia','hen_follow'].includes(c.tt)).length;
+    const w=sd.filter(c=>c.tt==='da_chot'); const rev=w.reduce((s,c)=>s+c.dt,0);
+    const rate=sd.length?Math.round(w.length/sd.length*100):0;
+    html+=`<tr><td><b>${name}</b></td><td>${sd.length}</td><td>${cham}</td><td>${w.length}</td><td>$${rev}</td>
+      <td><div class="bar" style="width:80px;display:inline-block;vertical-align:middle"><div style="width:${rate}%"></div></div> ${rate}%</td></tr>`;
+  });
+  html+=`</table></div>`;
+
+  // ----- 2 · MARKETING ĐẨY VỀ CHO SALE -----
+  html+=`<h2 class="sec">2 · Marketing đẩy về cho Sale</h2><div class="card" style="padding:0"><table>
+    <tr><th>MKT</th><th>Lead đẩy về</th><th>Đã chốt</th><th>Tỷ lệ chốt</th><th>Doanh thu mang về</th></tr>`;
+  Object.entries(MKT).forEach(([id,name])=>{
+    const md=d.filter(c=>c.mkt===id); const w=md.filter(c=>c.tt==='da_chot');
+    const rev=w.reduce((s,c)=>s+c.dt,0); const rate=md.length?Math.round(w.length/md.length*100):0;
+    html+=`<tr><td><b>${name}</b></td><td>${md.length}</td><td>${w.length}</td><td>${rate}%</td><td>$${rev}</td></tr>`;
+  });
+  html+=`</table></div>`;
+
+  // ----- 3 · 4 · CƠ CẤU DOANH THU -----
+  const tot=dtMoi+dtCu||1;
+  html+=`<h2 class="sec">3 · 4 · Cơ cấu doanh thu</h2><div class="card">
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+      <span>🆕 Chốt mới (khách mới): <b style="color:var(--won)">$${dtMoi}</b></span>
+      <span>🔁 Chăm sóc lại (khách cũ): <b style="color:var(--won)">$${dtCu}</b></span>
+      <span>Tổng: <b>$${dtMoi+dtCu}</b></span></div>
+    <div class="bar" style="height:16px;display:flex">
+      <div style="width:${dtMoi/tot*100}%;background:var(--teal)"></div>
+      <div style="width:${dtCu/tot*100}%;background:var(--sage)"></div></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">Xanh đậm = doanh thu khách mới · Xanh nhạt = doanh thu chăm sóc lại / up-sale khách cũ.</div>
+  </div>`;
+
+  // ----- 5 · VIỆC SALE CẦN LÀM -----
+  const mini=arr=>arr.slice(0,4).map(c=>`<div style="font-size:12px;padding:4px 0;border-top:1px solid var(--line)">${c.ten}
+     <span style="color:var(--muted)">· ${SALES[c.owner]||''}${c.follow?(' · '+c.follow):''}</span></div>`).join('')
+     +(arr.length>4?`<div style="font-size:11px;color:var(--muted);padding-top:4px">+${arr.length-4} khách khác…</div>`:'')
+     ||`<div style="font-size:12px;color:var(--muted);padding-top:6px">Không có khách nào.</div>`;
+  html+=`<h2 class="sec">5 · Việc Sale cần làm</h2><div class="grid" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="card"><div class="lbl">🔁 Đào lại khách chưa chốt</div>
+      <div class="val" style="color:var(--hot)">${daoLai.length}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Đã tư vấn/báo giá/không phản hồi — follow lại để chốt.</div>${mini(daoLai)}</div>
+    <div class="card"><div class="lbl">⬆️ Up-sale khách cũ đến hạn</div>
+      <div class="val amber">${upsale.length}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Khách cũ tới thời điểm nhắc mua lại / nâng combo.</div>${mini(upsale)}</div>
+    <div class="card"><div class="lbl">🌱 Lộ trình chăm khách mới</div>
+      <div class="val" style="color:var(--teal-dark)">${khachMoi.length}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Khách mới vào — bắt đầu tư vấn theo lộ trình.</div>${mini(khachMoi)}</div>
+  </div>
+  <p style="margin-top:12px"><button class="btn ghost" onclick="go('today')">→ Mở "Việc cần làm hôm nay"</button></p>`;
+
+  document.getElementById('v-dashboard').innerHTML=html;
+}
+function countBy(field,map){const m={};DATA.forEach(c=>m[c[field]]=(m[c[field]]||0)+1);
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[map[k]||k,v]);}
+function countWon(field,map){const m={};DATA.filter(c=>c.tt==='da_chot').forEach(c=>m[c[field]]=(m[c[field]]||0)+1);
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[map[k]||k,v]);}
+function barCard(title,rows){const max=Math.max(1,...rows.map(r=>r[1]));
+  return `<div class="card"><div class="lbl" style="margin-bottom:10px;font-weight:700">${title}</div>`+
+    rows.map(r=>`<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><span>${r[0]}</span><b>${r[1]}</b></div>
+    <div class="bar"><div style="width:${r[1]/max*100}%"></div></div></div>`).join('')+`</div>`;}
+
+/* ====== TRUNG TÂM CHĂM SÓC THÔNG MINH ====== */
+function careScore(c){            // điểm càng cao = càng gấp
+  if(['da_chot','tu_choi'].includes(c.tt)) return -1;
+  let s=0; const f=flag(c);
+  if(f==='over'){ s+=50; const days=Math.round((new Date(D(0))-new Date(c.follow))/86400000); s+=Math.min(days*5,20); }
+  if(f==='warn') s+=22;
+  if(c.muc==='nong') s+=25;
+  if(c.khach_cu && c.ngay_upsale && c.ngay_upsale<=D(0)) s+=30;
+  if(c.tt==='moi_vao') s+=18;
+  if(c.tt==='da_bao_gia') s+=15;
+  if(c.tt==='da_tu_van') s+=10;
+  if(c.tt==='khong_phan_hoi') s+=8;
+  return s;
+}
+function nextAction(c){
+  const f=flag(c);
+  if(c.khach_cu && c.ngay_upsale && c.ngay_upsale<=D(0)) return '⬆️ Nhắc khách cũ mua lại / nâng combo';
+  if(f==='over') return '📞 GỌI NGAY — quá hạn follow';
+  if(c.muc==='nong') return '🔥 Ưu tiên chốt khách nóng';
+  if(c.tt==='da_bao_gia') return '💰 Chốt đơn — đã báo giá';
+  if(c.tt==='moi_vao') return '🌱 Tư vấn khách mới (bước 1 lộ trình)';
+  if(c.tt==='da_tu_van') return '📝 Gửi báo giá';
+  if(f==='warn') return '⏰ Follow theo lịch hẹn';
+  if(c.tt==='khong_phan_hoi') return '🔁 Nhắn lại / đổi kênh liên hệ';
+  return '👀 Theo dõi tiếp';
+}
+/* Sản phẩm AGO phù hợp theo bệnh lý/nhu cầu */
+const SP_GOI = {pcos:'AGO WOMEN', amh_thap:'AGO EVA', u_xo:'AGO TUMOR', tac_voi:'AGO EVA',
+  noi_tiet:'AGO WOMEN', tinh_trung_yeu:'AGO DAD', muon_thai:'AGO MOM', khac:''};
+
+/* Gợi ý việc cần làm cụ thể cho TỪNG khách (tối đa ~5 ý) */
+function careSuggestions(c){
+  const out=[]; const f=flag(c); const sp=SP_GOI[c.benh]||c.sp;
+  // 1. Quá hạn -> nhắc xử lý trước
+  if(f==='over') out.push('⚠️ Đã quá hạn — liên hệ lại NGAY, mở lời nhẹ nhàng vì phản hồi muộn.');
+  // 2. Up-sale khách cũ đến hạn
+  if(c.khach_cu && c.ngay_upsale && c.ngay_upsale<=D(0)){
+    out.push('Hỏi thăm kết quả/cảm nhận sau liệu trình trước.');
+    out.push('Đề xuất mua lại hoặc nâng combo phù hợp giai đoạn hiện tại'+(sp?` (gợi ý: ${sp}).`:'.'));
+  }
+  // 3. Theo trạng thái
+  if(c.tt==='moi_vao'){
+    out.push('Phản hồi trong 5 phút đầu + cảm ơn khách đã quan tâm.');
+    out.push(`Hỏi rõ tình trạng/nhu cầu (${BENH[c.benh]||'nhu cầu'}) để tư vấn đúng.`);
+    out.push('Gửi tài liệu giới thiệu + review khách thật'+(sp?` về ${sp}.`:'.'));
+  } else if(c.tt==='da_tu_van'){
+    out.push('Chốt lại nhu cầu chính & ngân sách của khách.');
+    out.push('Gửi báo giá + ưu đãi combo phù hợp'+(sp?` (${sp}).`:'.'));
+    out.push('Hẹn ngày phản hồi cụ thể (đặt lịch follow).');
+  } else if(c.tt==='da_bao_gia'){
+    out.push('Hỏi khách còn băn khoăn gì: giá / niềm tin / cần hỏi chồng.');
+    out.push('Đưa lý do chốt ngay: ưu đãi có hạn, lộ trình theo tháng, suất tư vấn.');
+    out.push('Hướng dẫn cách đặt cọc / thanh toán để chốt đơn.');
+  } else if(c.tt==='hen_follow'){
+    out.push('Liên hệ đúng lịch hẹn, mở đầu bằng điều khách quan tâm lần trước.');
+    out.push('Nhắc lại lợi ích chính & ưu đãi còn hiệu lực.');
+  } else if(c.tt==='khong_phan_hoi'){
+    out.push('Đổi kênh liên hệ (WhatsApp / gọi / email).');
+    out.push(`Nhắn tin giá trị, không spam: chia sẻ case tương tự (${BENH[c.benh]||'nhu cầu'}).`);
+    out.push('Sau 2 lần không phản hồi → hạ mức độ & dời lịch follow xa hơn.');
+  }
+  // 4. Theo mức độ
+  if(c.muc==='nong') out.push('🔥 Khách nóng: ưu tiên đẩy nhanh tới bước chốt trong hôm nay.');
+  if(c.muc==='lanh') out.push('Khách lạnh: nuôi dưỡng dài hạn, thêm vào danh sách gửi nội dung định kỳ.');
+  // 5. Thiếu thông tin liên hệ
+  if(!c.phone && !c.email) out.push('Bổ sung SĐT/WhatsApp hoặc email để chăm sóc được.');
+  return out.slice(0,5);
+}
+
+function findC(id){ return DATA.find(c=>c.id===id); }
+function markCared(id){ const c=findC(id); if(!c)return;
+  c.follow=D(3); if(c.tt==='moi_vao')c.tt='da_tu_van'; if(c.khach_cu&&c.ngay_upsale)c.ngay_upsale=D(30);
+  c.ngay_capnhat=D(0);
+  alert('✅ Đã ghi nhận chăm "'+c.ten+'". Hẹn follow lại: '+c.follow); renderAll(); }
+function quickClose(id){ const c=findC(id); if(!c)return;
+  const v=prompt('Nhập doanh thu chốt (USD) cho "'+c.ten+'":','0'); if(v===null)return;
+  c.tt='da_chot'; c.dt=Number(v)||0; c.loai_don=c.khach_cu?'upsell':'moi'; c.follow=''; c.ngay_capnhat=D(0);
+  alert('🎉 Đã chốt "'+c.ten+'" — $'+c.dt); renderAll(); }
+
+function careCard(c){
+  const sc=careScore(c);
+  const t = sc>=50?['Khẩn cấp','var(--over)'] : sc>=30?['Cao','#d2691e'] : sc>=15?['Trung bình','#cf9300'] : ['Thấp','var(--teal)'];
+  const info=(l,v)=>v?`<span style="margin-right:14px"><b style="color:var(--muted)">${l}:</b> ${v}</span>`:'';
+  return `<div class="card" style="margin-bottom:12px;border-left:5px solid ${t[1]}">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div style="font-size:16px;font-weight:700">${c.ten} ${mucPill(c.muc)}
+        <span class="pill" style="background:${t[1]}22;color:${t[1]}">● ${t[0]} · ${sc}đ</span></div>
+      <div class="pill" style="background:var(--cream);color:var(--teal-dark);font-size:12px;padding:5px 11px">${nextAction(c)}</div>
+    </div>
+    <div style="font-size:12.5px;margin:10px 0;line-height:1.9">
+      ${info('SĐT/WhatsApp',c.phone)}${c.has_wa?'<span class="pill" style="background:#e3f4e8;color:#1f8a4c;font-size:11px;margin-right:14px">💬 Có WhatsApp</span>':''}${info('Email',c.email)}${info('Quốc gia',c.quoc_gia)}
+      ${info('Nguồn',NGUON[c.nguon])}${info('MKT',MKT[c.mkt])}${info('Sale',SALES[c.owner])}<br>
+      ${info('Bệnh lý',benhLabel(c))}${info('Sản phẩm',c.sp)}${info('Trạng thái',STATUS[c.tt])}
+      ${info('Ngày follow',c.follow)}${c.khach_cu?info('Up-sale',c.ngay_upsale):''}${c.khach_cu?info('Khách cũ','Có'):''}
+    </div>
+    ${c.ghi?`<div style="font-size:12.5px;background:var(--cream);padding:8px 10px;border-radius:8px;margin-bottom:10px">📝 ${c.ghi}</div>`:''}
+    <div style="border:1px dashed var(--sage);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#f7faf8">
+      <div style="font-size:12.5px;font-weight:700;color:var(--teal-dark);margin-bottom:6px">💡 Gợi ý việc cần làm với khách này:</div>
+      ${careSuggestions(c).map(s=>`<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:3px 0;cursor:pointer">
+        <input type="checkbox" style="width:auto;margin-top:2px"> <span>${s}</span></label>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="padding:7px 14px;font-size:13px" onclick="markCared('${c.id}')">✅ Đã chăm (hẹn +3 ngày)</button>
+      <button class="btn ghost" style="padding:7px 14px;font-size:13px" onclick="quickClose('${c.id}')">💰 Chốt đơn</button>
+      <button class="btn ghost" style="padding:7px 14px;font-size:13px" onclick="editCustomer('${c.id}')">✏️ Sửa thông tin</button>
+    </div>
+  </div>`;
+}
+function renderCare(){
+  if(!document.getElementById('care-ctrl')){
+    const saleF = fullView()? `<select id="care-sale" onchange="renderCare()"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>`:'';
+    const mktF = fullView()? `<select id="care-mkt" onchange="renderCare()"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([k,v])=>`<option value="${k}">Khách của ${v}</option>`).join('')}</select>`:'';
+    document.getElementById('v-care').innerHTML=`
+    <p style="color:var(--muted);font-size:13px;margin-bottom:10px">Hệ thống tự xếp khách theo độ ưu tiên — làm từ trên xuống là chăm đủ, không bỏ sót ai. Mỗi khách kèm gợi ý hành động kế tiếp.</p>
+    <div id="care-ctrl" class="filters">
+      <input class="search" id="care-search" placeholder="🔎 Tìm tên / SĐT / ghi chú..." oninput="renderCare()">
+      ${saleF}${mktF}
+      <select id="care-sort" onchange="renderCare()">
+        <option value="priority">Sắp theo: Ưu tiên (gấp nhất)</option>
+        <option value="follow">Sắp theo: Ngày follow gần nhất</option>
+        <option value="muc">Sắp theo: Mức độ nóng</option>
+      </select>
+    </div>
+    <div id="care-summary"></div>
+    <div id="care-list"></div>`;
+  }
+  const s=(document.getElementById('care-search').value||'').toLowerCase();
+  const fSale=fullView()?(document.getElementById('care-sale')?.value||''):ME.id;
+  const fMkt=fullView()?(document.getElementById('care-mkt')?.value||''):'';
+  const sort=document.getElementById('care-sort').value;
+  let arr=myData().filter(c=>!['da_chot','tu_choi'].includes(c.tt));
+  if(fSale) arr=arr.filter(c=>c.owner===fSale);
+  if(fMkt) arr=arr.filter(c=>c.mkt===fMkt);
+  if(s) arr=arr.filter(c=>`${c.ten} ${c.phone} ${c.ghi}`.toLowerCase().includes(s));
+  const mucOrd={nong:0,am:1,lanh:2};
+  arr.sort((a,b)=> sort==='follow' ? ((a.follow||'9999')<(b.follow||'9999')?-1:1)
+                : sort==='muc' ? ((mucOrd[a.muc]-mucOrd[b.muc])||(careScore(b)-careScore(a)))
+                : careScore(b)-careScore(a));
+  const khan=arr.filter(c=>careScore(c)>=50).length;
+  const cao =arr.filter(c=>{const x=careScore(c);return x>=30&&x<50;}).length;
+  const tb  =arr.filter(c=>{const x=careScore(c);return x>=15&&x<30;}).length;
+  document.getElementById('care-summary').innerHTML=`<div class="grid kpi-grid" style="margin-bottom:14px">
+    <div class="card kpi"><div class="lbl">🔴 Khẩn cấp</div><div class="val red">${khan}</div></div>
+    <div class="card kpi"><div class="lbl">🟠 Ưu tiên cao</div><div class="val" style="color:#d2691e">${cao}</div></div>
+    <div class="card kpi"><div class="lbl">🟡 Trung bình</div><div class="val amber">${tb}</div></div>
+    <div class="card kpi"><div class="lbl">Tổng cần chăm</div><div class="val">${arr.length}</div></div>
+  </div>`;
+  document.getElementById('care-list').innerHTML = arr.length? arr.map(careCard).join('')
+    : `<div class="card empty">🎉 Không còn khách nào cần chăm. Quá tuyệt!</div>`;
+}
+
+function renderAdd(){
+  const opt=(o)=>Object.entries(o).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  document.getElementById('v-add').innerHTML=`
+    <div class="card" style="margin-bottom:16px">
+      <h2 class="sec" style="margin-top:0">📥 Nhập khách hàng từ Excel</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:10px">Tải file mẫu, điền danh sách khách rồi tải lên để nhập hàng loạt (dùng để demo nhanh bằng khách thật).</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn ghost" type="button" onclick="downloadTemplate()">⬇️ Tải file mẫu (.xlsx)</button>
+        <input type="file" id="xls-file" accept=".xlsx,.xls,.csv" style="width:auto;border:1px solid var(--line);padding:7px;border-radius:9px">
+        <button class="btn" type="button" onclick="importExcel()">📤 Nhập file</button>
+      </div>
+    </div>
+    <div class="card"><form onsubmit="saveCustomer(event)">
+    <div class="form-grid">
+      <div><label>Tên khách hàng *</label><input id="f-ten" required></div>
+      <div><label>Số điện thoại / WhatsApp</label><input id="f-phone">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px;color:var(--text)">
+          <input type="checkbox" id="f-wa" style="width:auto"> 💬 Số này đã kết nối WhatsApp</label></div>
+      <div><label>Email (nếu có)</label><input id="f-email" type="email"></div>
+      <div><label>Quốc gia</label><input id="f-qg" placeholder="US, CA, DE..."></div>
+      <div><label>Nguồn khách</label><select id="f-nguon">${opt(NGUON)}</select></div>
+      <div><label>MKT phụ trách (kéo lead)</label><select id="f-mkt">${opt(MKT)}</select></div>
+      <div><label>Sale chăm khách</label><select id="f-owner">${opt(SALES)}</select></div>
+      <div><label>Mức độ khách</label><select id="f-muc"><option value="nong">🔥 Nóng</option><option value="am" selected>☀️ Ấm</option><option value="lanh">❄️ Lạnh</option></select>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.7;background:var(--cream);padding:8px 10px;border-radius:8px">
+          🔥 <b>Nóng</b>: đã hỏi giá/combo, nhu cầu rõ, sẵn sàng mua trong vài ngày.<br>
+          ☀️ <b>Ấm</b>: đang quan tâm/tìm hiểu, đã tư vấn nhưng chưa chốt, cần follow.<br>
+          ❄️ <b>Lạnh</b>: mới biết tới, chưa rõ nhu cầu, ít tương tác — nuôi dưỡng dần.
+        </div></div>
+      <div class="full"><label>Bệnh lý / nhu cầu (chọn nhiều)</label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        ${Object.entries(BENH).map(([k,v])=>`<label style="display:flex;align-items:center;gap:8px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:8px 10px;cursor:pointer">
+          <input type="checkbox" class="benh-chk" value="${k}" style="width:auto"> ${v}</label>`).join('')}</div></div>
+      <div class="full"><label>Sản phẩm quan tâm (chọn nhiều + số lượng)</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${['AGO MOM','AGO WOMEN','AGO DAD','AGO EVA','AGO TUMOR','Combo khác'].map(s=>`<label style="display:flex;align-items:center;gap:8px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:6px 10px;cursor:pointer">
+          <input type="checkbox" class="sp-chk" value="${s}" style="width:auto" onchange="this.parentNode.querySelector('.sp-qty').disabled=!this.checked">
+          <span style="flex:1">${s}</span>
+          <input type="number" class="sp-qty" min="1" value="1" disabled title="Số lượng" style="width:58px;padding:5px"></label>`).join('')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Tick sản phẩm rồi nhập số lượng — VD: 2 AGO MOM + 2 AGO EVA.</div></div>
+      <div><label>Trạng thái</label><select id="f-tt">${opt(STATUS)}</select></div>
+      <div><label>Ngày cần follow tiếp theo</label><input id="f-follow" type="date" value="${D(1)}"></div>
+      <div><label>Doanh thu (nếu đã chốt, USD)</label><input id="f-dt" type="number" value="0"></div>
+      <div><label>Lý do chưa mua</label><select id="f-ly">
+        <option value="">—</option>${opt({gia_cao:'Giá cao',hoi_chong:'Cần hỏi chồng',chua_tin:'Chưa tin',dang_ivf:'Đang IVF',chua_san_sang:'Chưa sẵn sàng',khong_phan_hoi:'Không phản hồi',khac:'Khác'})}</select></div>
+      <div class="full"><label>Ghi chú tư vấn</label><textarea id="f-ghi" rows="3"></textarea></div>
+      <div class="full"><button class="btn" type="submit">💾 Lưu khách hàng</button></div>
+    </div></form></div>`;
+}
+function saveCustomer(e){
+  e.preventDefault();
+  const g=id=>document.getElementById(id).value;
+  const owner = ME.role==='sale' ? ME.id : g('f-owner');
+  const benhs=[...document.querySelectorAll('.benh-chk:checked')].map(ch=>ch.value);
+  const sps=[...document.querySelectorAll('.sp-chk:checked')].map(ch=>{
+    const q=ch.parentNode.querySelector('.sp-qty').value||1; return `${q} ${ch.value}`;});
+  DATA.unshift({id:Date.now(),owner:owner,mkt:g('f-mkt'),ten:g('f-ten'),phone:g('f-phone'),
+    has_wa:document.getElementById('f-wa').checked,
+    email:g('f-email'),quoc_gia:g('f-qg'),nguon:g('f-nguon'),
+    benh:benhs[0]||'khac', benh_list:benhs.map(b=>BENH[b]).join(', '),
+    sp:sps.join(', ')||'—',
+    muc:g('f-muc'),tt:g('f-tt'),follow:g('f-follow'),ghi:g('f-ghi'),dt:Number(g('f-dt'))||0,ly:g('f-ly')});
+  alert('✅ Đã lưu khách hàng "'+g('f-ten')+'"');
+  e.target.reset(); renderAll(); go('list');
+}
+
+/* ====== NHẬP EXCEL / CSV ====== */
+function revFind(map,text){ if(!text)return ''; const t=(''+text).trim().toLowerCase();
+  return Object.keys(map).find(k=>(''+map[k]).toLowerCase()===t)||''; }
+function normDate(s){ if(!s)return ''; const d=new Date(s); return isNaN(d)?(''+s):d.toISOString().slice(0,10); }
+function downloadTemplate(){
+  const headers=['Tên khách hàng','Số điện thoại','WhatsApp','Email','Quốc gia','Nguồn','MKT','Sale','Bệnh lý','Sản phẩm','Mức độ','Trạng thái','Ngày follow','Doanh thu','Ghi chú'];
+  const ex=['Anna Tran','+1 408-555-0000','Có','anna@gmail.com','US','Facebook','Mai','Lan','PCOS','2 AGO WOMEN','Nóng','Mới vào','2026-06-25','0','Khách quan tâm combo'];
+  const ws=XLSX.utils.aoa_to_sheet([headers,ex]);
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Khách hàng');
+  XLSX.writeFile(wb,'mau_khach_hang_CCP.xlsx');
+}
+function importExcel(){
+  const f=document.getElementById('xls-file').files[0];
+  if(!f){ alert('Chọn file Excel/CSV trước.'); return; }
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      let n=0;
+      rows.forEach(r=>{
+        const get=(...keys)=>{ for(const k of keys){ const kk=Object.keys(r).find(h=>(''+h).trim().toLowerCase()===k.toLowerCase());
+          if(kk!==undefined && r[kk]!=='') return (''+r[kk]).trim(); } return ''; };
+        const ten=get('Tên khách hàng','Tên','Name'); if(!ten) return;
+        const mucT=get('Mức độ','Mức').toLowerCase();
+        const muc= (mucT.includes('nóng')||mucT==='nong')?'nong' : (mucT.includes('lạnh')||mucT==='lanh')?'lanh':'am';
+        const benhT=get('Bệnh lý','Bệnh lý / nhu cầu','Nhu cầu');
+        const benhKeys=benhT.split(/[;,\/]/).map(s=>revFind(BENH,s.trim())).filter(Boolean);
+        const waT=get('WhatsApp','Đã có WhatsApp').toLowerCase();
+        const tt=revFind(STATUS,get('Trạng thái'))||'moi_vao';
+        const c={ id:Date.now()+n,
+          owner: revFind(SALES,get('Sale','Sale chăm khách')) || (ME.role==='sale'?ME.id:Object.keys(SALES)[0]),
+          mkt: revFind(MKT,get('MKT','MKT phụ trách')) || Object.keys(MKT)[0],
+          ten, phone:get('Số điện thoại','SĐT','Số điện thoại / WhatsApp','Phone'),
+          has_wa:['có','x','yes','true','1','đã có'].includes(waT),
+          email:get('Email'), quoc_gia:get('Quốc gia','Thị trường','Country'),
+          nguon:revFind(NGUON,get('Nguồn','Nguồn khách'))||'khac',
+          benh:benhKeys[0]||'khac', benh_list:benhKeys.map(k=>BENH[k]).join(', ')||benhT,
+          sp:get('Sản phẩm','Sản phẩm quan tâm')||'—',
+          muc, tt, follow:normDate(get('Ngày follow','Ngày cần follow tiếp theo')),
+          ghi:get('Ghi chú','Ghi chú tư vấn'), dt:Number(get('Doanh thu','Doanh thu (USD)'))||0,
+          ly:'', khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0) };
+        if(c.tt==='da_chot') c.loai_don='moi';
+        DATA.unshift(c); n++;
+      });
+      alert('✅ Đã nhập '+n+' khách hàng từ file.');
+      document.getElementById('xls-file').value='';
+      renderAll(); go('list');
+    }catch(err){ alert('Lỗi đọc file: '+err.message); }
+  };
+  rd.readAsArrayBuffer(f);
+}
+
+function renderList(){
+  const opt=(o,all)=>`<option value="">${all}</option>`+Object.entries(o).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  const saleFilter = fullView()
+    ? `<select id="fl-sale" onchange="renderList()"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>` : '';
+  const mktFilter = fullView()
+    ? `<select id="fl-mkt" onchange="renderList()"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>` : '';
+  // build only once (controls), then table
+  if(!document.getElementById('fl-search')){
+    document.getElementById('v-list').innerHTML=`
+    <div id="list-datebar"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:#fde3dd;box-shadow:inset 4px 0 0 var(--hot)"></i> Khách nóng</span>
+      <span><i class="sw" style="background:#fffbf0;border:1px solid var(--warn)"></i> Đến hạn follow</span>
+      <span><i class="sw" style="background:#fdeeee;border:1px solid var(--over)"></i> Quá hạn follow</span>
+      <span><i class="sw" style="background:#eefaf3;border:1px solid var(--won)"></i> Đã chốt</span>
+    </div>
+    <div class="filters">
+      <input class="search" id="fl-search" placeholder="🔎 Tìm theo tên, SĐT, ghi chú..." oninput="renderList()">
+      ${saleFilter}
+      ${mktFilter}
+      <select id="fl-qg" onchange="renderList()"><option value="">Tất cả quốc gia</option>${[...new Set(DATA.map(d=>d.quoc_gia))].map(q=>`<option>${q}</option>`).join('')}</select>
+      <select id="fl-benh" onchange="renderList()">${opt(BENH,'Tất cả bệnh lý')}</select>
+      <select id="fl-tt" onchange="renderList()">${opt(STATUS,'Tất cả trạng thái')}</select>
+      <select id="fl-follow" onchange="renderList()"><option value="">Mọi ngày follow</option><option value="today">Hôm nay</option><option value="over">Quá hạn</option></select>
+    </div>
+    <div class="card" style="padding:0" id="list-table"></div>`;
+  }
+  document.getElementById('list-datebar').innerHTML=renderDateFilterBar('list');
+  const s=(document.getElementById('fl-search').value||'').toLowerCase();
+  const fSale=fullView()?(document.getElementById('fl-sale')?.value||''):ME.id;
+  const fMkt=fullView()?(document.getElementById('fl-mkt')?.value||''):'';
+  const fQg=document.getElementById('fl-qg').value, fBenh=document.getElementById('fl-benh').value;
+  const fTt=document.getElementById('fl-tt').value, fFollow=document.getElementById('fl-follow').value;
+  let rows=myData().filter(c=>{
+    if(!inDateRange('list',c)) return false;
+    if(fSale && c.owner!==fSale) return false;
+    if(fMkt && c.mkt!==fMkt) return false;
+    if(fQg && c.quoc_gia!==fQg) return false;
+    if(fBenh && c.benh!==fBenh) return false;
+    if(fTt && c.tt!==fTt) return false;
+    if(fFollow==='today' && flag(c)!=='warn') return false;
+    if(fFollow==='over' && flag(c)!=='over') return false;
+    if(s && !(`${c.ten} ${c.phone} ${c.ghi}`.toLowerCase().includes(s))) return false;
+    return true;
+  });
+  let t=`<table><tr><th>Khách</th><th>Quốc gia</th><th>Nguồn</th><th>Bệnh lý</th><th>SP</th><th>Mức</th><th>Trạng thái</th><th>Follow</th>${fullView()?'<th>MKT</th><th>Sale</th>':''}<th>DT</th></tr>`;
+  if(!rows.length) t+=`<tr><td colspan="10" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
+  rows.forEach(c=>{
+    const f=flag(c); const fd= !c.follow?'—':
+      (f==='over'?`<b style="color:var(--over)">${c.follow} ⚠</b>`:f==='warn'?`<b style="color:#b07d00">${c.follow}</b>`:c.follow);
+    t+=`<tr class="${rowClass(c)}">
+      <td><b style="cursor:pointer;color:var(--teal-dark)" title="Bấm để sửa" onclick="editCustomer('${c.id}')">${c.ten}</b> ${canEdit(c)?`<span style="cursor:pointer" title="Sửa" onclick="editCustomer('${c.id}')">✏️</span>`:''}${canDelete(c)?` <span style="cursor:pointer" title="Xoá khách" onclick="deleteCustomer('${c.id}')">🗑️</span>`:''}<br><span style="color:var(--muted);font-size:11px">${phoneCell(c)}</span></td>
+      <td>${c.quoc_gia||'—'}</td><td>${NGUON[c.nguon]||'—'}</td><td>${BENH[c.benh]||'—'}</td>
+      <td>${c.sp||'—'}</td><td>${mucPill(c.muc)}</td><td>${STATUS[c.tt]}</td><td>${fd}</td>
+      ${fullView()?`<td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>`:''}
+      <td>${c.dt?'$'+c.dt:'—'}</td></tr>`;
+  });
+  t+=`</table>`;
+  document.getElementById('list-table').innerHTML=t;
+}
+
+function renderToday(){
+  const d=myData();
+  const due=d.filter(c=>flag(c)==='warn');
+  const over=d.filter(c=>flag(c)==='over');
+  const hot=d.filter(c=>c.muc==='nong'&&c.tt!=='da_chot'&&flag(c)!=='warn'&&flag(c)!=='over');
+  const block=(title,arr,color)=>{
+    if(!arr.length) return '';
+    let h=`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0"><table>
+      <tr><th>Khách</th><th>SĐT/WhatsApp</th><th>Trạng thái</th><th>Ngày follow</th><th>Ghi chú</th></tr>`;
+    arr.forEach(c=>h+=`<tr class="${rowClass(c)}"><td><b>${c.ten}</b> ${mucPill(c.muc)}</td><td>${c.phone||'—'}</td>
+      <td>${STATUS[c.tt]}</td><td>${c.follow||'—'}</td><td style="color:var(--muted)">${c.ghi||''}</td></tr>`);
+    return h+`</table></div>`;
+  };
+  let html=`<div class="grid kpi-grid">
+    <div class="card kpi"><div class="lbl">Quá hạn (gọi ngay)</div><div class="val red">${over.length}</div></div>
+    <div class="card kpi"><div class="lbl">Đến hạn hôm nay</div><div class="val amber">${due.length}</div></div>
+    <div class="card kpi"><div class="lbl">Khách nóng cần đẩy</div><div class="val" style="color:var(--hot)">${hot.length}</div></div>
+    <div class="card kpi"><div class="lbl">Tổng việc</div><div class="val">${over.length+due.length+hot.length}</div></div>
+  </div>`;
+  html+=block('🔴 Quá hạn follow — ưu tiên gọi ngay',over,'var(--over)');
+  html+=block('🟡 Đến hạn follow hôm nay',due,'#b07d00');
+  html+=block('🔥 Khách nóng cần chăm',hot,'var(--hot)');
+  if(!(over.length+due.length+hot.length)) html=`<div class="card empty">🎉 Tuyệt vời! Hôm nay bạn không còn việc tồn nào.</div>`;
+  document.getElementById('v-today').innerHTML=html;
+}
+
+function renderReport(){
+  const rows = ME.role==='admin'? Object.entries(SALES) : [[ME.id, ME.name]];
+  let html=renderDateFilterBar('report')+`<div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Sale</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th></tr>`;
+  let T={total:0,dtMoi:0,dtCu:0};
+  rows.forEach(([id,name])=>{
+    const sd=DATA.filter(c=>c.owner===id && inDateRange('report',c));
+    const x=saleStats(sd); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu;
+    html+=`<tr><td><b>${name}</b></td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td>
+      <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td></tr>`;
+  });
+  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>${T.total}</td><td colspan="3"></td><td>$${T.dtMoi}</td><td>$${T.dtCu}</td><td>$${T.dtMoi+T.dtCu}</td></tr></table></div>
+    <p style="color:var(--muted);font-size:12px;margin-top:10px">📅 Số liệu theo khoảng ngày đã chọn (${rangeLabel('report')}). Bản thật sẽ tự gửi báo cáo mỗi sáng qua Telegram/email.</p>`;
+  document.getElementById('v-report').innerHTML=html;
+}
+
+function renderMarketing(){
+  const rg=getRange('mkt');
+  const CUS=DATA.filter(c=>inDateRange('mkt',c));
+  const SPD=SPEND.filter(s=>s.ngay>=rg.s&&s.ngay<=rg.e);
+  // gom theo nguồn
+  const agg=(keyFn)=>{
+    const m={};
+    CUS.forEach(c=>{const k=keyFn(c); m[k]=m[k]||{lead:0,chot:0,rev:0,spend:0}; m[k].lead++;
+      if(c.tt==='da_chot'){m[k].chot++; m[k].rev+=c.dt;}});
+    SPD.forEach(s=>{const k=keyFn(s); m[k]=m[k]||{lead:0,chot:0,rev:0,spend:0}; m[k].spend+=s.chi_phi;});
+    return m;
+  };
+  const fmtCPL=(sp,lead)=> lead? '$'+(sp/lead).toFixed(1) : '—';
+  const fmtROI=(rev,sp)=> sp? '<b style="color:'+(rev>=sp?'var(--won)':'var(--over)')+'">'+(rev/sp).toFixed(1)+'x</b>' : (rev?'<b style="color:var(--won)">∞</b>':'—');
+  const rateBar=(c,l)=>{const r=l?Math.round(c/l*100):0;return `<div class="bar" style="width:70px;display:inline-block;vertical-align:middle"><div style="width:${r}%"></div></div> ${r}%`;};
+
+  const totLead=CUS.length, totChot=CUS.filter(c=>c.tt==='da_chot').length;
+  const totRev=CUS.filter(c=>c.tt==='da_chot').reduce((s,c)=>s+c.dt,0);
+  const totSpend=SPD.reduce((s,x)=>s+x.chi_phi,0);
+
+  let html=renderDateFilterBar('mkt')+`<div class="grid kpi-grid">
+    <div class="card kpi"><div class="lbl">Tổng lead</div><div class="val">${totLead}</div></div>
+    <div class="card kpi"><div class="lbl">Tổng chi phí QC</div><div class="val red">$${totSpend}</div></div>
+    <div class="card kpi"><div class="lbl">CPL trung bình</div><div class="val amber">${fmtCPL(totSpend,totLead)}</div></div>
+    <div class="card kpi"><div class="lbl">ROI tổng (DT/Chi phí)</div><div class="val green">${totSpend?(totRev/totSpend).toFixed(1)+'x':'—'}</div></div>
+  </div>`;
+
+  // ----- Doanh số theo từng Marketing -----
+  const aggMkt = agg(c=>c.mkt);
+  const maxRev = Math.max(1,...Object.values(aggMkt).map(v=>v.rev));
+  html+=`<h2 class="sec">💰 Doanh số theo Marketing</h2><div class="grid" style="grid-template-columns:repeat(${Object.keys(MKT).length||1},1fr)">`;
+  Object.entries(MKT).forEach(([id,name])=>{
+    const v=aggMkt[id]||{lead:0,chot:0,rev:0,spend:0};
+    const share = totRev? Math.round(v.rev/totRev*100):0;
+    html+=`<div class="card kpi">
+      <div class="lbl">MKT · ${name}</div>
+      <div class="val green">$${v.rev}</div>
+      <div style="font-size:12px;color:var(--muted);margin:6px 0 8px">${v.chot} đơn chốt · ${v.lead} lead · đóng góp ${share}%</div>
+      <div class="bar"><div style="width:${v.rev/maxRev*100}%"></div></div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  const tableBy=(title,colLabel,m,labelMap)=>{
+    let t=`<h2 class="sec">${title}</h2><div class="card" style="padding:0"><table>
+      <tr><th>${colLabel}</th><th>Lead</th><th>Chốt</th><th>Tỷ lệ chốt</th><th>Chi phí</th><th>CPL</th><th>Doanh thu</th><th>ROI</th></tr>`;
+    Object.entries(m).sort((a,b)=>b[1].rev-a[1].rev).forEach(([k,v])=>{
+      t+=`<tr><td><b>${labelMap?(labelMap[k]||k):k}</b></td><td>${v.lead}</td><td>${v.chot}</td>
+        <td>${rateBar(v.chot,v.lead)}</td><td>$${v.spend}</td><td>${fmtCPL(v.spend,v.lead)}</td>
+        <td>$${v.rev}</td><td>${fmtROI(v.rev,v.spend)}</td></tr>`;
+    });
+    return t+`</table></div>`;
+  };
+  html+=tableBy('Theo nguồn khách','Nguồn', agg(c=>c.nguon), NGUON);
+  html+=tableBy('Theo nhân sự MKT','MKT', agg(c=>c.mkt), MKT);
+
+  // Form nhập chi phí (admin + marketing)
+  html+=`<h2 class="sec">➕ Nhập chi phí quảng cáo</h2><div class="card"><form onsubmit="saveSpend(event)">
+    <div class="form-grid">
+      <div><label>Ngày</label><input id="s-ngay" type="date" value="${D(0)}"></div>
+      <div><label>Nguồn</label><select id="s-nguon">${Object.entries(NGUON).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+      <div><label>MKT phụ trách</label><select id="s-mkt">${Object.entries(MKT).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+      <div><label>Chi phí (USD)</label><input id="s-chi" type="number" value="0"></div>
+      <div class="full"><button class="btn" type="submit">💾 Lưu chi phí</button></div>
+    </div></form></div>
+    <p style="color:var(--muted);font-size:12px;margin-top:10px">CPL = Chi phí / số lead · ROI = Doanh thu / Chi phí. Bản thật có thể tự kéo chi phí từ Facebook/TikTok Ads qua Make/n8n.</p>`;
+  document.getElementById('v-marketing').innerHTML=html;
+}
+function saveSpend(e){
+  e.preventDefault(); const g=id=>document.getElementById(id).value;
+  SPEND.push({ngay:g('s-ngay'),nguon:g('s-nguon'),mkt:g('s-mkt'),chi_phi:Number(g('s-chi'))||0});
+  alert('✅ Đã lưu chi phí $'+g('s-chi')); renderMarketing();
+}
+
+function renderTeam(){
+  let html=renderDateFilterBar('team')+`<div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Nhân viên</th><th>Vai trò</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th></tr>`;
+  let T={total:0,dtMoi:0,dtCu:0};
+  Object.entries(SALES).forEach(([id,name])=>{
+    const sd=DATA.filter(c=>c.owner===id && inDateRange('team',c));
+    const x=saleStats(sd); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu;
+    html+=`<tr><td><b>${name}</b></td><td>Sale</td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td>
+      <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td></tr>`;
+  });
+  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td></td><td>${T.total}</td><td colspan="3"></td><td>$${T.dtMoi}</td><td>$${T.dtCu}</td><td>$${T.dtMoi+T.dtCu}</td></tr></table></div>
+    <p style="color:var(--muted);font-size:12px;margin-top:10px">Admin có thể thêm/khóa tài khoản sale ở bản thật.</p>`;
+  document.getElementById('v-team').innerHTML=html;
+}
+
+function canManage(){ return (PERMS[ME.uname]||[]).includes('perms'); }
+function togglePerm(u,m){
+  const p=PERMS[u]||(PERMS[u]=[]); const i=p.indexOf(m);
+  if(i>=0)p.splice(i,1); else p.push(m);
+  if(ME && ME.uname===u) applyMenu();
+  renderPerms();
+}
+function createAccount(e){
+  e.preventDefault();
+  const g=id=>document.getElementById(id).value.trim();
+  const u=g('na-user').toLowerCase(), name=g('na-name'), pass=g('na-pass')||'123', role=g('na-role');
+  if(!u||!name){ alert('Nhập tên và tài khoản.'); return; }
+  if(USERS[u]){ alert('Tài khoản "'+u+'" đã tồn tại.'); return; }
+  let id;
+  if(role==='sale'){ id='S'+(Object.keys(SALES).length+1); SALES[id]=name; }
+  else if(role==='marketing'){ id='M'+(Object.keys(MKT).length+1); MKT[id]=name; }
+  else { id='A'+Date.now(); }
+  USERS[u]={pass,name,role,id,active:true};
+  PERMS[u]=[...(DEFAULT_PERMS[role]||DEFAULT_PERMS.sale)];
+  alert('✅ Đã tạo tài khoản "'+name+'" ('+u+' / '+pass+'), vai trò '+role+'.');
+  e.target.reset(); renderAll();
+}
+function lockAccount(u){
+  if(u==='owner'||u===ME.uname){ alert('Không thể khóa tài khoản này.'); return; }
+  USERS[u].active = USERS[u].active===false ? true : false;
+  renderPerms();
+}
+function delAccount(u){
+  if(u==='owner'||u===ME.uname){ alert('Không thể xóa tài khoản này.'); return; }
+  if(!confirm('Xóa tài khoản "'+USERS[u].name+'"? Khách của họ vẫn được giữ lại.')) return;
+  const a=USERS[u]; if(a.role==='sale')delete SALES[a.id]; if(a.role==='marketing')delete MKT[a.id];
+  delete USERS[u]; delete PERMS[u]; renderPerms();
+}
+function renderPerms(){
+  if(!canManage()){ document.getElementById('v-perms').innerHTML=`<div class="card empty">Bạn không có quyền quản lý tài khoản.</div>`; return; }
+  // ----- Danh sách tài khoản + tạo mới -----
+  let html=`<h2 class="sec" style="margin-top:0">Tài khoản nhân sự</h2><div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Tên</th><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr>`;
+  Object.entries(USERS).forEach(([u,a])=>{
+    const locked=a.active===false;
+    html+=`<tr><td><b>${a.name}</b></td><td>${u}</td><td>${a.role}</td>
+      <td>${locked?'<span class="pill" style="background:#fdeeee;color:var(--over)">Đã khóa</span>':'<span class="pill" style="background:#eefaf3;color:var(--won)">Hoạt động</span>'}</td>
+      <td>${(u==='owner'||u===ME.uname)?'<span style="color:var(--muted);font-size:12px">—</span>':
+        `<button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="lockAccount('${u}')">${locked?'Mở khóa':'Khóa'}</button>
+         <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--over)" onclick="delAccount('${u}')">Xóa</button>`}</td></tr>`;
+  });
+  html+=`</table></div>`;
+  // form tạo tài khoản
+  html+=`<h2 class="sec">➕ Tạo tài khoản mới</h2><div class="card"><form onsubmit="createAccount(event)">
+    <div class="form-grid">
+      <div><label>Tên nhân sự *</label><input id="na-name" required></div>
+      <div><label>Email đăng nhập *</label><input id="na-user" type="email" required placeholder="vd: hoa@gmail.com"></div>
+      <div><label>Mật khẩu</label><input id="na-pass" placeholder="mặc định: 123"></div>
+      <div><label>Vai trò</label><select id="na-role">
+        <option value="sale">Sale</option><option value="marketing">Marketing</option><option value="admin">Admin</option></select></div>
+      <div class="full"><button class="btn" type="submit">Tạo tài khoản</button></div>
+    </div></form></div>`;
+  // ----- Ma trận phân quyền -----
+  html+=`<h2 class="sec">Phân quyền xem từng mục</h2>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:10px">Tick để cấp/bỏ quyền xem từng mục cho từng người. Áp dụng khi người đó đăng nhập lại.</p>
+  <div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Người dùng</th>${ALL_MODULES.map(m=>`<th style="font-size:10px;white-space:nowrap">${m[1]}</th>`).join('')}</tr>`;
+  Object.entries(USERS).forEach(([u,a])=>{
+    const p=PERMS[u]||[];
+    html+=`<tr><td><b>${a.name}</b><br><span style="color:var(--muted);font-size:11px">${u} · ${a.role}</span></td>`;
+    ALL_MODULES.forEach(m=>{
+      const on=p.includes(m[0]); const lock=(u==='owner');
+      html+=`<td style="text-align:center"><input type="checkbox" ${on?'checked':''} ${lock?'disabled':''} style="width:auto" onchange="togglePerm('${u}','${m[0]}')"></td>`;
+    });
+    html+=`</tr>`;
+  });
+  html+=`</table></div>
+  <p style="color:var(--muted);font-size:12px;margin-top:10px">💡 Bản thật: lưu vào database, đổi mật khẩu, và phân quyền sâu hơn (chỉ xem / được sửa / được xóa) cho từng mục.</p>`;
+  document.getElementById('v-perms').innerHTML=html;
+}
+
+function renderSettings(){
+  document.getElementById('v-settings').innerHTML=`<div class="card">
+    <h2 class="sec" style="margin-top:0">Cài đặt</h2>
+    <p style="line-height:1.9">
+    • Quy tắc nhắc follow: <b>đến hạn = vàng</b>, <b>quá hạn 1 ngày = đỏ</b>, <b>quá hạn 2 ngày = tự chuyển "Quá hạn" + báo Admin</b>.<br>
+    • Danh mục tùy chỉnh: nguồn khách, bệnh lý, sản phẩm, lý do chưa mua.<br>
+    • Tích hợp tương lai: Pancake, Facebook Lead Ads, WhatsApp, Make/n8n.<br>
+    • Báo cáo tự động mỗi sáng qua email/Slack.</p>
+    <p style="color:var(--muted);font-size:12px">Đây là bản demo giao diện. Phần code thật (Next.js + Supabase) sẽ kết nối database & đăng nhập thật.</p>
+  </div>`;
+}
+</script>
+
+<!-- ====================================================================
+     LỚP KẾT NỐI SUPABASE (đăng nhập + dữ liệu thật, dùng chung cả team)
+     CHỈ CẦN SỬA 2 DÒNG SUPABASE_URL & SUPABASE_ANON_KEY bên dưới.
+     ==================================================================== -->
+<script>
+const SUPABASE_URL = 'https://wviyzewnokgirfkpdcvh.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ein2Oxmzo36-WpKUheVlYg_HOms1mso';
+const sb = (window.supabase && SUPABASE_URL.startsWith('http'))
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+/* ---- Tải toàn bộ dữ liệu từ Supabase vào app ---- */
+async function loadAll(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) return false;
+  const { data:profs, error:pe } = await sb.from('profiles').select('*');
+  if(pe){ alert('Lỗi đọc profiles: '+pe.message); return false; }
+  Object.keys(SALES).forEach(k=>delete SALES[k]);
+  Object.keys(MKT).forEach(k=>delete MKT[k]);
+  Object.keys(USERS).forEach(k=>delete USERS[k]);
+  PERMS = {};
+  (profs||[]).forEach(p=>{
+    USERS[p.id] = {name:p.ten, role:p.role, id:p.id, active:p.active!==false, uname:p.id};
+    PERMS[p.id] = p.quyen || [];
+    if(p.role==='sale') SALES[p.id]=p.ten;
+    if(p.role==='marketing') MKT[p.id]=p.ten;
+  });
+  const myp = (profs||[]).find(p=>p.id===user.id) || {id:user.id, ten:user.email, role:'sale', quyen:[]};
+  ME = {id:user.id, name:myp.ten, role:myp.role, uname:user.id, quyen:myp.quyen||PERMS[user.id]||[]};
+  const { data:cs } = await sb.from('customers').select('*').order('ngay_tao',{ascending:false});
+  const allc = (cs||[]).map(c=>({ ...c,
+    follow:c.follow||'', ngay_tao:(c.ngay_tao||'').slice(0,10),
+    ngay_capnhat:(c.ngay_capnhat||c.ngay_tao||'').slice(0,10), ngay_upsale:c.ngay_upsale||'',
+    dt:Number(c.dt)||0, benh_list:c.benh_list||'', has_wa:!!c.has_wa, khach_cu:!!c.khach_cu, da_xoa:!!c.da_xoa }));
+  DATA = allc.filter(c=>!c.da_xoa);
+  TRASH = allc.filter(c=>c.da_xoa);
+  const { data:spd } = await sb.from('marketing_spend').select('*');
+  SPEND = (spd||[]).map(s=>({ngay:(s.ngay||'').slice(0,10), nguon:s.nguon, mkt:s.mkt, chi_phi:Number(s.chi_phi)||0}));
+  return true;
+}
+async function afterLogin(){
+  if(!await loadAll()) return;
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('who').textContent=ME.name;
+  const roleLbl={owner:'Chủ tài khoản (toàn quyền)',admin:'Toàn quyền',sale:'Sale',marketing:'Marketing'};
+  document.getElementById('role').textContent='Quyền: '+(roleLbl[ME.role]||ME.role);
+  document.getElementById('todaytag').textContent='Hôm nay: '+today.toLocaleDateString('vi-VN');
+  applyMenu();
+  const allowed=PERMS[ME.uname]||[];
+  go(allowed.includes('dashboard')?'dashboard':(allowed[0]||'dashboard'));
+  renderAll();
+}
+/* ---- Đăng nhập / đăng xuất bằng Supabase Auth (email + mật khẩu) ---- */
+async function login(){
+  if(!sb){ alert('Chưa cấu hình Supabase. Hãy điền SUPABASE_URL và SUPABASE_ANON_KEY trong file.'); return; }
+  const email=document.getElementById('u').value.trim();
+  const pass=document.getElementById('p').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password:pass });
+  if(error){ alert('Đăng nhập lỗi: '+error.message); return; }
+  await afterLogin();
+}
+async function logout(){ if(sb) await sb.auth.signOut(); location.reload(); }
+
+/* ---- Ghi dữ liệu (lưu thẳng vào Supabase, sau đó tải lại) ---- */
+async function saveCustomer(e){
+  e.preventDefault(); const g=id=>document.getElementById(id).value;
+  const benhs=[...document.querySelectorAll('.benh-chk:checked')].map(ch=>ch.value);
+  const sps=[...document.querySelectorAll('.sp-chk:checked')].map(ch=>{const q=ch.parentNode.querySelector('.sp-qty').value||1;return q+' '+ch.value;});
+  const owner = ME.role==='sale'?ME.id:(g('f-owner')||ME.id);
+  const rec={owner, mkt:g('f-mkt')||null, ten:g('f-ten'), phone:g('f-phone'), has_wa:document.getElementById('f-wa').checked,
+    email:g('f-email'), quoc_gia:g('f-qg'), nguon:g('f-nguon'), benh:benhs[0]||'khac', benh_list:benhs.map(b=>BENH[b]).join(', '),
+    sp:sps.join(', ')||'—', muc:g('f-muc'), tt:g('f-tt'), follow:g('f-follow')||null, ghi:g('f-ghi'),
+    dt:Number(g('f-dt'))||0, ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
+  if(rec.tt==='da_chot') rec.loai_don='moi';
+  const { error } = await sb.from('customers').insert(rec);
+  if(error){ alert('Lưu lỗi: '+error.message); return; }
+  alert('✅ Đã lưu khách "'+rec.ten+'"'); e.target.reset(); await loadAll(); renderAll(); go('list');
+}
+async function markCared(id){ const c=findC(id); if(!c)return;
+  const upd={follow:D(3), ngay_capnhat:D(0)};
+  if(c.tt==='moi_vao')upd.tt='da_tu_van'; if(c.khach_cu&&c.ngay_upsale)upd.ngay_upsale=D(30);
+  const { error }=await sb.from('customers').update(upd).eq('id',id);
+  if(error){ alert(error.message); return; } await loadAll(); renderAll();
+  alert('✅ Đã ghi nhận chăm "'+c.ten+'"');
+}
+async function quickClose(id){ const c=findC(id); if(!c)return;
+  const v=prompt('Nhập doanh thu chốt (USD) cho "'+c.ten+'":','0'); if(v===null)return;
+  const upd={tt:'da_chot', dt:Number(v)||0, loai_don:c.khach_cu?'upsell':'moi', follow:null, ngay_capnhat:D(0)};
+  const { error }=await sb.from('customers').update(upd).eq('id',id);
+  if(error){ alert(error.message); return; } await loadAll(); renderAll();
+  alert('🎉 Đã chốt "'+c.ten+'" — $'+(Number(v)||0));
+}
+async function saveSpend(e){ e.preventDefault(); const g=id=>document.getElementById(id).value;
+  const { error }=await sb.from('marketing_spend').insert({ngay:g('s-ngay'),nguon:g('s-nguon'),mkt:g('s-mkt'),chi_phi:Number(g('s-chi'))||0});
+  if(error){ alert(error.message); return; } await loadAll(); renderMarketing();
+}
+async function saveEdit(e,id){ e.preventDefault();
+  const upd=collectEdit();
+  const c=DATA.find(x=>String(x.id)===String(id));
+  if(upd.tt==='da_chot') upd.loai_don=(c&&c.khach_cu)?'upsell':'moi';
+  const { error }=await sb.from('customers').update(upd).eq('id', id);
+  if(error){ alert('Lưu lỗi: '+error.message); return; }
+  closeEdit(); alert('✅ Đã lưu thay đổi'); await loadAll(); renderAll();
+}
+async function deleteCustomer(id){
+  const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
+  if(!canDelete(c)){ alert('Bạn không có quyền xoá khách này.'); return; }
+  if(!confirm('Đưa khách "'+c.ten+'" vào thùng rác? Admin có thể khôi phục lại.')) return;
+  const { error }=await sb.from('customers').update({da_xoa:true}).eq('id', id);
+  if(error){ alert('Lỗi: '+error.message); return; }
+  alert('🗑️ Đã chuyển "'+c.ten+'" vào thùng rác'); await loadAll(); renderAll();
+}
+async function restoreCustomer(id){
+  if(!(ME.role==='owner'||ME.role==='admin')){ alert('Chỉ Admin mới khôi phục được.'); return; }
+  const { error }=await sb.from('customers').update({da_xoa:false}).eq('id', id);
+  if(error){ alert('Lỗi: '+error.message); return; }
+  alert('♻️ Đã khôi phục khách'); await loadAll(); renderAll();
+}
+async function purgeCustomer(id){
+  if(!(ME.role==='owner'||ME.role==='admin')){ alert('Chỉ Admin mới xoá vĩnh viễn được.'); return; }
+  const c=TRASH.find(x=>String(x.id)===String(id));
+  if(!confirm('Xoá VĨNH VIỄN'+(c?' "'+c.ten+'"':'')+'? Không khôi phục được nữa.')) return;
+  const { error }=await sb.from('customers').delete().eq('id', id);
+  if(error){ alert('Lỗi: '+error.message); return; }
+  alert('Đã xoá vĩnh viễn.'); await loadAll(); renderAll();
+}
+function importExcel(){
+  const f=document.getElementById('xls-file').files[0]; if(!f){ alert('Chọn file Excel/CSV trước.'); return; }
+  const rd=new FileReader();
+  rd.onload=async ev=>{ try{
+    const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+    const recs=[];
+    rows.forEach(r=>{ const get=(...keys)=>{ for(const k of keys){ const kk=Object.keys(r).find(h=>(''+h).trim().toLowerCase()===k.toLowerCase()); if(kk!==undefined&&r[kk]!=='')return(''+r[kk]).trim(); } return ''; };
+      const ten=get('Tên khách hàng','Tên','Name'); if(!ten)return;
+      const mucT=get('Mức độ','Mức').toLowerCase(); const muc=(mucT.includes('nóng')||mucT==='nong')?'nong':(mucT.includes('lạnh')||mucT==='lanh')?'lanh':'am';
+      const benhT=get('Bệnh lý','Bệnh lý / nhu cầu','Nhu cầu'); const benhKeys=benhT.split(/[;,\/]/).map(s=>revFind(BENH,s.trim())).filter(Boolean);
+      const waT=get('WhatsApp','Đã có WhatsApp').toLowerCase(); const tt=revFind(STATUS,get('Trạng thái'))||'moi_vao';
+      const rec={ owner:revFind(SALES,get('Sale','Sale chăm khách'))||(ME.role==='sale'?ME.id:(Object.keys(SALES)[0]||ME.id)),
+        mkt:revFind(MKT,get('MKT','MKT phụ trách'))||Object.keys(MKT)[0]||null,
+        ten, phone:get('Số điện thoại','SĐT','Số điện thoại / WhatsApp','Phone'), has_wa:['có','x','yes','true','1','đã có'].includes(waT),
+        email:get('Email'), quoc_gia:get('Quốc gia','Thị trường','Country'), nguon:revFind(NGUON,get('Nguồn','Nguồn khách'))||'khac',
+        benh:benhKeys[0]||'khac', benh_list:benhKeys.map(k=>BENH[k]).join(', ')||benhT, sp:get('Sản phẩm','Sản phẩm quan tâm')||'—',
+        muc, tt, follow:normDate(get('Ngày follow','Ngày cần follow tiếp theo'))||null, ghi:get('Ghi chú','Ghi chú tư vấn'),
+        dt:Number(get('Doanh thu','Doanh thu (USD)'))||0, ly:'', khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0) };
+      if(rec.tt==='da_chot')rec.loai_don='moi'; recs.push(rec);
+    });
+    if(!recs.length){ alert('Không tìm thấy dòng hợp lệ trong file.'); return; }
+    const { error }=await sb.from('customers').insert(recs);
+    if(error){ alert('Nhập lỗi: '+error.message); return; }
+    alert('✅ Đã nhập '+recs.length+' khách hàng.'); document.getElementById('xls-file').value=''; await loadAll(); renderAll(); go('list');
+  }catch(err){ alert('Lỗi đọc file: '+err.message); } };
+  rd.readAsArrayBuffer(f);
+}
+/* ---- Phân quyền / khóa tài khoản (cập nhật profiles) ---- */
+async function togglePerm(u,m){ const p=(PERMS[u]||[]).slice(); const i=p.indexOf(m); if(i>=0)p.splice(i,1); else p.push(m);
+  const { error }=await sb.from('profiles').update({quyen:p}).eq('id',u); if(error){ alert(error.message); return; }
+  PERMS[u]=p; if(ME&&ME.uname===u){ ME.quyen=p; applyMenu(); } renderPerms();
+}
+async function lockAccount(u){ if(u===ME.uname){ alert('Không thể khóa tài khoản đang đăng nhập.'); return; }
+  const na = USERS[u].active===false ? true : false;
+  const { error }=await sb.from('profiles').update({active:na}).eq('id',u); if(error){ alert(error.message); return; }
+  await loadAll(); renderPerms();
+}
+async function createAccount(e){ e.preventDefault();
+  const g=id=>document.getElementById(id).value.trim();
+  const ten=g('na-name'), email=g('na-user'), pass=g('na-pass')||'123', role=g('na-role');
+  if(!ten||!email){ alert('Nhập tên và email đăng nhập.'); return; }
+  const btn=e.target.querySelector('button[type=submit]'); if(btn){btn.disabled=true;btn.textContent='Đang tạo...';}
+  const { data, error } = await sb.functions.invoke('admin-create-user', { body:{ ten, email, password:pass, role } });
+  if(btn){btn.disabled=false;btn.textContent='Tạo tài khoản';}
+  if(error){ alert('Tạo lỗi: '+(error.message||error)); return; }
+  if(data && data.error){ alert('Tạo lỗi: '+data.error); return; }
+  alert('✅ Đã tạo tài khoản "'+ten+'"\nEmail: '+email+'\nMật khẩu: '+pass+'\nVai trò: '+role);
+  e.target.reset(); await loadAll(); renderAll();
+}
+function delAccount(u){ alert('Để xóa hẳn nhân sự: vào Supabase → Authentication → xóa user. Ở đây chị có thể "Khóa" để chặn đăng nhập (giữ lại dữ liệu).'); }
+
+/* ---- Khởi động: đổi ô đăng nhập sang Email + tự đăng nhập nếu còn phiên ---- */
+window.addEventListener('DOMContentLoaded', ()=>{
+  const u=document.getElementById('u'); if(u) u.placeholder='Email';
+  if(sb){ sb.auth.getSession().then(({data})=>{ if(data.session) afterLogin(); }); }
+});
+</script>
+</body>
+</html>
