@@ -57,9 +57,15 @@
   .tag-nong{background:#fde3dd;color:var(--hot)} .tag-am{background:#fdf0d8;color:#b07d00} .tag-lanh{background:#e4eef5;color:#3b6e92}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
   /* ---------- FILTERS / FORM ---------- */
-  .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
-  .filters select,.filters input{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff}
-  .filters input.search{flex:1;min-width:200px}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+  .filters select,.filters input{padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff;width:auto;max-width:190px}
+  .filters input.search{flex:1 1 240px;min-width:200px;max-width:none}
+  .colbar{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-bottom:10px;font-size:12.5px}
+  .colbar label{display:inline-flex;align-items:center;gap:5px;font-weight:500;color:var(--text);margin:0;cursor:pointer}
+  .colbar input{width:auto;margin:0}
+  .rev-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .rev-card{flex:1 1 130px;min-width:120px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+  .rev-card .rl{font-size:12px;color:var(--muted)} .rev-card .rv{font-size:18px;font-weight:800;color:var(--teal-dark)} .rev-card .rn{font-size:11px;color:var(--muted)}
   form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
   input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit}
@@ -783,17 +789,18 @@ function renderAdd(){
       <div><label>Số điện thoại / WhatsApp</label><input id="f-phone">
         <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px;color:var(--text)">
           <input type="checkbox" id="f-wa" style="width:auto"> 💬 Số này đã kết nối WhatsApp</label></div>
+      <div><label>Quốc gia</label><input id="f-qg" list="qg-list" placeholder="US, CA, DE..."><datalist id="qg-list"><option value="US"><option value="CA"><option value="DE"><option value="FR"><option value="IT"><option value="ES"><option value="NL"><option value="BE"><option value="AT"><option value="UK"><option value="AU"><option value="EU"></datalist><div style="font-size:11px;color:var(--muted);margin-top:3px">US · CA=Canada · DE/FR/IT… = Euro</div></div>
       <div><label>Email (nếu có)</label><input id="f-email" type="email"></div>
-      <div><label>Quốc gia</label><input id="f-qg" placeholder="US, CA, DE..."></div>
       <div><label>Nguồn khách</label><select id="f-nguon">${opt(NGUON)}</select></div>
       <div><label>MKT phụ trách (kéo lead)</label><select id="f-mkt">${opt(MKT)}</select></div>
       <div><label>Sale chăm khách</label><select id="f-owner">${opt(SALES)}</select></div>
       <div><label>Mức độ khách</label><select id="f-muc"><option value="nong">🔥 Nóng</option><option value="am" selected>☀️ Ấm</option><option value="lanh">❄️ Lạnh</option></select>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.7;background:var(--cream);padding:8px 10px;border-radius:8px">
+        <details style="margin-top:6px"><summary style="font-size:11px;color:var(--muted);cursor:pointer">ℹ️ Giải thích mức độ</summary>
+        <div style="font-size:11px;color:var(--muted);line-height:1.7;background:var(--cream);padding:8px 10px;border-radius:8px;margin-top:4px">
           🔥 <b>Nóng</b>: đã hỏi giá/combo, nhu cầu rõ, sẵn sàng mua trong vài ngày.<br>
           ☀️ <b>Ấm</b>: đang quan tâm/tìm hiểu, đã tư vấn nhưng chưa chốt, cần follow.<br>
           ❄️ <b>Lạnh</b>: mới biết tới, chưa rõ nhu cầu, ít tương tác — nuôi dưỡng dần.
-        </div></div>
+        </div></details></div>
       <div class="full"><label>Bệnh lý / nhu cầu (chọn nhiều)</label>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
         ${Object.entries(BENH).map(([k,v])=>`<label style="display:flex;align-items:center;gap:8px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:8px 10px;cursor:pointer">
@@ -885,6 +892,25 @@ function importExcel(){
   rd.readAsArrayBuffer(f);
 }
 
+/* ====== CỘT HIỂN THỊ + TỔNG DT THEO QUỐC GIA ====== */
+const LIST_COLS=[{k:'qg',label:'Quốc gia'},{k:'nguon',label:'Nguồn'},{k:'benh',label:'Bệnh lý'},{k:'sp',label:'SP'},{k:'muc',label:'Mức'},{k:'tt',label:'Trạng thái'},{k:'follow',label:'Follow'},{k:'mkt',label:'MKT'},{k:'sale',label:'Sale'},{k:'ghi',label:'Ghi chú / Việc'},{k:'dt',label:'DT'}];
+let COL_HIDE={}; try{COL_HIDE=JSON.parse(localStorage.getItem('ccp_col_hide')||'{}');}catch(e){COL_HIDE={};}
+function applyColVis(){ const css=LIST_COLS.filter(c=>COL_HIDE[c.k]).map(c=>`#list-table .c-${c.k}{display:none}`).join(''); let st=document.getElementById('col-vis-style'); if(!st){st=document.createElement('style');st.id='col-vis-style';document.head.appendChild(st);} st.textContent=css; }
+function toggleCol(k){ COL_HIDE[k]=!COL_HIDE[k]; try{localStorage.setItem('ccp_col_hide',JSON.stringify(COL_HIDE));}catch(e){} applyColVis(); }
+function countryGroup(q){ q=(q||'').toUpperCase().trim().replace(/[.\s]/g,'');
+  if(['US','USA','UNITEDSTATES','MỸ','MY'].includes(q)) return 'US';
+  if(['CA','CAD','CAN','CANADA'].includes(q)) return 'Canada';
+  if(['EU','EUR','EURO','EUROPE','DE','FR','IT','ES','NL','BE','AT','PT','IE','FI','GR','LU','SK','SI','EE','LV','LT','CY','MT','HR','UK','GB','CH','SE','NO','DK','PL','CZ'].includes(q)) return 'Euro';
+  return 'Khác'; }
+function renderRevenue(rows){ const el=document.getElementById('list-revenue'); if(!el) return;
+  const rev={US:{n:0,s:0},Canada:{n:0,s:0},Euro:{n:0,s:0},'Khác':{n:0,s:0}};
+  rows.forEach(c=>{ const g=countryGroup(c.quoc_gia); rev[g].n++; rev[g].s+=(parseFloat(c.dt)||0); });
+  const tot=rows.reduce((a,c)=>a+(parseFloat(c.dt)||0),0);
+  const cards=[['US','🇺🇸 US'],['Canada','🇨🇦 Canada'],['Euro','🇪🇺 Euro'],['Khác','🌍 Khác']]
+    .filter(([k])=>rev[k].n>0||k!=='Khác')
+    .map(([k,lbl])=>`<div class="rev-card"><div class="rl">${lbl}</div><div class="rv">$${rev[k].s.toLocaleString('en-US')}</div><div class="rn">${rev[k].n} khách</div></div>`).join('');
+  el.innerHTML=`<div class="rev-grid">${cards}<div class="rev-card" style="background:var(--cream)"><div class="rl">💰 Tổng cộng</div><div class="rv">$${tot.toLocaleString('en-US')}</div><div class="rn">${rows.length} khách</div></div></div>`;
+}
 function renderList(){
   const opt=(o,all)=>`<option value="">${all}</option>`+Object.entries(o).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
   const saleFilter = fullView()
@@ -911,6 +937,8 @@ function renderList(){
       <select id="fl-chot" onchange="renderList()"><option value="">Đã &amp; chưa chốt</option><option value="chot">✅ Đã chốt</option><option value="chua">⏳ Chưa chốt</option></select>
       <select id="fl-follow" onchange="renderList()"><option value="">Mọi ngày follow</option><option value="today">Hôm nay</option><option value="over">Quá hạn</option></select>
     </div>
+    <div class="colbar"><span style="color:var(--muted);font-weight:700">⚙ Hiện cột:</span>${LIST_COLS.map(c=>`<label><input type="checkbox" id="colcb-${c.k}" ${COL_HIDE[c.k]?'':'checked'} onchange="toggleCol('${c.k}')"> ${c.label}</label>`).join('')}</div>
+    <div id="list-revenue"></div>
     <div class="card" style="padding:0" id="list-table"></div>`;
   }
   document.getElementById('list-datebar').innerHTML=renderDateFilterBar('list');
@@ -938,7 +966,7 @@ function renderList(){
   let t=`<div style="padding:10px 14px;font-size:13px;border-bottom:1px solid var(--line);background:var(--cream)">
     ✅ Đã chốt: <b style="color:var(--won)">${_nChot}</b> &nbsp;·&nbsp; ⏳ Chưa chốt: <b style="color:#b07d00">${_nChua}</b>
     &nbsp;·&nbsp; Hiển thị: <b>${rows.length}</b></div>
-    <table><tr><th>Khách</th><th>Quốc gia</th><th>Nguồn</th><th>Bệnh lý</th><th>SP</th><th>Mức</th><th>Trạng thái</th><th>Follow</th>${fullView()?'<th>MKT</th><th>Sale</th>':''}<th>Ghi chú / Việc</th><th>DT</th></tr>`;
+    <table><tr><th>Khách</th><th class="c-qg">Quốc gia</th><th class="c-nguon">Nguồn</th><th class="c-benh">Bệnh lý</th><th class="c-sp">SP</th><th class="c-muc">Mức</th><th class="c-tt">Trạng thái</th><th class="c-follow">Follow</th>${fullView()?'<th class="c-mkt">MKT</th><th class="c-sale">Sale</th>':''}<th class="c-ghi">Ghi chú / Việc</th><th class="c-dt">DT</th></tr>`;
   if(!rows.length) t+=`<tr><td colspan="12" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
   const noteCell=c=>{
     const ts=TASKS.filter(t=>!t.xong && String(t.customer_id)===String(c.id));
@@ -954,14 +982,16 @@ function renderList(){
       (f==='over'?`<b style="color:var(--over)">${c.follow} ⚠</b>`:f==='warn'?`<b style="color:#b07d00">${c.follow}</b>`:c.follow);
     t+=`<tr class="${rowClass(c)}">
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="Bấm để sửa" onclick="editCustomer('${c.id}')">${c.ten}</b>${lanMuaBadge(c)} ${canEdit(c)?`<span style="cursor:pointer" title="Sửa" onclick="editCustomer('${c.id}')">✏️</span>`:''}${canDelete(c)?` <span style="cursor:pointer" title="Xoá khách" onclick="deleteCustomer('${c.id}')">🗑️</span>`:''}<br><span style="color:var(--muted);font-size:11px">${phoneCell(c)}</span></td>
-      <td>${c.quoc_gia||'—'}</td><td>${NGUON[c.nguon]||'—'}</td><td>${BENH[c.benh]||'—'}</td>
-      <td>${c.sp||'—'}</td><td>${mucPill(c.muc)}</td><td>${STATUS[c.tt]}</td><td>${fd}</td>
-      ${fullView()?`<td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>`:''}
-      <td style="max-width:260px">${noteCell(c)}</td>
-      <td>${c.dt?'$'+c.dt:'—'}</td></tr>`;
+      <td class="c-qg">${c.quoc_gia||'—'}</td><td class="c-nguon">${NGUON[c.nguon]||'—'}</td><td class="c-benh">${BENH[c.benh]||'—'}</td>
+      <td class="c-sp">${c.sp||'—'}</td><td class="c-muc">${mucPill(c.muc)}</td><td class="c-tt">${STATUS[c.tt]}</td><td class="c-follow">${fd}</td>
+      ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
+      <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
+      <td class="c-dt">${c.dt?'$'+c.dt:'—'}</td></tr>`;
   });
   t+=`</table>`;
   document.getElementById('list-table').innerHTML=t;
+  renderRevenue(rows);
+  applyColVis();
 }
 
 /* ====== VIỆC CẦN LÀM / NHẮC VIỆC ====== */
