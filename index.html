@@ -224,6 +224,8 @@ let ME = null;
 let TRASH = [];  // khách đã xoá (chỉ admin xem & khôi phục)
 let ORDERS = {};  // lịch sử mua hàng theo khách: { customer_id: [ {id,ngay,san_pham,so_tien} ] }
 let TASKS = [];   // việc cần làm / nhắc việc
+let TASK_Q = '';  // bộ lọc tên khách ở trang Việc cần làm
+function setTaskQ(v){ TASK_Q=v; renderToday(); const el=document.getElementById('tk-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 // Bộ lọc khoảng ngày dùng chung cho nhiều trang (mỗi trang 1 state)
 const FILTERS = {
   dash:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'thang_nay' },
@@ -971,7 +973,8 @@ function renderToday(){
   const d=myData();
   const due=d.filter(c=>flag(c)==='warn');
   const over=d.filter(c=>flag(c)==='over');
-  const mt=myTasks();
+  const _q=(TASK_Q||'').toLowerCase();
+  const mt=myTasks().filter(t=> !_q || (taskCustName(t)||'').toLowerCase().includes(_q) || (t.noi_dung||'').toLowerCase().includes(_q));
   const tOver=mt.filter(t=>taskBucket(t)==='over'), tToday=mt.filter(t=>taskBucket(t)==='today'), tUp=mt.filter(t=>taskBucket(t)==='upcoming');
   let html=`<div class="grid kpi-grid">
     <div class="card kpi"><div class="lbl">Việc quá hạn</div><div class="val red">${tOver.length}</div></div>
@@ -988,10 +991,13 @@ function renderToday(){
       <div><label>Đến hạn</label><input id="t-han" type="date" value="${D(0)}"></div>
       ${fullView()?`<div><label>Giao cho Sale</label><select id="t-owner">${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>`:''}
       <button class="btn" type="button" onclick="addTask()">Thêm việc</button>
-    </div></div>`;
-  const taskRow=t=>{ const cn=taskCustName(t); return `<tr><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đánh dấu xong" onchange="toggleTask('${t.id}')"></td>
+    </div>
+    <div style="margin-top:10px"><input id="tk-q" class="search" value="${esc(TASK_Q)}" oninput="setTaskQ(this.value)" placeholder="🔎 Lọc việc theo tên khách hoặc nội dung..." style="max-width:360px"></div></div>`;
+  const taskRow=t=>{ const cn=taskCustName(t);
+    const cnHtml = cn ? (t.customer_id? ` · <b style="cursor:pointer;color:var(--teal-dark)" title="Bấm để sửa thông tin khách" onclick="editCustomer('${t.customer_id}')">${cn} ✏️</b>` : ` · <b>${cn}</b>`) : '';
+    return `<tr><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đánh dấu xong" onchange="toggleTask('${t.id}')"></td>
     <td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td>
-    <td>${t.noi_dung||''}${cn?` · <b>${cn}</b>`:''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
+    <td>${t.noi_dung||''}${cnHtml}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
     <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
   const taskTable=(title,arr,color)=> arr.length? `<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Nội dung</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${arr.map(taskRow).join('')}</table></div>`:'';
   html+=taskTable('Việc quá hạn',tOver,'var(--over)')+taskTable('Việc hôm nay',tToday,'#b07d00')+taskTable('Việc sắp tới',tUp,'var(--teal-dark)');
@@ -1160,7 +1166,8 @@ function renderPerms(){
     const locked=a.active===false;
     html+=`<tr><td><b>${a.name}</b></td><td>${u}</td><td>${a.role}</td>
       <td>${locked?'<span class="pill" style="background:#fdeeee;color:var(--over)">Đã khóa</span>':'<span class="pill" style="background:#eefaf3;color:var(--won)">Hoạt động</span>'}</td>
-      <td>${(u==='owner'||u===ME.uname)?'<span style="color:var(--muted);font-size:12px">—</span>':
+      <td><button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--teal-dark)" onclick="renameAccount('${u}')">Sửa tên</button>
+        ${(u==='owner'||u===ME.uname)?'':
         `<button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="lockAccount('${u}')">${locked?'Mở khóa':'Khóa'}</button>
          <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--over)" onclick="delAccount('${u}')">Xóa</button>`}</td></tr>`;
   });
@@ -1489,6 +1496,14 @@ async function lockAccount(u){ if(u===ME.uname){ alert('Không thể khóa tài 
   const na = USERS[u].active===false ? true : false;
   const { error }=await sb.from('profiles').update({active:na}).eq('id',u); if(error){ alert(error.message); return; }
   await loadAll(); renderPerms();
+}
+async function renameAccount(u){
+  const cur = USERS[u]? USERS[u].name : '';
+  const nv = prompt('Đổi tên nhân sự:', cur); if(nv===null) return;
+  const ten = nv.trim(); if(!ten){ alert('Tên không được để trống.'); return; }
+  const { error }=await sb.from('profiles').update({ten}).eq('id',u);
+  if(error){ alert('Lỗi đổi tên: '+error.message); return; }
+  await loadAll(); renderAll();
 }
 async function createAccount(e){ e.preventDefault();
   const g=id=>document.getElementById(id).value.trim();
