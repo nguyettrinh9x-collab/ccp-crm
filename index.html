@@ -992,7 +992,7 @@ function renderToday(){
       ${fullView()?`<div><label>Giao cho Sale</label><select id="t-owner">${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>`:''}
       <button class="btn" type="button" onclick="addTask()">Thêm việc</button>
     </div>
-    <div style="margin-top:10px"><input id="tk-q" class="search" value="${esc(TASK_Q)}" oninput="setTaskQ(this.value)" placeholder="🔎 Lọc việc theo tên khách hoặc nội dung..." style="max-width:360px"></div></div>`;
+    <div style="margin-top:10px"><input id="tk-q" class="search" value="${(TASK_Q||'').replace(/"/g,'&quot;')}" oninput="setTaskQ(this.value)" placeholder="🔎 Lọc việc theo tên khách hoặc nội dung..." style="max-width:360px"></div></div>`;
   const taskRow=t=>{ const cn=taskCustName(t);
     const cnHtml = cn ? (t.customer_id? ` · <b style="cursor:pointer;color:var(--teal-dark)" title="Bấm để sửa thông tin khách" onclick="editCustomer('${t.customer_id}')">${cn} ✏️</b>` : ` · <b>${cn}</b>`) : '';
     return `<tr><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đánh dấu xong" onchange="toggleTask('${t.id}')"></td>
