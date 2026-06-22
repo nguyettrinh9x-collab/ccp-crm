@@ -64,7 +64,7 @@
   label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
   input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit}
   .full{grid-column:1/3}
-  .btn{padding:11px 22px;border:0;border-radius:10px;background:var(--teal);color:#fff;font-weight:600;cursor:pointer;font-size:14px}
+  .btn{padding:12px 26px;border:0;border-radius:10px;background:var(--teal);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
   .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--text)}
   .view{display:none} .view.active{display:block}
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:12px}
@@ -96,17 +96,17 @@
   <div class="sidebar">
     <div class="logo">CCP CRM</div>
     <nav class="nav" id="nav">
-      <a data-v="dashboard" class="active"><span class="ic">📊</span> Dashboard</a>
-      <a data-v="care"><span class="ic">🎯</span> Trung tâm chăm sóc</a>
-      <a data-v="add"><span class="ic">➕</span> Thêm khách hàng</a>
-      <a data-v="list"><span class="ic">📋</span> Danh sách khách hàng</a>
-      <a data-v="today"><span class="ic">✅</span> Việc cần làm hôm nay</a>
-      <a data-v="report"><span class="ic">📈</span> Báo cáo</a>
-      <a data-v="marketing"><span class="ic">📣</span> Báo cáo Marketing</a>
-      <a data-v="team"><span class="ic">👥</span> Sale team</a>
-      <a data-v="settings"><span class="ic">⚙️</span> Cài đặt</a>
-      <a data-v="perms"><span class="ic">🔐</span> Tài khoản & Phân quyền</a>
-      <a data-v="trash"><span class="ic">♻️</span> Thùng rác</a>
+      <a data-v="today" class="active">Việc cần làm</a>
+      <a data-v="care">Chăm sóc khách</a>
+      <a data-v="list">Khách hàng</a>
+      <a data-v="add">Thêm khách</a>
+      <a data-v="dashboard">Tổng quan</a>
+      <a data-v="report">Báo cáo</a>
+      <a data-v="marketing">Marketing</a>
+      <a data-v="team">Sale team</a>
+      <a data-v="perms">Tài khoản</a>
+      <a data-v="settings">Cài đặt</a>
+      <a data-v="trash">Thùng rác</a>
     </nav>
     <div class="foot">
       Đăng nhập: <b id="who"></b><br><span id="role"></span>
@@ -160,52 +160,6 @@ const USERS = {
   hoe:  {pass:'123', name:'Hòe',    role:'sale', id:'hoe'},
   yen:  {pass:'123', name:'Yến',    role:'sale', id:'yen'},
   nguyet:{pass:'123', name:'Nguyệt', role:'marketing', id:'nguyet'},
-  duy:  {pass:'123', name:'Duy',    role:'marketing', id:'duy'},
-  viet: {pass:'123', name:'Việt',   role:'marketing', id:'viet'},
-};
-const SALES = {bao:'Bảo', phuc:'Phúc', tien:'Tiên', ttien:'T.Tiên', hoe:'Hòe', yen:'Yến'};
-// Tất cả các mục có thể phân quyền
-const ALL_MODULES = [
-  ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
-  ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
-  ['marketing','BC Marketing'],['team','Sale team'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
-];
-// Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
-const DEFAULT_PERMS = {
-  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
-  sale: ['dashboard','care','add','list','today'],
-  marketing:['dashboard','care','list','marketing'],
-};
-// Quyền hiện tại của từng tài khoản — Admin/Chủ chỉnh trên trang Tài khoản & Phân quyền
-let PERMS = {
-  owner:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
-  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
-  bao:  ['dashboard','care','add','list','today'],
-  phuc: ['dashboard','care','add','list','today'],
-  tien: ['dashboard','care','add','list','today'],
-  ttien:['dashboard','care','add','list','today'],
-  hoe:  ['dashboard','care','add','list','today'],
-  yen:  ['dashboard','care','add','list','today'],
-  nguyet:['dashboard','care','list','marketing'],
-  duy:  ['dashboard','care','list','marketing'],
-  viet: ['dashboard','care','list','marketing'],
-};
-const today = new Date('2026-06-19'); // ngày demo
-const D = n => { const d=new Date(today); d.setDate(d.getDate()+n);
-  return d.toISOString().slice(0,10); };
-
-const STATUS = {moi_vao:'Mới vào',da_tu_van:'Đã tư vấn',da_bao_gia:'Đã báo giá',
-  hen_follow:'Hẹn follow',da_chot:'Đã chốt',khong_phan_hoi:'Không phản hồi',tu_choi:'Từ chối',qua_han:'Quá hạn'};
-const BENH = {pcos:'PCOS',u_xo:'U xơ tử cung',tac_voi:'Tắc vòi trứng',amh_thap:'AMH thấp',
-  noi_tiet:'Nội tiết kém',tinh_trung_yeu:'Tinh trùng yếu',muon_thai:'Muốn có thai tự nhiên',khac:'Khác'};
-const NGUON = {facebook:'Facebook',tiktok:'TikTok',pancake:'Pancake',website:'Website',whatsapp:'WhatsApp',khac:'Khác'};
-
-/* Nhân sự MKT (người kéo lead) */
-const MKT = {nguyet:'Nguyệt', duy:'Duy', viet:'Việt'};
-
-/* ====== BẢN TRẮNG ======
-   Chưa có khách hàng. Chị nhập sau bằng:
-   • nút "📥 Nhập file" (Excel/CSV) trong trang Thêm khách hàng, hoặc
    • form "Thêm khách hàng" để nhập tay từng khách.
    Team (Sale/MKT) đã được thiết lập sẵn. */
 let DATA = [];
@@ -217,6 +171,7 @@ let SPEND = [];  // chưa có chi phí marketing — nhập ở trang Báo cáo 
 let ME = null;
 let TRASH = [];  // khách đã xoá (chỉ admin xem & khôi phục)
 let ORDERS = {};  // lịch sử mua hàng theo khách: { customer_id: [ {id,ngay,san_pham,so_tien} ] }
+let TASKS = [];   // việc cần làm / nhắc việc
 // Bộ lọc khoảng ngày dùng chung cho nhiều trang (mỗi trang 1 state)
 const FILTERS = {
   dash:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'thang_nay' },
@@ -378,8 +333,8 @@ function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)==
   closeEdit(); alert('✅ Đã lưu thay đổi'); renderAll(); }
 
 /* ============ NAV ============ */
-const TITLES={dashboard:'Dashboard',care:'Trung tâm chăm sóc',add:'Thêm khách hàng',list:'Danh sách khách hàng',
-  today:'Việc cần làm hôm nay',report:'Báo cáo ngày',marketing:'Báo cáo Marketing',team:'Sale team',settings:'Cài đặt',perms:'Tài khoản & Phân quyền',trash:'Thùng rác — khôi phục khách đã xoá'};
+const TITLES={dashboard:'Tổng quan',care:'Chăm sóc khách',add:'Thêm khách',list:'Khách hàng',
+  today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác'};
 document.getElementById('nav').addEventListener('click',e=>{
   const a=e.target.closest('a'); if(!a)return; go(a.dataset.v);
 });
@@ -942,29 +897,42 @@ function renderList(){
   document.getElementById('list-table').innerHTML=t;
 }
 
+/* ====== VIỆC CẦN LÀM / NHẮC VIỆC ====== */
+const TASK_LOAI={cham_chot:'Chăm khách đã chốt',cham_chua:'Chăm khách chưa chốt',gui_tt:'Gửi thêm thông tin',nhac:'Nhắc nhở'};
+function taskCustName(t){ const c=DATA.find(x=>String(x.id)===String(t.customer_id)); return c?c.ten:''; }
+function myTasks(){ const all=TASKS.filter(t=>!t.xong); return fullView()?all:all.filter(t=>t.owner===ME.id); }
+function taskBucket(t){ const h=t.han||''; if(!h) return 'upcoming'; if(h<D(0))return 'over'; if(h===D(0))return 'today'; return 'upcoming'; }
 function renderToday(){
   const d=myData();
   const due=d.filter(c=>flag(c)==='warn');
   const over=d.filter(c=>flag(c)==='over');
-  const hot=d.filter(c=>c.muc==='nong'&&c.tt!=='da_chot'&&flag(c)!=='warn'&&flag(c)!=='over');
-  const block=(title,arr,color)=>{
-    if(!arr.length) return '';
-    let h=`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0"><table>
-      <tr><th>Khách</th><th>SĐT/WhatsApp</th><th>Trạng thái</th><th>Ngày follow</th><th>Ghi chú</th></tr>`;
-    arr.forEach(c=>h+=`<tr class="${rowClass(c)}"><td><b>${c.ten}</b> ${mucPill(c.muc)}</td><td>${c.phone||'—'}</td>
-      <td>${STATUS[c.tt]}</td><td>${c.follow||'—'}</td><td style="color:var(--muted)">${c.ghi||''}</td></tr>`);
-    return h+`</table></div>`;
-  };
+  const mt=myTasks();
+  const tOver=mt.filter(t=>taskBucket(t)==='over'), tToday=mt.filter(t=>taskBucket(t)==='today'), tUp=mt.filter(t=>taskBucket(t)==='upcoming');
   let html=`<div class="grid kpi-grid">
-    <div class="card kpi"><div class="lbl">Quá hạn (gọi ngay)</div><div class="val red">${over.length}</div></div>
-    <div class="card kpi"><div class="lbl">Đến hạn hôm nay</div><div class="val amber">${due.length}</div></div>
-    <div class="card kpi"><div class="lbl">Khách nóng cần đẩy</div><div class="val" style="color:var(--hot)">${hot.length}</div></div>
-    <div class="card kpi"><div class="lbl">Tổng việc</div><div class="val">${over.length+due.length+hot.length}</div></div>
+    <div class="card kpi"><div class="lbl">Việc quá hạn</div><div class="val red">${tOver.length}</div></div>
+    <div class="card kpi"><div class="lbl">Việc hôm nay</div><div class="val amber">${tToday.length}</div></div>
+    <div class="card kpi"><div class="lbl">Follow quá hạn</div><div class="val red">${over.length}</div></div>
+    <div class="card kpi"><div class="lbl">Follow hôm nay</div><div class="val amber">${due.length}</div></div>
   </div>`;
-  html+=block('🔴 Quá hạn follow — ưu tiên gọi ngay',over,'var(--over)');
-  html+=block('🟡 Đến hạn follow hôm nay',due,'#b07d00');
-  html+=block('🔥 Khách nóng cần chăm',hot,'var(--hot)');
-  if(!(over.length+due.length+hot.length)) html=`<div class="card empty">🎉 Tuyệt vời! Hôm nay bạn không còn việc tồn nào.</div>`;
+  html+=`<div class="card" style="margin:16px 0">
+    <h2 class="sec" style="margin-top:0">Thêm việc cần làm</h2>
+    <div style="display:grid;grid-template-columns:1.3fr 1.6fr 2fr 1fr ${fullView()?'1.1fr ':''}auto;gap:8px;align-items:end">
+      <div><label>Loại việc</label><select id="t-loai">${Object.entries(TASK_LOAI).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+      <div><label>Khách (nếu có)</label><select id="t-cus"><option value="">— Không gắn khách —</option>${myData().map(c=>`<option value="${c.id}">${c.ten}</option>`).join('')}</select></div>
+      <div><label>Nội dung việc</label><input id="t-noi" placeholder="VD: Gọi hỏi thăm sau liệu trình"></div>
+      <div><label>Đến hạn</label><input id="t-han" type="date" value="${D(0)}"></div>
+      ${fullView()?`<div><label>Giao cho Sale</label><select id="t-owner">${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>`:''}
+      <button class="btn" type="button" onclick="addTask()">Thêm việc</button>
+    </div></div>`;
+  const taskRow=t=>{ const cn=taskCustName(t); return `<tr><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đánh dấu xong" onchange="toggleTask('${t.id}')"></td>
+    <td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td>
+    <td>${t.noi_dung||''}${cn?` · <b>${cn}</b>`:''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
+    <td style="text-align:center"><span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
+  const taskTable=(title,arr,color)=> arr.length? `<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Nội dung</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${arr.map(taskRow).join('')}</table></div>`:'';
+  html+=taskTable('Việc quá hạn',tOver,'var(--over)')+taskTable('Việc hôm nay',tToday,'#b07d00')+taskTable('Việc sắp tới',tUp,'var(--teal-dark)');
+  if(!mt.length) html+=`<div class="card empty">Chưa có việc nào — thêm việc ở ô phía trên.</div>`;
+  const fb=(title,arr,color)=> arr.length?`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>SĐT</th><th>Trạng thái</th><th>Ngày follow</th></tr>${arr.map(c=>`<tr class="${rowClass(c)}"><td><b>${c.ten}</b></td><td>${c.phone||'—'}</td><td>${STATUS[c.tt]}</td><td>${c.follow||'—'}</td></tr>`).join('')}</table></div>`:'';
+  html+=`<h2 class="sec" style="margin-top:22px">Nhắc follow tự động</h2>`+((over.length||due.length)? fb('Quá hạn follow',over,'var(--over)')+fb('Đến hạn hôm nay',due,'#b07d00') : `<div class="card empty">Không có follow nào đến hạn.</div>`);
   document.getElementById('v-today').innerHTML=html;
 }
 
@@ -981,6 +949,18 @@ function renderReport(){
   });
   html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>${T.total}</td><td colspan="3"></td><td>$${T.dtMoi}</td><td>$${T.dtCu}</td><td>$${T.dtMoi+T.dtCu}</td></tr></table></div>
     <p style="color:var(--muted);font-size:12px;margin-top:10px">📅 Số liệu theo khoảng ngày đã chọn (${rangeLabel('report')}). Bản thật sẽ tự gửi báo cáo mỗi sáng qua Telegram/email.</p>`;
+  // ----- VIỆC CẦN LÀM (theo Sale) -----
+  const openT=TASKS.filter(t=>!t.xong);
+  const rws = (ME.role==='admin'||ME.role==='owner'||ME.role==='marketing')? Object.entries(SALES) : [[ME.id, ME.name]];
+  html+=`<h2 class="sec" style="margin-top:24px">📋 Việc cần làm (theo Sale)</h2>
+    <div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Sale</th><th>Quá hạn</th><th>Hôm nay</th><th>Sắp tới</th><th>Tổng việc đang mở</th></tr>`;
+  let tot=0;
+  rws.forEach(([id,name])=>{ const ts=openT.filter(t=>t.owner===id); tot+=ts.length;
+    const o=ts.filter(t=>taskBucket(t)==='over').length, td=ts.filter(t=>taskBucket(t)==='today').length, up=ts.filter(t=>taskBucket(t)==='upcoming').length;
+    html+=`<tr><td><b>${name}</b></td><td>${o?`<b style="color:var(--over)">${o}</b>`:'0'}</td><td>${td?`<b style="color:#b07d00">${td}</b>`:'0'}</td><td>${up}</td><td><b>${ts.length}</b></td></tr>`;
+  });
+  html+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:8px">Tổng ${tot} việc đang mở. Chi tiết từng việc xem ở trang <b>Việc cần làm</b>.</p>`;
   document.getElementById('v-report').innerHTML=html;
 }
 
@@ -1208,7 +1188,30 @@ async function loadAll(){
   ORDERS = {};
   const { data:od } = await sb.from('orders').select('*');
   (od||[]).forEach(o=>{ const k=String(o.customer_id); (ORDERS[k]=ORDERS[k]||[]).push({id:o.id, ngay:(o.ngay||'').slice(0,10), san_pham:o.san_pham, so_tien:Number(o.so_tien)||0}); });
+  TASKS = [];
+  const { data:tk } = await sb.from('tasks').select('*');
+  TASKS = (tk||[]).map(t=>({id:t.id, owner:t.owner, customer_id:t.customer_id, loai:t.loai, noi_dung:t.noi_dung, han:(t.han||'').slice(0,10), xong:!!t.xong}));
   return true;
+}
+/* ---- Việc cần làm / nhắc việc (Supabase) ---- */
+async function addTask(){
+  const g=x=>{const e=document.getElementById(x);return e?e.value:'';};
+  const owner = fullView()? (g('t-owner')||ME.id) : ME.id;
+  const rec={ owner, customer_id:g('t-cus')||null, loai:g('t-loai')||'nhac', noi_dung:(g('t-noi')||'').trim(), han:g('t-han')||null, xong:false };
+  if(!rec.noi_dung){ alert('Nhập nội dung việc cần làm.'); return; }
+  const { error }=await sb.from('tasks').insert(rec);
+  if(error){ alert('Lỗi thêm việc: '+error.message); return; }
+  await loadAll(); renderAll();
+}
+async function toggleTask(id){
+  const t=TASKS.find(x=>String(x.id)===String(id)); const nv=!(t&&t.xong);
+  const { error }=await sb.from('tasks').update({xong:nv}).eq('id', id);
+  if(error){ alert('Lỗi: '+error.message); return; } await loadAll(); renderAll();
+}
+async function delTask(id){
+  if(!confirm('Xoá việc này?')) return;
+  const { error }=await sb.from('tasks').delete().eq('id', id);
+  if(error){ alert('Lỗi: '+error.message); return; } await loadAll(); renderAll();
 }
 /* ---- Thêm / xoá lần mua (đơn mua lại) ---- */
 async function addOrder(id){
@@ -1237,7 +1240,7 @@ async function afterLogin(){
   document.getElementById('todaytag').textContent='Hôm nay: '+today.toLocaleDateString('vi-VN');
   applyMenu();
   const allowed=PERMS[ME.uname]||[];
-  go(allowed.includes('dashboard')?'dashboard':(allowed[0]||'dashboard'));
+  go(allowed.includes('today')?'today':(allowed.includes('dashboard')?'dashboard':(allowed[0]||'dashboard')));
   renderAll();
 }
 /* ---- Đăng nhập / đăng xuất bằng Supabase Auth (email + mật khẩu) ---- */
@@ -1432,3 +1435,50 @@ window.addEventListener('DOMContentLoaded', ()=>{
 </script>
 </body>
 </html>
+
+  duy:  {pass:'123', name:'Duy',    role:'marketing', id:'duy'},
+  viet: {pass:'123', name:'Việt',   role:'marketing', id:'viet'},
+};
+const SALES = {bao:'Bảo', phuc:'Phúc', tien:'Tiên', ttien:'T.Tiên', hoe:'Hòe', yen:'Yến'};
+// Tất cả các mục có thể phân quyền
+const ALL_MODULES = [
+  ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
+  ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
+  ['marketing','BC Marketing'],['team','Sale team'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
+];
+// Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
+const DEFAULT_PERMS = {
+  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
+  sale: ['dashboard','care','add','list','today'],
+  marketing:['dashboard','care','list','marketing'],
+};
+// Quyền hiện tại của từng tài khoản — Admin/Chủ chỉnh trên trang Tài khoản & Phân quyền
+let PERMS = {
+  owner:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
+  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
+  bao:  ['dashboard','care','add','list','today'],
+  phuc: ['dashboard','care','add','list','today'],
+  tien: ['dashboard','care','add','list','today'],
+  ttien:['dashboard','care','add','list','today'],
+  hoe:  ['dashboard','care','add','list','today'],
+  yen:  ['dashboard','care','add','list','today'],
+  nguyet:['dashboard','care','list','marketing'],
+  duy:  ['dashboard','care','list','marketing'],
+  viet: ['dashboard','care','list','marketing'],
+};
+const today = new Date('2026-06-19'); // ngày demo
+const D = n => { const d=new Date(today); d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10); };
+
+const STATUS = {moi_vao:'Mới vào',da_tu_van:'Đã tư vấn',da_bao_gia:'Đã báo giá',
+  hen_follow:'Hẹn follow',da_chot:'Đã chốt',khong_phan_hoi:'Không phản hồi',tu_choi:'Từ chối',qua_han:'Quá hạn'};
+const BENH = {pcos:'PCOS',u_xo:'U xơ tử cung',tac_voi:'Tắc vòi trứng',amh_thap:'AMH thấp',
+  noi_tiet:'Nội tiết kém',tinh_trung_yeu:'Tinh trùng yếu',muon_thai:'Muốn có thai tự nhiên',khac:'Khác'};
+const NGUON = {facebook:'Facebook',tiktok:'TikTok',pancake:'Pancake',website:'Website',whatsapp:'WhatsApp',khac:'Khác'};
+
+/* Nhân sự MKT (người kéo lead) */
+const MKT = {nguyet:'Nguyệt', duy:'Duy', viet:'Việt'};
+
+/* ====== BẢN TRẮNG ======
+   Chưa có khách hàng. Chị nhập sau bằng:
+   • nút "📥 Nhập file" (Excel/CSV) trong trang Thêm khách hàng,
