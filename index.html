@@ -276,7 +276,7 @@ function mucPill(m){return `<span class="pill tag-${m}">${m==='nong'?'🔥 Nóng
 function benhLabel(c){return c.benh_list||BENH[c.benh]||'—';}
 function phoneCell(c){return (c.phone||c.email||'')+(c.has_wa&&c.phone?' 💬':'');}
 /* ====== SỬA / XOÁ THÔNG TIN KHÁCH ====== */
-function canEdit(c){ return fullView() || c.owner===ME.id; }
+function canEdit(c){ return true; } /* mọi tài khoản đều được sửa khách + thêm đơn */
 function canDelete(c){ return ME.role==='owner' || ME.role==='admin' || c.owner===ME.id; }
 function deleteCustomer(id){
   const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
@@ -898,7 +898,7 @@ function renderList(){
       <span><i class="sw" style="background:#eefaf3;border:1px solid var(--won)"></i> Đã chốt</span>
     </div>
     <div class="filters">
-      <input class="search" id="fl-search" placeholder="🔎 Tìm theo tên, SĐT, ghi chú..." oninput="renderList()">
+      <input class="search" id="fl-search" placeholder="🔎 Tìm theo tên khách, SĐT, Sale, MKT, ngày, ghi chú..." oninput="renderList()">
       ${saleFilter}
       ${mktFilter}
       <select id="fl-qg" onchange="renderList()"><option value="">Tất cả quốc gia</option>${[...new Set(DATA.map(d=>d.quoc_gia))].map(q=>`<option>${q}</option>`).join('')}</select>
@@ -927,7 +927,7 @@ function renderList(){
     if(fTt && c.tt!==fTt) return false;
     if(fFollow==='today' && flag(c)!=='warn') return false;
     if(fFollow==='over' && flag(c)!=='over') return false;
-    if(s && !(`${c.ten} ${c.phone} ${c.ghi}`.toLowerCase().includes(s))) return false;
+    if(s && !(`${c.ten} ${c.phone} ${c.ghi} ${SALES[c.owner]||''} ${MKT[c.mkt]||''} ${c.ngay_tao||''} ${c.follow||''} ${c.ngay_capnhat||''}`.toLowerCase().includes(s))) return false;
     return true;
   });
   const _mine=myData(); const _nChot=_mine.filter(c=>c.tt==='da_chot').length; const _nChua=_mine.length-_nChot;
@@ -939,6 +939,8 @@ function renderList(){
   const noteCell=c=>{
     const ts=TASKS.filter(t=>!t.xong && String(t.customer_id)===String(c.id));
     let s = c.ghi?`<div style="font-size:11px;color:var(--muted)">📝 ${c.ghi}</div>`:'';
+    if(c.ngay_capnhat) s += `<div style="font-size:11px;color:var(--muted);margin-top:2px">🗓 Chăm gần nhất: ${c.ngay_capnhat}</div>`;
+    if(c.follow) s += `<div style="font-size:11px;color:var(--muted)">🔔 Follow tiếp: ${c.follow}</div>`;
     s += ts.map(t=>{ const col=t.han<D(0)?'var(--over)':(t.han===D(0)?'#b07d00':'var(--muted)');
       return `<div style="font-size:11px;margin-top:3px"><span class="pill" style="background:var(--cream);color:var(--teal-dark);font-size:10px;padding:1px 6px">${TASK_LOAI[t.loai]||t.loai}</span> ${t.noi_dung||''}${t.han?` · <b style="color:${col}">${t.han}</b>`:''}</div>`; }).join('');
     return s||'<span style="color:var(--line)">—</span>';
@@ -1384,9 +1386,15 @@ async function saveCustomer(e){
     sp:sps.join(', ')||'—', muc:g('f-muc'), tt:g('f-tt'), follow:g('f-follow')||null, ghi:g('f-ghi'),
     dt:Number(g('f-dt'))||0, ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
   if(rec.tt==='da_chot') rec.loai_don='moi';
-  const { error } = await sb.from('customers').insert(rec);
+  const { data:ins, error } = await sb.from('customers').insert(rec).select('id').single();
   if(error){ alert('Lưu lỗi: '+error.message); return; }
-  alert('✅ Đã lưu khách "'+rec.ten+'"'); e.target.reset(); await loadAll(); renderAll(); go('list');
+  /* Tự tạo việc chăm sóc cho Sale phụ trách khách mới để tối ưu thời gian */
+  if(ins && ins.id){
+    await sb.from('tasks').insert({ owner:rec.owner, customer_id:ins.id, loai:'cham_chua',
+      noi_dung:'Chăm sóc khách mới: '+rec.ten, han:D(0), xong:false });
+  }
+  e.target.reset(); await loadAll(); renderAll(); go('today');
+  alert('✅ Đã lưu khách "'+rec.ten+'" và tạo việc chăm sóc cho Sale (xem ở Việc cần làm).');
 }
 async function markCared(id){ const c=findC(id); if(!c)return;
   const upd={follow:D(3), ngay_capnhat:D(0)};
