@@ -164,6 +164,11 @@ const USERS = {
   viet: {pass:'123', name:'Việt',   role:'marketing', id:'viet'},
 };
 const SALES = {bao:'Bảo', phuc:'Phúc', tien:'Tiên', ttien:'T.Tiên', hoe:'Hòe', yen:'Yến'};
+/* Danh mục sản phẩm chuẩn AGO — đồng bộ tên để dễ phân tích sau này (nguồn: agofertility.com) */
+const AGO_SP = ['AGO Mom','AGO Eva','AGO Dad','AGO Tumor','AGO Women','AGO Mama','AGO Beauty','AGO Men','AGO Hau Bien','Eva Herblux','Xmen Herblux','U Xo Herblux','Tien Liet Tuyen Herblux','Ich Than Herblux','De Khang Herblux','Ovagen','A12 Mom','Tue Tinh Nang','Bach Trinh Nu','Chill Polytic','Dieu Kinh ND AMH','Mau Nguyet Da','Mau Nguyet Da +','Tieu Nang Da','VSHM Tue Tinh','Manh Luc Da','Manh Luc Da +','Omega','Xong Phu Huong Da','Xit Phu Huong Da'];
+function spDatalist(){ return '<datalist id="ago-sp-list">'+AGO_SP.map(s=>`<option value="${s}">`).join('')+'</datalist>'; }
+function spChips(inputId){ return '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">'+AGO_SP.map(s=>`<button type="button" onclick="addSP('${inputId}','${s.replace(/'/g,"\\'")}')" style="font-size:11px;padding:3px 9px;border:1px solid var(--line);border-radius:20px;background:#fff;cursor:pointer">${s}</button>`).join('')+'</div>'; }
+function addSP(inputId,name){ const el=document.getElementById(inputId); if(!el) return; const v=el.value.trim(); el.value = v ? (v.replace(/\s*\+?\s*$/,'')+' + 1 '+name) : ('1 '+name); el.focus(); }
 // Tất cả các mục có thể phân quyền
 const ALL_MODULES = [
   ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
@@ -329,10 +334,12 @@ function orderHistoryHTML(c){
     <div style="font-weight:700;font-size:13px;margin-bottom:8px">➕ Thêm lần mua mới (mua lại)</div>
     <div style="display:grid;grid-template-columns:130px 1fr 110px auto;gap:8px;align-items:end">
       <div><label style="font-size:12px">Ngày mua</label><input id="o-ngay" type="date" value="${D(0)}"></div>
-      <div><label style="font-size:12px">Sản phẩm</label><input id="o-sp" placeholder="VD: 2 AGO EVA + 1 AGO MOM"></div>
+      <div><label style="font-size:12px">Sản phẩm</label><input id="o-sp" list="ago-sp-list" placeholder="VD: 2 AGO Eva + 1 AGO Mom"></div>
       <div><label style="font-size:12px">Số tiền ($)</label><input id="o-tien" type="number" value="0"></div>
       <button class="btn" type="button" onclick="addOrder('${c.id}')">➕ Thêm</button>
-    </div></div></div>`;
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">Bấm tên sản phẩm để thêm nhanh (tên đã chuẩn hoá) — rồi sửa số lượng:</div>
+    ${spChips('o-sp')}${spDatalist()}</div></div>`;
   return h;
 }
 function editCustomer(id){
@@ -363,7 +370,7 @@ function editCustomer(id){
       <div><label>Ngày follow tiếp theo</label><input id="e-follow" type="date" value="${c.follow||''}"></div>
       <div><label>Bệnh lý chính</label><select id="e-benh">${opt(BENH,c.benh)}</select></div>
       <div><label>Doanh thu (USD)</label><input id="e-dt" type="number" value="${Number(c.dt)||0}"></div>
-      <div class="full"><label>Sản phẩm quan tâm</label><input id="e-sp" value="${esc(c.sp)}"></div>
+      <div class="full"><label>Sản phẩm quan tâm</label><input id="e-sp" list="ago-sp-list" value="${esc(c.sp)}">${spChips('e-sp')}${spDatalist()}</div>
       <div class="full"><label>Ghi chú tư vấn</label><textarea id="e-ghi" rows="3">${(''+(c.ghi||'')).replace(/</g,'&lt;')}</textarea></div>
       <div class="full" style="display:flex;gap:8px"><button class="btn" type="submit">💾 Lưu thay đổi</button>
         <button type="button" class="btn ghost" onclick="closeEdit()">Hủy</button></div>
@@ -790,7 +797,7 @@ function renderAdd(){
           <input type="checkbox" class="benh-chk" value="${k}" style="width:auto"> ${v}</label>`).join('')}</div></div>
       <div class="full"><label>Sản phẩm quan tâm (chọn nhiều + số lượng)</label>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        ${['AGO MOM','AGO WOMEN','AGO DAD','AGO EVA','AGO TUMOR','Combo khác'].map(s=>`<label style="display:flex;align-items:center;gap:8px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:6px 10px;cursor:pointer">
+        ${[...AGO_SP,'Combo khác'].map(s=>`<label style="display:flex;align-items:center;gap:8px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:6px 10px;cursor:pointer">
           <input type="checkbox" class="sp-chk" value="${s}" style="width:auto" onchange="this.parentNode.querySelector('.sp-qty').disabled=!this.checked">
           <span style="flex:1">${s}</span>
           <input type="number" class="sp-qty" min="1" value="1" disabled title="Số lượng" style="width:58px;padding:5px"></label>`).join('')}</div>
@@ -1225,8 +1232,8 @@ async function loadAll(){
   (profs||[]).forEach(p=>{
     USERS[p.id] = {name:p.ten, role:p.role, id:p.id, active:p.active!==false, uname:p.id};
     PERMS[p.id] = p.quyen || [];
-    if(p.role==='sale') SALES[p.id]=p.ten;
-    if(p.role==='marketing') MKT[p.id]=p.ten;
+    if(p.role==='sale'||p.role==='admin'||p.role==='owner') SALES[p.id]=p.ten;
+    if(p.role==='marketing'||p.role==='admin'||p.role==='owner') MKT[p.id]=p.ten;
   });
   const myp = (profs||[]).find(p=>p.id===user.id) || {id:user.id, ten:user.email, role:'sale', quyen:[]};
   ME = {id:user.id, name:myp.ten, role:myp.role, uname:user.id, quyen:myp.quyen||PERMS[user.id]||[]};
