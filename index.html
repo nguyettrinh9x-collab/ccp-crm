@@ -230,6 +230,8 @@ let ME = null;
 let TRASH = [];  // khách đã xoá (chỉ admin xem & khôi phục)
 let ORDERS = {};  // lịch sử mua hàng theo khách: { customer_id: [ {id,ngay,san_pham,so_tien} ] }
 let TASKS = [];   // việc cần làm / nhắc việc
+let TARGETS = {}; // mục tiêu DT theo tháng: { 'owner|YYYY-MM': muc_tieu }
+let REPORT_MONTH = (new Date()).toISOString().slice(0,7); // tháng đang xem ở Báo cáo
 let TASK_Q = '';  // bộ lọc tên khách ở trang Việc cần làm
 function setTaskQ(v){ TASK_Q=v; renderToday(); const el=document.getElementById('tk-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 // Bộ lọc khoảng ngày dùng chung cho nhiều trang (mỗi trang 1 state)
@@ -1037,6 +1039,18 @@ function renderToday(){
   document.getElementById('v-today').innerHTML=html;
 }
 
+/* ====== MỤC TIÊU DOANH THU THEO THÁNG ====== */
+function monthDT(owner,ym){ return DATA.filter(c=>c.owner===owner && c.tt==='da_chot' && (c.ngay_capnhat||c.ngay_tao||'').slice(0,7)===ym).reduce((s,c)=>s+(Number(c.dt)||0),0); }
+function setReportMonth(v){ if(v) REPORT_MONTH=v; renderReport(); }
+async function saveTarget(owner){
+  const el=document.getElementById('tg-'+owner); if(!el) return;
+  const val=Number(el.value)||0;
+  if(window.sb){
+    const { error }=await sb.from('sale_targets').upsert({owner:owner, thang:REPORT_MONTH, muc_tieu:val},{onConflict:'owner,thang'});
+    if(error){ alert('Lỗi lưu mục tiêu: '+error.message); return; }
+  }
+  TARGETS[owner+'|'+REPORT_MONTH]=val; renderReport();
+}
 function renderReport(){
   const rows = ME.role==='admin'? Object.entries(SALES) : [[ME.id, ME.name]];
   let html=renderDateFilterBar('report')+`<div class="card" style="padding:0;overflow-x:auto"><table>
@@ -1050,6 +1064,25 @@ function renderReport(){
   });
   html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>${T.total}</td><td colspan="3"></td><td>$${T.dtMoi}</td><td>$${T.dtCu}</td><td>$${T.dtMoi+T.dtCu}</td></tr></table></div>
     <p style="color:var(--muted);font-size:12px;margin-top:10px">📅 Số liệu theo khoảng ngày đã chọn (${rangeLabel('report')}). Bản thật sẽ tự gửi báo cáo mỗi sáng qua Telegram/email.</p>`;
+  // ----- MỤC TIÊU DOANH THU THEO THÁNG -----
+  html+=`<h2 class="sec" style="margin-top:24px">🎯 Mục tiêu doanh thu theo tháng</h2>
+    <div style="margin-bottom:10px"><input type="month" value="${REPORT_MONTH}" onchange="setReportMonth(this.value)" style="width:auto;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px"></div>
+    <div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Sale</th><th>Mục tiêu DT ($)</th><th>DT tổng tháng này</th><th>Hoàn thành</th></tr>`;
+  let TT={tg:0,dt:0};
+  rows.forEach(([id,name])=>{
+    const tg=TARGETS[id+'|'+REPORT_MONTH]||0; const dt=monthDT(id,REPORT_MONTH);
+    TT.tg+=tg; TT.dt+=dt;
+    const pct=tg?Math.round(dt/tg*100):0;
+    const col=pct>=100?'var(--won)':(pct>=60?'#b07d00':'var(--over)');
+    html+=`<tr><td><b>${name}</b></td>
+      <td><input id="tg-${id}" type="number" min="0" value="${tg||''}" placeholder="0" onchange="saveTarget('${id}')" style="width:120px;padding:6px 8px;border:1px solid var(--line);border-radius:8px"></td>
+      <td>$${dt}</td>
+      <td><div class="bar" style="width:90px;display:inline-block;vertical-align:middle"><div style="width:${Math.min(100,pct)}%;background:${col}"></div></div> <b style="color:${col}">${tg?pct+'%':'—'}</b></td></tr>`;
+  });
+  const pctT=TT.tg?Math.round(TT.dt/TT.tg*100):0;
+  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>$${TT.tg}</td><td>$${TT.dt}</td><td>${TT.tg?pctT+'%':'—'}</td></tr></table></div>
+    <p style="color:var(--muted);font-size:12px;margin-top:8px">Mục tiêu đặt riêng từng tháng · % hoàn thành = DT tổng (đơn đã chốt) trong tháng / mục tiêu. Gõ số rồi bấm ra ngoài để lưu — ai cũng nhập/sửa được.</p>`;
   // ----- VIỆC CẦN LÀM (theo Sale) -----
   const openT=TASKS.filter(t=>!t.xong);
   const rws = (ME.role==='admin'||ME.role==='owner'||ME.role==='marketing')? Object.entries(SALES) : [[ME.id, ME.name]];
@@ -1293,6 +1326,9 @@ async function loadAll(){
   TASKS = [];
   const { data:tk } = await sb.from('tasks').select('*');
   TASKS = (tk||[]).map(t=>({id:t.id, owner:t.owner, customer_id:t.customer_id, loai:t.loai, noi_dung:t.noi_dung, han:(t.han||'').slice(0,10), xong:!!t.xong}));
+  TARGETS = {};
+  const { data:tg } = await sb.from('sale_targets').select('*');
+  (tg||[]).forEach(t=>{ TARGETS[t.owner+'|'+t.thang]=Number(t.muc_tieu)||0; });
   return true;
 }
 /* ---- Việc cần làm / nhắc việc (Supabase) ---- */
