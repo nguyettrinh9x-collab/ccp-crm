@@ -1158,6 +1158,12 @@ function renderSettings(){
     • Tích hợp tương lai: Pancake, Facebook Lead Ads, WhatsApp, Make/n8n.<br>
     • Báo cáo tự động mỗi sáng qua email/Slack.</p>
     <p style="color:var(--muted);font-size:12px">Đây là bản demo giao diện. Phần code thật (Next.js + Supabase) sẽ kết nối database & đăng nhập thật.</p>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2 class="sec" style="margin-top:0">🔐 Bảo mật 2 lớp (2FA)</h2>
+    <p style="font-size:13px;color:var(--muted);line-height:1.7">Thêm 1 lớp xác thực bằng mã 6 số từ app <b>Google Authenticator</b> hoặc <b>Authy</b>. Sau khi bật, mỗi lần đăng nhập sẽ cần nhập mã từ điện thoại — kẻ gian biết mật khẩu vẫn không vào được. Khuyên dùng cho tài khoản Admin.</p>
+    <button class="btn" type="button" onclick="enrollMFA()">🔐 Bật 2FA cho tài khoản này</button>
+    <button class="btn ghost" type="button" onclick="disableMFA()" style="margin-left:8px">Tắt 2FA</button>
   </div>`;
 }
 </script>
@@ -1241,9 +1247,67 @@ async function login(){
   const pass=document.getElementById('p').value;
   const { error } = await sb.auth.signInWithPassword({ email, password:pass });
   if(error){ alert('Đăng nhập lỗi: '+error.message); return; }
+  if(!await ensureMFA()){ await sb.auth.signOut(); return; }
   await afterLogin();
 }
 async function logout(){ if(sb) await sb.auth.signOut(); location.reload(); }
+
+/* ---- Bảo mật 2 lớp (2FA / TOTP) ---- */
+async function ensureMFA(){
+  try{
+    const { data: aal, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(error || !aal) return true;
+    if(aal.nextLevel==='aal2' && aal.currentLevel!=='aal2'){
+      const { data: factors } = await sb.auth.mfa.listFactors();
+      const totp = (factors && factors.totp ? factors.totp : []).find(f=>f.status==='verified');
+      if(!totp) return true; // chưa bật 2FA -> bỏ qua
+      const { data: ch, error: ce } = await sb.auth.mfa.challenge({ factorId: totp.id });
+      if(ce){ alert('Lỗi 2FA: '+ce.message); return false; }
+      const code = prompt('🔐 Nhập mã 6 số từ app Authenticator để vào hệ thống:');
+      if(!code){ return false; }
+      const { error: ve } = await sb.auth.mfa.verify({ factorId: totp.id, challengeId: ch.id, code: (''+code).trim() });
+      if(ve){ alert('Mã 2FA sai hoặc đã hết hạn. Vui lòng đăng nhập lại.'); return false; }
+    }
+    return true;
+  }catch(e){ return true; }
+}
+async function enrollMFA(){
+  const { data: f } = await sb.auth.mfa.listFactors();
+  if(f && f.totp && f.totp.some(x=>x.status==='verified')){ alert('Tài khoản này đã bật 2FA rồi.'); return; }
+  const { data, error } = await sb.auth.mfa.enroll({ factorType:'totp', friendlyName:'CCP-'+Date.now() });
+  if(error){ alert('Lỗi bật 2FA: '+error.message); return; }
+  const fid=data.id, qr=data.totp.qr_code, secret=data.totp.secret;
+  let ov=document.getElementById('mfa-overlay');
+  if(!ov){ ov=document.createElement('div'); ov.id='mfa-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px'; document.body.appendChild(ov); }
+  ov.style.display='flex';
+  ov.innerHTML=`<div class="card" style="max-width:420px;width:100%;text-align:center">
+    <h2 class="sec" style="margin-top:0">🔐 Bật bảo mật 2 lớp</h2>
+    <p style="font-size:13px;color:var(--muted);text-align:left;line-height:1.7">1) Mở app <b>Google Authenticator</b> hoặc <b>Authy</b> trên điện thoại.<br>2) Bấm "+" → quét mã QR dưới đây.<br>3) Nhập 6 số app hiển thị để xác nhận.</p>
+    <div style="background:#fff;padding:10px;border-radius:10px;display:inline-block">${qr}</div>
+    <p style="font-size:11px;color:var(--muted);word-break:break-all">Mã thủ công (nếu không quét được): ${secret}</p>
+    <input id="mfa-code" placeholder="Nhập 6 số" style="text-align:center;letter-spacing:4px;font-size:18px">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" style="flex:1" type="button" onclick="verifyMFA('${fid}')">Xác nhận bật</button>
+      <button class="btn ghost" type="button" onclick="document.getElementById('mfa-overlay').style.display='none'">Huỷ</button>
+    </div></div>`;
+}
+async function verifyMFA(fid){
+  const code=(document.getElementById('mfa-code').value||'').trim();
+  if(!code){ alert('Nhập mã 6 số trước.'); return; }
+  const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: fid, code });
+  if(error){ alert('Mã sai hoặc hết hạn, thử lại: '+error.message); return; }
+  document.getElementById('mfa-overlay').style.display='none';
+  alert('✅ Đã bật 2FA. Từ lần đăng nhập sau, hệ thống sẽ hỏi mã 6 số từ app Authenticator.');
+}
+async function disableMFA(){
+  const { data: f } = await sb.auth.mfa.listFactors();
+  const list=(f && f.totp)?f.totp:[];
+  if(!list.length){ alert('Tài khoản chưa bật 2FA.'); return; }
+  if(!confirm('Tắt bảo mật 2 lớp cho tài khoản này?')) return;
+  for(const x of list){ await sb.auth.mfa.unenroll({ factorId: x.id }); }
+  alert('Đã tắt 2FA.');
+}
 
 /* ---- Ghi dữ liệu (lưu thẳng vào Supabase, sau đó tải lại) ---- */
 async function saveCustomer(e){
@@ -1363,7 +1427,7 @@ function delAccount(u){ alert('Để xóa hẳn nhân sự: vào Supabase → Au
 /* ---- Khởi động: đổi ô đăng nhập sang Email + tự đăng nhập nếu còn phiên ---- */
 window.addEventListener('DOMContentLoaded', ()=>{
   const u=document.getElementById('u'); if(u) u.placeholder='Email';
-  if(sb){ sb.auth.getSession().then(({data})=>{ if(data.session) afterLogin(); }); }
+  if(sb){ sb.auth.getSession().then(async ({data})=>{ if(data.session){ if(await ensureMFA()){ afterLogin(); } else { await sb.auth.signOut(); } } }); }
 });
 </script>
 </body>
