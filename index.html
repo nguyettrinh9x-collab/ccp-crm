@@ -202,7 +202,8 @@ let PERMS = {
   duy:  ['dashboard','care','list','marketing'],
   viet: ['dashboard','care','list','marketing'],
 };
-const today = new Date('2026-06-19'); // ngày demo
+const _now = new Date();
+const today = new Date(Date.UTC(_now.getFullYear(), _now.getMonth(), _now.getDate())); // ngày hiện tại (tự cập nhật mỗi ngày)
 const D = n => { const d=new Date(today); d.setDate(d.getDate()+n);
   return d.toISOString().slice(0,10); };
 
@@ -378,9 +379,12 @@ function editCustomer(id){
       <div><label>Sale chăm khách</label><select id="e-owner">${opt(SALES,c.owner)}</select></div>
       <div><label>Mức độ khách</label><select id="e-muc"><option value="nong" ${c.muc==='nong'?'selected':''}>🔥 Nóng</option><option value="am" ${c.muc==='am'?'selected':''}>☀️ Ấm</option><option value="lanh" ${c.muc==='lanh'?'selected':''}>❄️ Lạnh</option></select></div>
       <div><label>Trạng thái</label><select id="e-tt">${opt(STATUS,c.tt)}</select></div>
+      <div><label>Ngày chăm sóc gần nhất</label><input id="e-ngaycham" type="date" value="${c.ngay_capnhat||''}"></div>
       <div><label>Ngày follow tiếp theo</label><input id="e-follow" type="date" value="${c.follow||''}"></div>
-      <div><label>Bệnh lý chính</label><select id="e-benh">${opt(BENH,c.benh)}</select></div>
+      <div class="full"><label>Bệnh lý / nhu cầu</label><input id="e-benh" value="${esc(c.benh_list||BENH[c.benh]||'')}" placeholder="Sale tự ghi: VD PCOS, tắc vòi trứng..."></div>
       <div><label>Doanh thu (USD)</label><input id="e-dt" type="number" value="${Number(c.dt)||0}"></div>
+      <div><label>Ngày lên đơn / chốt</label><input id="e-ngaychot" type="date" value="${esc(c.ngay_chot)}"></div>
+      <div class="full"><label>Địa chỉ khách hàng (nếu có)</label><input id="e-diachi" value="${esc(c.dia_chi)}" placeholder="Số nhà, đường, thành phố, quốc gia..."></div>
       <div class="full"><label>Sản phẩm quan tâm</label><input id="e-sp" list="ago-sp-list" value="${esc(c.sp)}">${spChips('e-sp')}${spDatalist()}</div>
       <div class="full"><label>Ghi chú tư vấn</label><textarea id="e-ghi" rows="3">${(''+(c.ghi||'')).replace(/</g,'&lt;')}</textarea></div>
       <div class="full" style="display:flex;gap:8px"><button class="btn" type="submit">💾 Lưu thay đổi</button>
@@ -388,10 +392,10 @@ function editCustomer(id){
     </div></form>${orderHistoryHTML(c)}</div>`;
 }
 function closeEdit(){ const ov=document.getElementById('edit-overlay'); if(ov)ov.style.display='none'; }
-function collectEdit(){ const g=x=>document.getElementById(x).value; const benh=g('e-benh');
+function collectEdit(){ const g=x=>document.getElementById(x).value;
   return { ten:g('e-ten'), phone:g('e-phone'), has_wa:document.getElementById('e-wa').checked, email:g('e-email'),
-    quoc_gia:g('e-qg'), nguon:g('e-nguon'), mkt:g('e-mkt')||null, owner:g('e-owner'), muc:g('e-muc'), tt:g('e-tt'),
-    follow:g('e-follow')||null, benh:benh, benh_list:BENH[benh]||'', dt:Number(g('e-dt'))||0, sp:g('e-sp'), ghi:g('e-ghi'), ngay_capnhat:D(0) }; }
+    quoc_gia:g('e-qg'), dia_chi:g('e-diachi')||null, nguon:g('e-nguon'), mkt:g('e-mkt')||null, owner:g('e-owner'), muc:g('e-muc'), tt:g('e-tt'),
+    follow:g('e-follow')||null, benh:'khac', benh_list:(g('e-benh')||'').trim(), dt:Number(g('e-dt'))||0, ngay_chot:g('e-ngaychot')||null, sp:g('e-sp'), ghi:g('e-ghi'), ngay_capnhat:(g('e-ngaycham')||D(0)) }; }
 function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
   Object.assign(c, collectEdit()); if(c.tt==='da_chot'&&!c.loai_don)c.loai_don=c.khach_cu?'upsell':'moi';
   closeEdit(); alert('✅ Đã lưu thay đổi'); renderAll(); }
@@ -803,10 +807,10 @@ function renderAdd(){
           ☀️ <b>Ấm</b>: đang quan tâm/tìm hiểu, đã tư vấn nhưng chưa chốt, cần follow.<br>
           ❄️ <b>Lạnh</b>: mới biết tới, chưa rõ nhu cầu, ít tương tác — nuôi dưỡng dần.
         </div></details></div>
-      <div class="full"><label>Bệnh lý / nhu cầu (chọn nhiều)</label>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-        ${Object.entries(BENH).map(([k,v])=>`<label style="display:flex;align-items:center;gap:8px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:8px 10px;cursor:pointer">
-          <input type="checkbox" class="benh-chk" value="${k}" style="width:auto"> ${v}</label>`).join('')}</div></div>
+      <div class="full"><label>Địa chỉ khách hàng (nếu có)</label><input id="f-diachi" placeholder="Số nhà, đường, thành phố, quốc gia..."></div>
+      <div class="full"><label>Bệnh lý / nhu cầu</label>
+        <input id="f-benh" placeholder="Sale tự ghi: VD PCOS, tắc vòi trứng, nội tiết kém, tinh trùng yếu...">
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Gõ tự do — nhiều bệnh cách nhau bằng dấu phẩy.</div></div>
       <div class="full"><label>Sản phẩm quan tâm</label>
         <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
           <select id="f-sppick" style="flex:1;min-width:180px;padding:8px">${[...AGO_SP,'Combo khác'].map(s=>`<option>${s}</option>`).join('')}</select>
@@ -816,8 +820,10 @@ function renderAdd(){
         <input id="f-sp" list="ago-sp-list" placeholder="VD: 2 AGO Mom + 1 AGO Eva" style="margin-top:8px">${spDatalist()}
         <div style="font-size:11px;color:var(--muted);margin-top:3px">Chọn sản phẩm + số lượng rồi bấm Thêm — hoặc gõ trực tiếp vào ô dưới.</div></div>
       <div><label>Trạng thái</label><select id="f-tt">${opt(STATUS)}</select></div>
+      <div><label>Ngày chăm sóc gần nhất</label><input id="f-ngaycham" type="date" value="${D(0)}"></div>
       <div><label>Ngày cần follow tiếp theo</label><input id="f-follow" type="date" value="${D(1)}"></div>
       <div><label>Doanh thu (nếu đã chốt, USD)</label><input id="f-dt" type="number" value="0"></div>
+      <div><label>Ngày lên đơn / chốt (nếu đã chốt)</label><input id="f-ngaychot" type="date" value="${D(0)}"></div>
       <div><label>Lý do chưa mua</label><select id="f-ly">
         <option value="">—</option>${opt({gia_cao:'Giá cao',hoi_chong:'Cần hỏi chồng',chua_tin:'Chưa tin',dang_ivf:'Đang IVF',chua_san_sang:'Chưa sẵn sàng',khong_phan_hoi:'Không phản hồi',khac:'Khác'})}</select></div>
       <div class="full"><label>Ghi chú tư vấn</label><textarea id="f-ghi" rows="3"></textarea></div>
@@ -961,7 +967,7 @@ function renderList(){
     if(fTt && c.tt!==fTt) return false;
     if(fFollow==='today' && flag(c)!=='warn') return false;
     if(fFollow==='over' && flag(c)!=='over') return false;
-    if(s && !(`${c.ten} ${c.phone} ${c.ghi} ${SALES[c.owner]||''} ${MKT[c.mkt]||''} ${c.ngay_tao||''} ${c.follow||''} ${c.ngay_capnhat||''}`.toLowerCase().includes(s))) return false;
+    if(s && !(`${c.ten} ${c.phone} ${c.ghi} ${c.benh_list||''} ${c.dia_chi||''} ${SALES[c.owner]||''} ${MKT[c.mkt]||''} ${c.ngay_tao||''} ${c.follow||''} ${c.ngay_capnhat||''}`.toLowerCase().includes(s))) return false;
     return true;
   });
   const _mine=myData(); const _nChot=_mine.filter(c=>c.tt==='da_chot').length; const _nChua=_mine.length-_nChot;
@@ -973,6 +979,8 @@ function renderList(){
   const noteCell=c=>{
     const ts=TASKS.filter(t=>!t.xong && String(t.customer_id)===String(c.id));
     let s = c.ghi?`<div style="font-size:11px;color:var(--muted)">📝 ${c.ghi}</div>`:'';
+    if(c.dia_chi) s += `<div style="font-size:11px;color:var(--muted);margin-top:2px">📍 ${c.dia_chi}</div>`;
+    if(c.ngay_chot) s += `<div style="font-size:11px;color:var(--muted);margin-top:2px">🧾 Ngày lên đơn: ${c.ngay_chot}</div>`;
     if(c.ngay_capnhat) s += `<div style="font-size:11px;color:var(--muted);margin-top:2px">🗓 Chăm gần nhất: ${c.ngay_capnhat}</div>`;
     if(c.follow) s += `<div style="font-size:11px;color:var(--muted)">🔔 Follow tiếp: ${c.follow}</div>`;
     s += ts.map(t=>{ const col=t.han<D(0)?'var(--over)':(t.han===D(0)?'#b07d00':'var(--muted)');
@@ -984,7 +992,7 @@ function renderList(){
       (f==='over'?`<b style="color:var(--over)">${c.follow} ⚠</b>`:f==='warn'?`<b style="color:#b07d00">${c.follow}</b>`:c.follow);
     t+=`<tr class="${rowClass(c)}">
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="Bấm để sửa" onclick="editCustomer('${c.id}')">${c.ten}</b>${lanMuaBadge(c)} ${canEdit(c)?`<span style="cursor:pointer" title="Sửa" onclick="editCustomer('${c.id}')">✏️</span>`:''}${canDelete(c)?` <span style="cursor:pointer" title="Xoá khách" onclick="deleteCustomer('${c.id}')">🗑️</span>`:''}<br><span style="color:var(--muted);font-size:11px">${phoneCell(c)}</span></td>
-      <td class="c-qg">${c.quoc_gia||'—'}</td><td class="c-nguon">${NGUON[c.nguon]||'—'}</td><td class="c-benh">${BENH[c.benh]||'—'}</td>
+      <td class="c-qg">${c.quoc_gia||'—'}</td><td class="c-nguon">${NGUON[c.nguon]||'—'}</td><td class="c-benh">${c.benh_list||BENH[c.benh]||'—'}</td>
       <td class="c-sp">${c.sp||'—'}</td><td class="c-muc">${mucPill(c.muc)}</td><td class="c-tt">${STATUS[c.tt]}</td><td class="c-follow">${fd}</td>
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
       <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
@@ -1040,7 +1048,7 @@ function renderToday(){
 }
 
 /* ====== MỤC TIÊU DOANH THU THEO THÁNG ====== */
-function monthDT(owner,ym){ return DATA.filter(c=>c.owner===owner && c.tt==='da_chot' && (c.ngay_capnhat||c.ngay_tao||'').slice(0,7)===ym).reduce((s,c)=>s+(Number(c.dt)||0),0); }
+function monthDT(owner,ym){ return DATA.filter(c=>c.owner===owner && c.tt==='da_chot' && ((c.ngay_chot||c.ngay_capnhat||c.ngay_tao||'')+'').slice(0,7)===ym).reduce((s,c)=>s+(Number(c.dt)||0),0); }
 function setReportMonth(v){ if(v) REPORT_MONTH=v; renderReport(); }
 async function saveTarget(owner){
   const el=document.getElementById('tg-'+owner); if(!el) return;
@@ -1070,7 +1078,8 @@ function renderReport(){
     <div class="card" style="padding:0;overflow-x:auto"><table>
     <tr><th>Sale</th><th>Mục tiêu DT ($)</th><th>DT tổng tháng này</th><th>Hoàn thành</th></tr>`;
   let TT={tg:0,dt:0};
-  rows.forEach(([id,name])=>{
+  const tgRows = Object.entries(SALES); // mục tiêu công khai: ai cũng thấy của cả team
+  tgRows.forEach(([id,name])=>{
     const tg=TARGETS[id+'|'+REPORT_MONTH]||0; const dt=monthDT(id,REPORT_MONTH);
     TT.tg+=tg; TT.dt+=dt;
     const pct=tg?Math.round(dt/tg*100):0;
@@ -1460,12 +1469,11 @@ async function disableMFA(){
 /* ---- Ghi dữ liệu (lưu thẳng vào Supabase, sau đó tải lại) ---- */
 async function saveCustomer(e){
   e.preventDefault(); const g=id=>document.getElementById(id).value;
-  const benhs=[...document.querySelectorAll('.benh-chk:checked')].map(ch=>ch.value);
   const owner = ME.role==='sale'?ME.id:(g('f-owner')||ME.id);
   const rec={owner, mkt:g('f-mkt')||null, ten:g('f-ten'), phone:g('f-phone'), has_wa:document.getElementById('f-wa').checked,
-    email:g('f-email'), quoc_gia:g('f-qg'), nguon:g('f-nguon'), benh:benhs[0]||'khac', benh_list:benhs.map(b=>BENH[b]).join(', '),
+    email:g('f-email'), quoc_gia:g('f-qg'), dia_chi:g('f-diachi')||null, nguon:g('f-nguon'), benh:'khac', benh_list:(g('f-benh')||'').trim(),
     sp:(g('f-sp')||'').trim()||'—', muc:g('f-muc'), tt:g('f-tt'), follow:g('f-follow')||null, ghi:g('f-ghi'),
-    dt:Number(g('f-dt'))||0, ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
+    dt:Number(g('f-dt'))||0, ngay_chot:(g('f-tt')==='da_chot'?(g('f-ngaychot')||D(0)):null), ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:(g('f-ngaycham')||D(0))};
   if(rec.tt==='da_chot') rec.loai_don='moi';
   const { data:ins, error } = await sb.from('customers').insert(rec).select('id').single();
   if(error){ alert('Lưu lỗi: '+error.message); return; }
@@ -1486,7 +1494,7 @@ async function markCared(id){ const c=findC(id); if(!c)return;
 }
 async function quickClose(id){ const c=findC(id); if(!c)return;
   const v=prompt('Nhập doanh thu chốt (USD) cho "'+c.ten+'":','0'); if(v===null)return;
-  const upd={tt:'da_chot', dt:Number(v)||0, loai_don:c.khach_cu?'upsell':'moi', follow:null, ngay_capnhat:D(0)};
+  const upd={tt:'da_chot', dt:Number(v)||0, loai_don:c.khach_cu?'upsell':'moi', follow:null, ngay_chot:(c.ngay_chot||D(0)), ngay_capnhat:D(0)};
   const { error }=await sb.from('customers').update(upd).eq('id',id);
   if(error){ alert(error.message); return; } await loadAll(); renderAll();
   alert('🎉 Đã chốt "'+c.ten+'" — $'+(Number(v)||0));
