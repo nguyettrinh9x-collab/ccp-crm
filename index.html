@@ -447,8 +447,9 @@ function saleStats(sd){
   const total=sd.length;
   const interacted=sd.filter(c=>['da_tu_van','da_bao_gia','hen_follow','da_chot'].includes(c.tt)).length;
   const won=sd.filter(c=>c.tt==='da_chot');
-  const dtMoi=won.filter(c=>c.loai_don==='moi').reduce((s,c)=>s+c.dt,0);
-  const dtCu =won.filter(c=>c.loai_don==='upsell').reduce((s,c)=>s+c.dt,0);
+  const dtMoi=won.filter(c=>c.loai_don==='moi').reduce((s,c)=>s+(Number(c.dt)||0),0);
+  const dtCu =won.filter(c=>c.loai_don==='upsell').reduce((s,c)=>s+(Number(c.dt)||0),0)
+              + won.reduce((s,c)=>s+ordersOf(c).reduce((a,o)=>a+(Number(o.so_tien)||0),0),0);
   const markets=[...new Set(sd.map(c=>c.quoc_gia).filter(Boolean))];
   return {total, won:won.length, dtMoi, dtCu, dtTong:dtMoi+dtCu, markets,
     rTuongtac: total?Math.round(interacted/total*100):0,
@@ -912,8 +913,8 @@ function countryGroup(q){ q=(q||'').toUpperCase().trim().replace(/[.\s]/g,'');
   return 'Khác'; }
 function renderRevenue(rows){ const el=document.getElementById('list-revenue'); if(!el) return;
   const rev={US:{n:0,s:0},Canada:{n:0,s:0},Euro:{n:0,s:0},'Khác':{n:0,s:0}};
-  rows.forEach(c=>{ const g=countryGroup(c.quoc_gia); rev[g].n++; rev[g].s+=(parseFloat(c.dt)||0); });
-  const tot=rows.reduce((a,c)=>a+(parseFloat(c.dt)||0),0);
+  rows.forEach(c=>{ const g=countryGroup(c.quoc_gia); rev[g].n++; rev[g].s+=tongChiTieu(c); });
+  const tot=rows.reduce((a,c)=>a+tongChiTieu(c),0);
   const cards=[['US','🇺🇸 US'],['Canada','🇨🇦 Canada'],['Euro','🇪🇺 Euro'],['Khác','🌍 Khác']]
     .filter(([k])=>rev[k].n>0||k!=='Khác')
     .map(([k,lbl])=>`<div class="rev-card"><div class="rl">${lbl}</div><div class="rv">$${rev[k].s.toLocaleString('en-US')}</div><div class="rn">${rev[k].n} khách</div></div>`).join('');
@@ -996,7 +997,7 @@ function renderList(){
       <td class="c-sp">${c.sp||'—'}</td><td class="c-muc">${mucPill(c.muc)}</td><td class="c-tt">${STATUS[c.tt]}</td><td class="c-follow">${fd}</td>
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
       <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
-      <td class="c-dt">${c.dt?'$'+c.dt:'—'}</td></tr>`;
+      <td class="c-dt">${tongChiTieu(c)?'$'+tongChiTieu(c).toLocaleString('en-US'):'—'}</td></tr>`;
   });
   t+=`</table>`;
   document.getElementById('list-table').innerHTML=t;
@@ -1007,7 +1008,9 @@ function renderList(){
 /* ====== VIỆC CẦN LÀM / NHẮC VIỆC ====== */
 const TASK_LOAI={cham_chot:'Chăm khách đã chốt',cham_chua:'Chăm khách chưa chốt',gui_tt:'Gửi thêm thông tin',nhac:'Nhắc nhở'};
 function taskCustName(t){ const c=DATA.find(x=>String(x.id)===String(t.customer_id)); return c?c.ten:''; }
-function myTasks(){ const all=TASKS.filter(t=>!t.xong); const adminLike=(ME.role==='admin'||ME.role==='owner'||ME.role==='marketing'); return adminLike?all:all.filter(t=>t.owner===ME.id); }
+function myTasks(){ const closed=new Set(DATA.filter(c=>c.tt==='da_chot').map(c=>String(c.id)));
+  const all=TASKS.filter(t=>!t.xong).filter(t=> !(t.loai==='cham_chua' && t.customer_id!=null && closed.has(String(t.customer_id))));
+  const adminLike=(ME.role==='admin'||ME.role==='owner'||ME.role==='marketing'); return adminLike?all:all.filter(t=>t.owner===ME.id); }
 function taskBucket(t){ const h=t.han||''; if(!h) return 'upcoming'; if(h<D(0))return 'over'; if(h===D(0))return 'today'; return 'upcoming'; }
 function renderToday(){
   const d=myData();
@@ -1048,7 +1051,7 @@ function renderToday(){
 }
 
 /* ====== MỤC TIÊU DOANH THU THEO THÁNG ====== */
-function monthDT(owner,ym){ return DATA.filter(c=>c.owner===owner && c.tt==='da_chot' && ((c.ngay_chot||c.ngay_capnhat||c.ngay_tao||'')+'').slice(0,7)===ym).reduce((s,c)=>s+(Number(c.dt)||0),0); }
+function monthDT(owner,ym){ return DATA.filter(c=>c.owner===owner && c.tt==='da_chot' && ((c.ngay_chot||c.ngay_capnhat||c.ngay_tao||'')+'').slice(0,7)===ym).reduce((s,c)=>s+tongChiTieu(c),0); }
 function setReportMonth(v){ if(v) REPORT_MONTH=v; renderReport(); }
 async function saveTarget(owner){
   const el=document.getElementById('tg-'+owner); if(!el) return;
