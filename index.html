@@ -927,8 +927,15 @@ function renderList(){
   let t=`<div style="padding:10px 14px;font-size:13px;border-bottom:1px solid var(--line);background:var(--cream)">
     ✅ Đã chốt: <b style="color:var(--won)">${_nChot}</b> &nbsp;·&nbsp; ⏳ Chưa chốt: <b style="color:#b07d00">${_nChua}</b>
     &nbsp;·&nbsp; Hiển thị: <b>${rows.length}</b></div>
-    <table><tr><th>Khách</th><th>Quốc gia</th><th>Nguồn</th><th>Bệnh lý</th><th>SP</th><th>Mức</th><th>Trạng thái</th><th>Follow</th>${fullView()?'<th>MKT</th><th>Sale</th>':''}<th>DT</th></tr>`;
-  if(!rows.length) t+=`<tr><td colspan="10" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
+    <table><tr><th>Khách</th><th>Quốc gia</th><th>Nguồn</th><th>Bệnh lý</th><th>SP</th><th>Mức</th><th>Trạng thái</th><th>Follow</th>${fullView()?'<th>MKT</th><th>Sale</th>':''}<th>Ghi chú / Việc</th><th>DT</th></tr>`;
+  if(!rows.length) t+=`<tr><td colspan="12" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
+  const noteCell=c=>{
+    const ts=TASKS.filter(t=>!t.xong && String(t.customer_id)===String(c.id));
+    let s = c.ghi?`<div style="font-size:11px;color:var(--muted)">📝 ${c.ghi}</div>`:'';
+    s += ts.map(t=>{ const col=t.han<D(0)?'var(--over)':(t.han===D(0)?'#b07d00':'var(--muted)');
+      return `<div style="font-size:11px;margin-top:3px"><span class="pill" style="background:var(--cream);color:var(--teal-dark);font-size:10px;padding:1px 6px">${TASK_LOAI[t.loai]||t.loai}</span> ${t.noi_dung||''}${t.han?` · <b style="color:${col}">${t.han}</b>`:''}</div>`; }).join('');
+    return s||'<span style="color:var(--line)">—</span>';
+  };
   rows.forEach(c=>{
     const f=flag(c); const fd= !c.follow?'—':
       (f==='over'?`<b style="color:var(--over)">${c.follow} ⚠</b>`:f==='warn'?`<b style="color:#b07d00">${c.follow}</b>`:c.follow);
@@ -937,6 +944,7 @@ function renderList(){
       <td>${c.quoc_gia||'—'}</td><td>${NGUON[c.nguon]||'—'}</td><td>${BENH[c.benh]||'—'}</td>
       <td>${c.sp||'—'}</td><td>${mucPill(c.muc)}</td><td>${STATUS[c.tt]}</td><td>${fd}</td>
       ${fullView()?`<td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>`:''}
+      <td style="max-width:260px">${noteCell(c)}</td>
       <td>${c.dt?'$'+c.dt:'—'}</td></tr>`;
   });
   t+=`</table>`;
@@ -1471,7 +1479,15 @@ async function createAccount(e){ e.preventDefault();
   alert('✅ Đã tạo tài khoản "'+ten+'"\nEmail: '+email+'\nMật khẩu: '+pass+'\nVai trò: '+role);
   e.target.reset(); await loadAll(); renderAll();
 }
-function delAccount(u){ alert('Để xóa hẳn nhân sự: vào Supabase → Authentication → xóa user. Ở đây chị có thể "Khóa" để chặn đăng nhập (giữ lại dữ liệu).'); }
+async function delAccount(u){
+  if(u===ME.uname){ alert('Không thể xoá tài khoản đang đăng nhập.'); return; }
+  const a=USERS[u]; const nm=a?a.name:u;
+  if(!confirm('Xoá VĨNH VIỄN tài khoản "'+nm+'"?\nTài khoản sẽ không đăng nhập được nữa. Khách của họ được chuyển về Admin. Không khôi phục được.')) return;
+  const { data, error } = await sb.functions.invoke('admin-delete-user', { body:{ id:u } });
+  if(error){ alert('Xoá lỗi: '+(error.message||error)); return; }
+  if(data && data.error){ alert('Xoá lỗi: '+data.error); return; }
+  alert('Đã xoá tài khoản "'+nm+'".'); await loadAll(); renderAll();
+}
 
 /* ---- Khởi động: đổi ô đăng nhập sang Email + tự đăng nhập nếu còn phiên ---- */
 window.addEventListener('DOMContentLoaded', ()=>{
