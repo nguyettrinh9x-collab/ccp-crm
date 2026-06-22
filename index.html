@@ -169,6 +169,7 @@ const AGO_SP = ['AGO Mom','AGO Eva','AGO Dad','AGO Tumor','AGO Women','AGO Mama'
 function spDatalist(){ return '<datalist id="ago-sp-list">'+AGO_SP.map(s=>`<option value="${s}">`).join('')+'</datalist>'; }
 function spChips(inputId){ return '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">'+AGO_SP.map(s=>`<button type="button" onclick="addSP('${inputId}','${s.replace(/'/g,"\\'")}')" style="font-size:11px;padding:3px 9px;border:1px solid var(--line);border-radius:20px;background:#fff;cursor:pointer">${s}</button>`).join('')+'</div>'; }
 function addSP(inputId,name){ const el=document.getElementById(inputId); if(!el) return; const v=el.value.trim(); el.value = v ? (v.replace(/\s*\+?\s*$/,'')+' + 1 '+name) : ('1 '+name); el.focus(); }
+function addSpPick(){ const p=document.getElementById('f-sppick'); const q=document.getElementById('f-spqty'); const el=document.getElementById('f-sp'); if(!p||!el)return; const name=p.value; const qty=q&&q.value?q.value:1; const v=el.value.trim(); el.value = v ? (v.replace(/\s*\+?\s*$/,'')+' + '+qty+' '+name) : (qty+' '+name); }
 // Tất cả các mục có thể phân quyền
 const ALL_MODULES = [
   ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
@@ -256,7 +257,7 @@ function applyMenu(){
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 
 /* ============ HELPER ============ */
-function fullView(){ return ME.role==='admin'||ME.role==='marketing'||ME.role==='owner'; }
+function fullView(){ return true; } /* mọi vai trò (gồm Sale) đều xem được TẤT CẢ khách */
 function myData(){ return fullView()?DATA:DATA.filter(d=>d.owner===ME.id); }
 function flag(c){
   if(c.tt==='da_chot') return 'won';
@@ -795,13 +796,14 @@ function renderAdd(){
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
         ${Object.entries(BENH).map(([k,v])=>`<label style="display:flex;align-items:center;gap:8px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:8px 10px;cursor:pointer">
           <input type="checkbox" class="benh-chk" value="${k}" style="width:auto"> ${v}</label>`).join('')}</div></div>
-      <div class="full"><label>Sản phẩm quan tâm (chọn nhiều + số lượng)</label>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        ${[...AGO_SP,'Combo khác'].map(s=>`<label style="display:flex;align-items:center;gap:8px;font-weight:400;border:1px solid var(--line);border-radius:9px;padding:6px 10px;cursor:pointer">
-          <input type="checkbox" class="sp-chk" value="${s}" style="width:auto" onchange="this.parentNode.querySelector('.sp-qty').disabled=!this.checked">
-          <span style="flex:1">${s}</span>
-          <input type="number" class="sp-qty" min="1" value="1" disabled title="Số lượng" style="width:58px;padding:5px"></label>`).join('')}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Tick sản phẩm rồi nhập số lượng — VD: 2 AGO MOM + 2 AGO EVA.</div></div>
+      <div class="full"><label>Sản phẩm quan tâm</label>
+        <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+          <select id="f-sppick" style="flex:1;min-width:180px;padding:8px">${[...AGO_SP,'Combo khác'].map(s=>`<option>${s}</option>`).join('')}</select>
+          <input id="f-spqty" type="number" min="1" value="1" title="Số lượng" style="width:72px;padding:8px">
+          <button type="button" class="btn ghost" style="padding:8px 14px" onclick="addSpPick()">➕ Thêm</button>
+        </div>
+        <input id="f-sp" list="ago-sp-list" placeholder="VD: 2 AGO Mom + 1 AGO Eva" style="margin-top:8px">${spDatalist()}
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Chọn sản phẩm + số lượng rồi bấm Thêm — hoặc gõ trực tiếp vào ô dưới.</div></div>
       <div><label>Trạng thái</label><select id="f-tt">${opt(STATUS)}</select></div>
       <div><label>Ngày cần follow tiếp theo</label><input id="f-follow" type="date" value="${D(1)}"></div>
       <div><label>Doanh thu (nếu đã chốt, USD)</label><input id="f-dt" type="number" value="0"></div>
@@ -963,7 +965,7 @@ function renderList(){
 /* ====== VIỆC CẦN LÀM / NHẮC VIỆC ====== */
 const TASK_LOAI={cham_chot:'Chăm khách đã chốt',cham_chua:'Chăm khách chưa chốt',gui_tt:'Gửi thêm thông tin',nhac:'Nhắc nhở'};
 function taskCustName(t){ const c=DATA.find(x=>String(x.id)===String(t.customer_id)); return c?c.ten:''; }
-function myTasks(){ const all=TASKS.filter(t=>!t.xong); return fullView()?all:all.filter(t=>t.owner===ME.id); }
+function myTasks(){ const all=TASKS.filter(t=>!t.xong); const adminLike=(ME.role==='admin'||ME.role==='owner'||ME.role==='marketing'); return adminLike?all:all.filter(t=>t.owner===ME.id); }
 function taskBucket(t){ const h=t.han||''; if(!h) return 'upcoming'; if(h<D(0))return 'over'; if(h===D(0))return 'today'; return 'upcoming'; }
 function renderToday(){
   const d=myData();
@@ -990,7 +992,7 @@ function renderToday(){
   const taskRow=t=>{ const cn=taskCustName(t); return `<tr><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đánh dấu xong" onchange="toggleTask('${t.id}')"></td>
     <td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td>
     <td>${t.noi_dung||''}${cn?` · <b>${cn}</b>`:''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
-    <td style="text-align:center"><span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
+    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
   const taskTable=(title,arr,color)=> arr.length? `<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Nội dung</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${arr.map(taskRow).join('')}</table></div>`:'';
   html+=taskTable('Việc quá hạn',tOver,'var(--over)')+taskTable('Việc hôm nay',tToday,'#b07d00')+taskTable('Việc sắp tới',tUp,'var(--teal-dark)');
   if(!mt.length) html+=`<div class="card empty">Chưa có việc nào — thêm việc ở ô phía trên.</div>`;
@@ -1271,6 +1273,13 @@ async function toggleTask(id){
   const { error }=await sb.from('tasks').update({xong:nv}).eq('id', id);
   if(error){ alert('Lỗi: '+error.message); return; } await loadAll(); renderAll();
 }
+async function editTask(id){
+  const t=TASKS.find(x=>String(x.id)===String(id)); if(!t)return;
+  const nd=prompt('Nội dung việc:', t.noi_dung||''); if(nd===null)return;
+  const hn=prompt('Đến hạn (YYYY-MM-DD):', t.han||''); if(hn===null)return;
+  const { error }=await sb.from('tasks').update({ noi_dung:nd.trim(), han:(hn||'').trim()||null }).eq('id', id);
+  if(error){ alert('Lỗi: '+error.message); return; } await loadAll(); renderAll();
+}
 async function delTask(id){
   if(!confirm('Xoá việc này?')) return;
   const { error }=await sb.from('tasks').delete().eq('id', id);
@@ -1379,11 +1388,10 @@ async function disableMFA(){
 async function saveCustomer(e){
   e.preventDefault(); const g=id=>document.getElementById(id).value;
   const benhs=[...document.querySelectorAll('.benh-chk:checked')].map(ch=>ch.value);
-  const sps=[...document.querySelectorAll('.sp-chk:checked')].map(ch=>{const q=ch.parentNode.querySelector('.sp-qty').value||1;return q+' '+ch.value;});
   const owner = ME.role==='sale'?ME.id:(g('f-owner')||ME.id);
   const rec={owner, mkt:g('f-mkt')||null, ten:g('f-ten'), phone:g('f-phone'), has_wa:document.getElementById('f-wa').checked,
     email:g('f-email'), quoc_gia:g('f-qg'), nguon:g('f-nguon'), benh:benhs[0]||'khac', benh_list:benhs.map(b=>BENH[b]).join(', '),
-    sp:sps.join(', ')||'—', muc:g('f-muc'), tt:g('f-tt'), follow:g('f-follow')||null, ghi:g('f-ghi'),
+    sp:(g('f-sp')||'').trim()||'—', muc:g('f-muc'), tt:g('f-tt'), follow:g('f-follow')||null, ghi:g('f-ghi'),
     dt:Number(g('f-dt'))||0, ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
   if(rec.tt==='da_chot') rec.loai_don='moi';
   const { data:ins, error } = await sb.from('customers').insert(rec).select('id').single();
