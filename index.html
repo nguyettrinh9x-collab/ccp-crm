@@ -160,6 +160,52 @@ const USERS = {
   hoe:  {pass:'123', name:'Hòe',    role:'sale', id:'hoe'},
   yen:  {pass:'123', name:'Yến',    role:'sale', id:'yen'},
   nguyet:{pass:'123', name:'Nguyệt', role:'marketing', id:'nguyet'},
+  duy:  {pass:'123', name:'Duy',    role:'marketing', id:'duy'},
+  viet: {pass:'123', name:'Việt',   role:'marketing', id:'viet'},
+};
+const SALES = {bao:'Bảo', phuc:'Phúc', tien:'Tiên', ttien:'T.Tiên', hoe:'Hòe', yen:'Yến'};
+// Tất cả các mục có thể phân quyền
+const ALL_MODULES = [
+  ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
+  ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
+  ['marketing','BC Marketing'],['team','Sale team'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
+];
+// Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
+const DEFAULT_PERMS = {
+  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
+  sale: ['dashboard','care','add','list','today'],
+  marketing:['dashboard','care','list','marketing'],
+};
+// Quyền hiện tại của từng tài khoản — Admin/Chủ chỉnh trên trang Tài khoản & Phân quyền
+let PERMS = {
+  owner:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
+  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
+  bao:  ['dashboard','care','add','list','today'],
+  phuc: ['dashboard','care','add','list','today'],
+  tien: ['dashboard','care','add','list','today'],
+  ttien:['dashboard','care','add','list','today'],
+  hoe:  ['dashboard','care','add','list','today'],
+  yen:  ['dashboard','care','add','list','today'],
+  nguyet:['dashboard','care','list','marketing'],
+  duy:  ['dashboard','care','list','marketing'],
+  viet: ['dashboard','care','list','marketing'],
+};
+const today = new Date('2026-06-19'); // ngày demo
+const D = n => { const d=new Date(today); d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10); };
+
+const STATUS = {moi_vao:'Mới vào',da_tu_van:'Đã tư vấn',da_bao_gia:'Đã báo giá',
+  hen_follow:'Hẹn follow',da_chot:'Đã chốt',khong_phan_hoi:'Không phản hồi',tu_choi:'Từ chối',qua_han:'Quá hạn'};
+const BENH = {pcos:'PCOS',u_xo:'U xơ tử cung',tac_voi:'Tắc vòi trứng',amh_thap:'AMH thấp',
+  noi_tiet:'Nội tiết kém',tinh_trung_yeu:'Tinh trùng yếu',muon_thai:'Muốn có thai tự nhiên',khac:'Khác'};
+const NGUON = {facebook:'Facebook',tiktok:'TikTok',pancake:'Pancake',website:'Website',whatsapp:'WhatsApp',khac:'Khác'};
+
+/* Nhân sự MKT (người kéo lead) */
+const MKT = {nguyet:'Nguyệt', duy:'Duy', viet:'Việt'};
+
+/* ====== BẢN TRẮNG ======
+   Chưa có khách hàng. Chị nhập sau bằng:
+   • nút "📥 Nhập file" (Excel/CSV) trong trang Thêm khách hàng, hoặc
    • form "Thêm khách hàng" để nhập tay từng khách.
    Team (Sale/MKT) đã được thiết lập sẵn. */
 let DATA = [];
@@ -1435,50 +1481,3 @@ window.addEventListener('DOMContentLoaded', ()=>{
 </script>
 </body>
 </html>
-
-  duy:  {pass:'123', name:'Duy',    role:'marketing', id:'duy'},
-  viet: {pass:'123', name:'Việt',   role:'marketing', id:'viet'},
-};
-const SALES = {bao:'Bảo', phuc:'Phúc', tien:'Tiên', ttien:'T.Tiên', hoe:'Hòe', yen:'Yến'};
-// Tất cả các mục có thể phân quyền
-const ALL_MODULES = [
-  ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
-  ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
-  ['marketing','BC Marketing'],['team','Sale team'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
-];
-// Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
-const DEFAULT_PERMS = {
-  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
-  sale: ['dashboard','care','add','list','today'],
-  marketing:['dashboard','care','list','marketing'],
-};
-// Quyền hiện tại của từng tài khoản — Admin/Chủ chỉnh trên trang Tài khoản & Phân quyền
-let PERMS = {
-  owner:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
-  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
-  bao:  ['dashboard','care','add','list','today'],
-  phuc: ['dashboard','care','add','list','today'],
-  tien: ['dashboard','care','add','list','today'],
-  ttien:['dashboard','care','add','list','today'],
-  hoe:  ['dashboard','care','add','list','today'],
-  yen:  ['dashboard','care','add','list','today'],
-  nguyet:['dashboard','care','list','marketing'],
-  duy:  ['dashboard','care','list','marketing'],
-  viet: ['dashboard','care','list','marketing'],
-};
-const today = new Date('2026-06-19'); // ngày demo
-const D = n => { const d=new Date(today); d.setDate(d.getDate()+n);
-  return d.toISOString().slice(0,10); };
-
-const STATUS = {moi_vao:'Mới vào',da_tu_van:'Đã tư vấn',da_bao_gia:'Đã báo giá',
-  hen_follow:'Hẹn follow',da_chot:'Đã chốt',khong_phan_hoi:'Không phản hồi',tu_choi:'Từ chối',qua_han:'Quá hạn'};
-const BENH = {pcos:'PCOS',u_xo:'U xơ tử cung',tac_voi:'Tắc vòi trứng',amh_thap:'AMH thấp',
-  noi_tiet:'Nội tiết kém',tinh_trung_yeu:'Tinh trùng yếu',muon_thai:'Muốn có thai tự nhiên',khac:'Khác'};
-const NGUON = {facebook:'Facebook',tiktok:'TikTok',pancake:'Pancake',website:'Website',whatsapp:'WhatsApp',khac:'Khác'};
-
-/* Nhân sự MKT (người kéo lead) */
-const MKT = {nguyet:'Nguyệt', duy:'Duy', viet:'Việt'};
-
-/* ====== BẢN TRẮNG ======
-   Chưa có khách hàng. Chị nhập sau bằng:
-   • nút "📥 Nhập file" (Excel/CSV) trong trang Thêm khách hàng,
