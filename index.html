@@ -242,6 +242,10 @@ let CARE_TODAY_Q='', CARE_TODAY_SALE='', CARE_TODAY_MKT='';  // bộ lọc bản
 function setCareTodayQ(v){ CARE_TODAY_Q=v; renderToday(); const el=document.getElementById('cct-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 function setCareTodaySale(v){ CARE_TODAY_SALE=v; renderToday(); }
 function setCareTodayMkt(v){ CARE_TODAY_MKT=v; renderToday(); }
+let CARE_TODAY_FROM='', CARE_TODAY_TO='';
+function setCareTodayFrom(v){ CARE_TODAY_FROM=v; renderToday(); }
+function setCareTodayTo(v){ CARE_TODAY_TO=v; renderToday(); }
+function clearCareTodayDate(){ CARE_TODAY_FROM=''; CARE_TODAY_TO=''; renderToday(); }
 // Bộ lọc khoảng ngày dùng chung cho nhiều trang (mỗi trang 1 state)
 const FILTERS = {
   dash:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'thang_nay' },
@@ -1127,11 +1131,14 @@ function renderToday(){
   const _cq=(CARE_TODAY_Q||'').toLowerCase();
   if(CARE_TODAY_SALE) careArr=careArr.filter(c=>c.owner===CARE_TODAY_SALE);
   if(CARE_TODAY_MKT) careArr=careArr.filter(c=>c.mkt===CARE_TODAY_MKT);
+  if(CARE_TODAY_FROM) careArr=careArr.filter(c=>c.ngay_chot && c.ngay_chot>=CARE_TODAY_FROM);
+  if(CARE_TODAY_TO) careArr=careArr.filter(c=>c.ngay_chot && c.ngay_chot<=CARE_TODAY_TO);
   if(_cq) careArr=careArr.filter(c=>`${c.ten||''} ${c.phone||''} ${c.su_dung||''} ${c.cham_kq||''} ${c.ghi||''}`.toLowerCase().includes(_cq));
   const cctSale=`<select onchange="setCareTodaySale(this.value)"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${CARE_TODAY_SALE===k?'selected':''}>${v}</option>`).join('')}</select>`;
   const cctMkt=`<select onchange="setCareTodayMkt(this.value)"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([k,v])=>`<option value="${k}" ${CARE_TODAY_MKT===k?'selected':''}>Khách của ${v}</option>`).join('')}</select>`;
+  const cctDate=`<span style="font-size:12px;color:var(--muted)">Ngày chốt:</span><input type="date" value="${CARE_TODAY_FROM}" onchange="setCareTodayFrom(this.value)" title="Từ ngày" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" value="${CARE_TODAY_TO}" onchange="setCareTodayTo(this.value)" title="Đến ngày" style="width:auto">${(CARE_TODAY_FROM||CARE_TODAY_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearCareTodayDate()">Xoá lọc ngày</button>`:''}`;
   html+=`<h2 class="sec" style="margin-top:22px">📋 Lịch chăm khách đã chốt (cả team)</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">💡 <b>Tự động lưu</b> trong lúc gõ (ngừng gõ ~1 giây là lưu) — hiện "✓ Đã lưu" ở góc phải. Không cần nút bấm.</p>
-    <div class="filters" style="margin-bottom:10px"><input id="cct-q" class="search" value="${(CARE_TODAY_Q||'').replace(/"/g,'&quot;')}" oninput="setCareTodayQ(this.value)" placeholder="🔎 Tìm tên / SĐT / ghi chú / kết quả..." style="max-width:420px">${cctSale}${cctMkt}</div>`+careTableHTML(careArr);
+    <div class="filters" style="margin-bottom:10px"><input id="cct-q" class="search" value="${(CARE_TODAY_Q||'').replace(/"/g,'&quot;')}" oninput="setCareTodayQ(this.value)" placeholder="🔎 Tìm tên / SĐT / ghi chú / kết quả..." style="max-width:420px">${cctSale}${cctMkt}${cctDate}</div>`+careTableHTML(careArr);
   document.getElementById('v-today').innerHTML=html;
 }
 
