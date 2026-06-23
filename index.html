@@ -1429,7 +1429,12 @@ async function changeMyPass(){
 const SUPABASE_URL = 'https://wviyzewnokgirfkpdcvh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ein2Oxmzo36-WpKUheVlYg_HOms1mso';
 const sb = (window.supabase && SUPABASE_URL.startsWith('http'))
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ storage: window.sessionStorage, persistSession:true, autoRefreshToken:true } }) : null;
+/* ===== Bảo mật đăng nhập: tự đăng xuất sau 30 phút không dùng ===== */
+let __idleTimer=null;
+async function __idleLogout(){ try{ if(sb) await sb.auth.signOut(); }catch(e){} alert('🔒 Đã tự đăng xuất do không hoạt động 30 phút. Vui lòng đăng nhập lại.'); location.reload(); }
+function resetIdle(){ if(!sb||!ME) return; clearTimeout(__idleTimer); __idleTimer=setTimeout(__idleLogout, 30*60*1000); }
+function startIdle(){ ['click','keydown','mousemove','touchstart','scroll'].forEach(ev=>document.addEventListener(ev, resetIdle, {passive:true})); resetIdle(); }
 
 /* ---- Tải toàn bộ dữ liệu từ Supabase vào app ---- */
 async function loadAll(){
@@ -1531,6 +1536,7 @@ async function afterLogin(){
   const allowed=PERMS[ME.uname]||[];
   go(allowed.includes('today')?'today':(allowed.includes('dashboard')?'dashboard':(allowed[0]||'dashboard')));
   renderAll();
+  startIdle();
 }
 /* ---- Đăng nhập / đăng xuất bằng Supabase Auth (email + mật khẩu) ---- */
 async function login(){
