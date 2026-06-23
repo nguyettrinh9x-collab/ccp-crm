@@ -238,8 +238,10 @@ let TARGETS = {}; // mục tiêu DT theo tháng: { 'owner|YYYY-MM': muc_tieu }
 let REPORT_MONTH = (new Date()).toISOString().slice(0,7); // tháng đang xem ở Báo cáo
 let TASK_Q = '';  // bộ lọc tên khách ở trang Việc cần làm
 function setTaskQ(v){ TASK_Q=v; renderToday(); const el=document.getElementById('tk-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
-let CARE_TODAY_Q='';  // bộ lọc bảng "Lịch chăm khách đã chốt" ở trang Việc cần làm
+let CARE_TODAY_Q='', CARE_TODAY_SALE='', CARE_TODAY_MKT='';  // bộ lọc bảng "Lịch chăm khách đã chốt" ở trang Việc cần làm
 function setCareTodayQ(v){ CARE_TODAY_Q=v; renderToday(); const el=document.getElementById('cct-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
+function setCareTodaySale(v){ CARE_TODAY_SALE=v; renderToday(); }
+function setCareTodayMkt(v){ CARE_TODAY_MKT=v; renderToday(); }
 // Bộ lọc khoảng ngày dùng chung cho nhiều trang (mỗi trang 1 state)
 const FILTERS = {
   dash:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'thang_nay' },
@@ -1123,9 +1125,13 @@ function renderToday(){
   html+=`<h2 class="sec" style="margin-top:22px">Nhắc follow tự động</h2>`+((over.length||due.length)? fb('Quá hạn follow',over,'var(--over)')+fb('Đến hạn hôm nay',due,'#b07d00') : `<div class="card empty">Không có follow nào đến hạn.</div>`);
   let careArr=DATA.filter(c=>isChot(c.tt)).sort((a,b)=>(b.ngay_chot||'').localeCompare(a.ngay_chot||''));
   const _cq=(CARE_TODAY_Q||'').toLowerCase();
+  if(CARE_TODAY_SALE) careArr=careArr.filter(c=>c.owner===CARE_TODAY_SALE);
+  if(CARE_TODAY_MKT) careArr=careArr.filter(c=>c.mkt===CARE_TODAY_MKT);
   if(_cq) careArr=careArr.filter(c=>`${c.ten||''} ${c.phone||''} ${c.su_dung||''} ${c.cham_kq||''} ${c.ghi||''}`.toLowerCase().includes(_cq));
+  const cctSale=`<select onchange="setCareTodaySale(this.value)"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${CARE_TODAY_SALE===k?'selected':''}>${v}</option>`).join('')}</select>`;
+  const cctMkt=`<select onchange="setCareTodayMkt(this.value)"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([k,v])=>`<option value="${k}" ${CARE_TODAY_MKT===k?'selected':''}>Khách của ${v}</option>`).join('')}</select>`;
   html+=`<h2 class="sec" style="margin-top:22px">📋 Lịch chăm khách đã chốt (cả team)</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">💡 <b>Tự động lưu</b> trong lúc gõ (ngừng gõ ~1 giây là lưu) — hiện "✓ Đã lưu" ở góc phải. Không cần nút bấm.</p>
-    <div style="margin-bottom:10px"><input id="cct-q" class="search" value="${(CARE_TODAY_Q||'').replace(/"/g,'&quot;')}" oninput="setCareTodayQ(this.value)" placeholder="🔎 Tìm tên / SĐT / ghi chú / kết quả..." style="max-width:420px"></div>`+careTableHTML(careArr);
+    <div class="filters" style="margin-bottom:10px"><input id="cct-q" class="search" value="${(CARE_TODAY_Q||'').replace(/"/g,'&quot;')}" oninput="setCareTodayQ(this.value)" placeholder="🔎 Tìm tên / SĐT / ghi chú / kết quả..." style="max-width:420px">${cctSale}${cctMkt}</div>`+careTableHTML(careArr);
   document.getElementById('v-today').innerHTML=html;
 }
 
