@@ -443,6 +443,8 @@ function go(v){
   document.getElementById('v-'+view).classList.add('active');
   document.getElementById('title').textContent=TITLES[v]||TITLES[view];
   if(view==='list') renderList();
+  else if(view==='care') renderCare();
+  else if(view==='today') renderToday();
 }
 
 /* ============ RENDER ============ */
@@ -794,10 +796,10 @@ function careTableHTML(arr){
       <td style="font-size:11px">${careCell(c.ngay_chot,7,10)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,20,25)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,28,35)}</td>
-      <td><select onchange="savePhanHoi('${c.id}',this.value)" style="padding:4px;width:auto"><option value="" ${ph===''?'selected':''}>—</option><option value="co" ${ph==='co'?'selected':''}>✅ Có</option><option value="khong" ${ph==='khong'?'selected':''}>❌ Không</option></select></td>
-      <td><input value="${(c.su_dung||'').replace(/"/g,'&quot;')}" placeholder="VD: Dùng đều, giảm đau bụng kinh..." oninput="debSave('su_dung','${c.id}',this.value)" onchange="saveSuDung('${c.id}',this.value)" style="padding:4px;width:230px"></td>
-      <td><input type="date" value="${c.follow||''}" onchange="saveFollowDate('${c.id}',this.value)" style="padding:4px;width:138px"></td>
-      <td><input value="${(c.cham_kq||'').replace(/"/g,'&quot;')}" placeholder="Kết quả chăm..." oninput="debSave('cham_kq','${c.id}',this.value)" onchange="saveChamKq('${c.id}',this.value)" style="padding:4px;width:210px"></td>
+      <td><select data-k="${c.id}|phan_hoi" onchange="savePhanHoi('${c.id}',this.value)" style="padding:4px;width:auto"><option value="" ${ph===''?'selected':''}>—</option><option value="co" ${ph==='co'?'selected':''}>✅ Có</option><option value="khong" ${ph==='khong'?'selected':''}>❌ Không</option></select></td>
+      <td><input data-k="${c.id}|su_dung" value="${(c.su_dung||'').replace(/"/g,'&quot;')}" placeholder="VD: Dùng đều, giảm đau bụng kinh..." oninput="debSave('su_dung','${c.id}',this.value)" onchange="saveSuDung('${c.id}',this.value)" style="padding:4px;width:230px"></td>
+      <td><input data-k="${c.id}|follow" type="date" value="${c.follow||''}" onchange="saveFollowDate('${c.id}',this.value)" style="padding:4px;width:138px"></td>
+      <td><input data-k="${c.id}|cham_kq" value="${(c.cham_kq||'').replace(/"/g,'&quot;')}" placeholder="Kết quả chăm..." oninput="debSave('cham_kq','${c.id}',this.value)" onchange="saveChamKq('${c.id}',this.value)" style="padding:4px;width:210px"></td>
     </tr>`; });
   return t+`</table></div>`;
 }
@@ -827,7 +829,8 @@ function renderCare(){
   document.getElementById('care-table').innerHTML=careTableHTML(careRows());
 }
 function toast(msg,ok){ let t=document.getElementById('cpp-toast'); if(!t){t=document.createElement('div'); t.id='cpp-toast'; t.style.cssText='position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:10px;font-size:14px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:99999;opacity:0;transition:opacity .25s;color:#fff'; document.body.appendChild(t);} t.style.background=ok===false?'#e23d3d':'#2f9e6e'; t.textContent=msg; t.style.opacity='1'; clearTimeout(window.__toastT); window.__toastT=setTimeout(()=>{t.style.opacity='0';},1600); }
-async function saveCol(id,col,val){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=val; if(!window.sb){toast('✓ Đã lưu');return;} try{ const {error}=await sb.from('customers').update({[col]:val}).eq('id',id); if(error){toast('⚠ Lỗi lưu, thử lại',false);} else {toast('✓ Đã lưu');} }catch(e){toast('⚠ Lỗi lưu, thử lại',false);} }
+function syncTwins(id,col,val){ const s=(val==null?'':String(val)); document.querySelectorAll('[data-k="'+id+'|'+col+'"]').forEach(el=>{ if(el!==document.activeElement && el.value!==s) el.value=s; }); }
+async function saveCol(id,col,val){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=val; syncTwins(id,col,val); if(!window.sb){toast('✓ Đã lưu');return;} try{ const {error}=await sb.from('customers').update({[col]:val}).eq('id',id); if(error){toast('⚠ Lỗi lưu, thử lại',false);} else {toast('✓ Đã lưu');} }catch(e){toast('⚠ Lỗi lưu, thử lại',false);} }
 let __saveTimers={};
 function debSave(col,id,v){ const k=col+'|'+id; clearTimeout(__saveTimers[k]); if(v!==undefined){const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=v;} __saveTimers[k]=setTimeout(()=>{ saveCol(id,col,v); },700); }
 async function savePhanHoi(id,v){ await saveCol(id,'phan_hoi',v); }
@@ -1345,6 +1348,7 @@ function renderPerms(){
     html+=`<tr><td><b>${a.name}</b></td><td>${u}</td><td>${a.role}</td>
       <td>${locked?'<span class="pill" style="background:#fdeeee;color:var(--over)">Đã khóa</span>':'<span class="pill" style="background:#eefaf3;color:var(--won)">Hoạt động</span>'}</td>
       <td><button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--teal-dark)" onclick="renameAccount('${u}')">Sửa tên</button>
+        <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:#b07d00" onclick="adminResetPass('${u}')">Đặt lại MK</button>
         ${(u==='owner'||u===ME.uname)?'':
         `<button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="lockAccount('${u}')">${locked?'Mở khóa':'Khóa'}</button>
          <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--over)" onclick="delAccount('${u}')">Xóa</button>`}</td></tr>`;
@@ -1394,7 +1398,26 @@ function renderSettings(){
     <p style="font-size:13px;color:var(--muted);line-height:1.7">Thêm 1 lớp xác thực bằng mã 6 số từ app <b>Google Authenticator</b> hoặc <b>Authy</b>. Sau khi bật, mỗi lần đăng nhập sẽ cần nhập mã từ điện thoại — kẻ gian biết mật khẩu vẫn không vào được. Khuyên dùng cho tài khoản Admin.</p>
     <button class="btn" type="button" onclick="enrollMFA()">🔐 Bật 2FA cho tài khoản này</button>
     <button class="btn ghost" type="button" onclick="disableMFA()" style="margin-left:8px">Tắt 2FA</button>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2 class="sec" style="margin-top:0">🔑 Đổi mật khẩu</h2>
+    <p style="font-size:13px;color:var(--muted);line-height:1.7">Đổi mật khẩu đăng nhập của <b>chính tài khoản bạn</b>. Nên đổi ngay mật khẩu mặc định sau lần đăng nhập đầu. Mật khẩu tối thiểu 6 ký tự.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;max-width:560px">
+      <div><label>Mật khẩu mới</label><input id="cpw1" type="password" placeholder="Mật khẩu mới"></div>
+      <div><label>Nhập lại mật khẩu mới</label><input id="cpw2" type="password" placeholder="Nhập lại"></div>
+      <button class="btn" type="button" onclick="changeMyPass()">Đổi mật khẩu</button>
+    </div>
   </div>`;
+}
+async function changeMyPass(){
+  if(!sb){ alert('Chưa kết nối hệ thống.'); return; }
+  const p1=(document.getElementById('cpw1').value||''), p2=(document.getElementById('cpw2').value||'');
+  if(p1.length<6){ alert('Mật khẩu tối thiểu 6 ký tự.'); return; }
+  if(p1!==p2){ alert('Hai ô mật khẩu chưa khớp.'); return; }
+  const { error }=await sb.auth.updateUser({ password:p1 });
+  if(error){ alert('Lỗi đổi mật khẩu: '+error.message); return; }
+  document.getElementById('cpw1').value=''; document.getElementById('cpw2').value='';
+  alert('✅ Đã đổi mật khẩu. Lần sau đăng nhập bằng mật khẩu mới.');
 }
 </script>
 
@@ -1711,6 +1734,16 @@ async function delAccount(u){
   if(error){ alert('Xoá lỗi: '+(error.message||error)); return; }
   if(data && data.error){ alert('Xoá lỗi: '+data.error); return; }
   alert('Đã xoá tài khoản "'+nm+'".'); await loadAll(); renderAll();
+}
+async function adminResetPass(u){
+  const a=USERS[u]; const nm=a?a.name:u;
+  const pass=prompt('Đặt mật khẩu MỚI cho "'+nm+'" (tối thiểu 6 ký tự):','123456');
+  if(pass===null) return;
+  if((pass||'').length<6){ alert('Mật khẩu tối thiểu 6 ký tự.'); return; }
+  const { data, error } = await sb.functions.invoke('admin-reset-password', { body:{ id:u, password:pass } });
+  if(error){ alert('Lỗi đặt lại mật khẩu: '+(error.message||error)); return; }
+  if(data && data.error){ alert('Lỗi: '+data.error); return; }
+  alert('✅ Đã đặt lại mật khẩu cho "'+nm+'".\nMật khẩu mới: '+pass+'\nHãy báo nhân viên đăng nhập rồi đổi lại ở mục Cài đặt.');
 }
 
 /* ---- Khởi động: đổi ô đăng nhập sang Email + tự đăng nhập nếu còn phiên ---- */
