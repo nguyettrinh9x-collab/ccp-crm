@@ -207,8 +207,8 @@ const today = new Date(Date.UTC(_now.getFullYear(), _now.getMonth(), _now.getDat
 const D = n => { const d=new Date(today); d.setDate(d.getDate()+n);
   return d.toISOString().slice(0,10); };
 
-const STATUS = {moi_vao:'Mới vào',da_tu_van:'Đã tư vấn',da_bao_gia:'Đã báo giá',
-  hen_follow:'Hẹn follow',da_chot:'Đã chốt',khong_phan_hoi:'Không phản hồi',tu_choi:'Từ chối',qua_han:'Quá hạn'};
+const STATUS = {kcnc:'KCNC',ktt:'KTT',tuong_tac:'TƯƠNG TÁC',web:'WEB',
+  khach_chan:'KHÁCH CHẶN',da_chot:'CHỐT NÓNG',dang_care:'ĐANG CARE',hen:'HẸN'};
 const BENH = {pcos:'PCOS',u_xo:'U xơ tử cung',tac_voi:'Tắc vòi trứng',amh_thap:'AMH thấp',
   noi_tiet:'Nội tiết kém',tinh_trung_yeu:'Tinh trùng yếu',muon_thai:'Muốn có thai tự nhiên',khac:'Khác'};
 const NGUON = {facebook:'Facebook',tiktok:'TikTok',pancake:'Pancake',website:'Website',whatsapp:'WhatsApp',khac:'Khác'};
@@ -370,6 +370,7 @@ function editCustomer(id){
       <button class="btn ghost" style="padding:5px 12px" onclick="closeEdit()">✕ Đóng</button></div>
     <form onsubmit="saveEdit(event,'${c.id}')"><div class="form-grid">
       <div><label>Tên khách *</label><input id="e-ten" required value="${esc(c.ten)}"></div>
+      <div><label>Ngày lên đơn <span style="font-weight:400;color:var(--muted)">(mọi khách)</span></label><input id="e-ngaychot" type="date" value="${esc(c.ngay_chot)}"></div>
       <div><label>SĐT / WhatsApp</label><input id="e-phone" value="${esc(c.phone)}">
         <label style="display:flex;gap:8px;font-weight:400;margin-top:6px"><input type="checkbox" id="e-wa" style="width:auto" ${c.has_wa?'checked':''}> 💬 Đã kết nối WhatsApp</label></div>
       <div><label>Email</label><input id="e-email" value="${esc(c.email)}"></div>
@@ -379,11 +380,9 @@ function editCustomer(id){
       <div><label>Sale chăm khách</label><select id="e-owner">${opt(SALES,c.owner)}</select></div>
       <div><label>Mức độ khách</label><select id="e-muc"><option value="nong" ${c.muc==='nong'?'selected':''}>🔥 Nóng</option><option value="am" ${c.muc==='am'?'selected':''}>☀️ Ấm</option><option value="lanh" ${c.muc==='lanh'?'selected':''}>❄️ Lạnh</option></select></div>
       <div><label>Trạng thái</label><select id="e-tt">${opt(STATUS,c.tt)}</select></div>
-      <div><label>Ngày chăm sóc gần nhất</label><input id="e-ngaycham" type="date" value="${c.ngay_capnhat||''}"></div>
       <div><label>Ngày follow tiếp theo</label><input id="e-follow" type="date" value="${c.follow||''}"></div>
       <div class="full"><label>Bệnh lý / nhu cầu</label><input id="e-benh" value="${esc(c.benh_list||BENH[c.benh]||'')}" placeholder="Sale tự ghi: VD PCOS, tắc vòi trứng..."></div>
       <div><label>Doanh thu (USD)</label><input id="e-dt" type="number" value="${Number(c.dt)||0}"></div>
-      <div><label>Ngày lên đơn / chốt</label><input id="e-ngaychot" type="date" value="${esc(c.ngay_chot)}"></div>
       <div class="full"><label>Địa chỉ khách hàng (nếu có)</label><input id="e-diachi" value="${esc(c.dia_chi)}" placeholder="Số nhà, đường, thành phố, quốc gia..."></div>
       <div class="full"><label>Sản phẩm quan tâm</label><input id="e-sp" list="ago-sp-list" value="${esc(c.sp)}">${spChips('e-sp')}${spDatalist()}</div>
       <div class="full"><label>Ghi chú tư vấn</label><textarea id="e-ghi" rows="3">${(''+(c.ghi||'')).replace(/</g,'&lt;')}</textarea></div>
@@ -395,7 +394,7 @@ function closeEdit(){ const ov=document.getElementById('edit-overlay'); if(ov)ov
 function collectEdit(){ const g=x=>document.getElementById(x).value;
   return { ten:g('e-ten'), phone:g('e-phone'), has_wa:document.getElementById('e-wa').checked, email:g('e-email'),
     quoc_gia:g('e-qg'), dia_chi:g('e-diachi')||null, nguon:g('e-nguon'), mkt:g('e-mkt')||null, owner:g('e-owner'), muc:g('e-muc'), tt:g('e-tt'),
-    follow:g('e-follow')||null, benh:'khac', benh_list:(g('e-benh')||'').trim(), dt:Number(g('e-dt'))||0, ngay_chot:g('e-ngaychot')||null, sp:g('e-sp'), ghi:g('e-ghi'), ngay_capnhat:(g('e-ngaycham')||D(0)) }; }
+    follow:g('e-follow')||null, benh:'khac', benh_list:(g('e-benh')||'').trim(), dt:Number(g('e-dt'))||0, ngay_chot:g('e-ngaychot')||null, sp:g('e-sp'), ghi:g('e-ghi'), ngay_capnhat:D(0) }; }
 function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
   Object.assign(c, collectEdit()); if(c.tt==='da_chot'&&!c.loai_don)c.loai_don=c.khach_cu?'upsell':'moi';
   closeEdit(); alert('✅ Đã lưu thay đổi'); renderAll(); }
@@ -445,7 +444,7 @@ function reRender(key){ ({dash:renderDash,list:renderList,report:renderReport,mk
 // Tính chỉ số 1 nhóm khách: số khách, thị trường, tỷ lệ tương tác/chốt, DT mới/chăm sóc/tổng
 function saleStats(sd){
   const total=sd.length;
-  const interacted=sd.filter(c=>['da_tu_van','da_bao_gia','hen_follow','da_chot'].includes(c.tt)).length;
+  const interacted=sd.filter(c=>['tuong_tac','dang_care','hen','da_chot'].includes(c.tt)).length;
   const won=sd.filter(c=>c.tt==='da_chot');
   const dtMoi=won.filter(c=>c.loai_don==='moi').reduce((s,c)=>s+(Number(c.dt)||0),0);
   const dtCu =won.filter(c=>c.loai_don==='upsell').reduce((s,c)=>s+(Number(c.dt)||0),0)
@@ -548,7 +547,7 @@ function renderDash(){
 
   // ----- THEO KHOẢNG NGÀY ĐÃ CHỌN -----
   const dp=d.filter(c=>inDateRange('dash',c));
-  const interacted=dp.filter(c=>['da_tu_van','da_bao_gia','hen_follow','da_chot'].includes(c.tt)).length;
+  const interacted=dp.filter(c=>['tuong_tac','dang_care','hen','da_chot'].includes(c.tt)).length;
   const rate=dp.length?Math.round(interacted/dp.length*100):0;
   const chotKy=dp.filter(c=>c.tt==='da_chot').length;
   const revKy=dp.filter(c=>c.tt==='da_chot').reduce((s,c)=>s+c.dt,0);
@@ -629,7 +628,7 @@ function barCard(title,rows){const max=Math.max(1,...rows.map(r=>r[1]));
 
 /* ====== TRUNG TÂM CHĂM SÓC THÔNG MINH ====== */
 function careScore(c){            // điểm càng cao = càng gấp
-  if(['da_chot','tu_choi'].includes(c.tt)) return -1;
+  if(['da_chot','khach_chan'].includes(c.tt)) return -1;
   let s=0; const f=flag(c);
   if(f==='over'){ s+=50; const days=Math.round((new Date(D(0))-new Date(c.follow))/86400000); s+=Math.min(days*5,20); }
   if(f==='warn') s+=22;
@@ -757,7 +756,7 @@ function renderCare(){
   const fSale=fullView()?(document.getElementById('care-sale')?.value||''):ME.id;
   const fMkt=fullView()?(document.getElementById('care-mkt')?.value||''):'';
   const sort=document.getElementById('care-sort').value;
-  let arr=myData().filter(c=>!['da_chot','tu_choi'].includes(c.tt));
+  let arr=myData().filter(c=>!['da_chot','khach_chan'].includes(c.tt));
   if(fSale) arr=arr.filter(c=>c.owner===fSale);
   if(fMkt) arr=arr.filter(c=>c.mkt===fMkt);
   if(s) arr=arr.filter(c=>`${c.ten} ${c.phone} ${c.ghi}`.toLowerCase().includes(s));
@@ -793,6 +792,7 @@ function renderAdd(){
     <div class="card"><form onsubmit="saveCustomer(event)">
     <div class="form-grid">
       <div><label>Tên khách hàng *</label><input id="f-ten" required></div>
+      <div><label>Ngày lên đơn <span style="font-weight:400;color:var(--muted)">(mọi khách)</span></label><input id="f-ngaychot" type="date" value="${D(0)}"></div>
       <div><label>Số điện thoại / WhatsApp</label><input id="f-phone">
         <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px;color:var(--text)">
           <input type="checkbox" id="f-wa" style="width:auto"> 💬 Số này đã kết nối WhatsApp</label></div>
@@ -821,10 +821,8 @@ function renderAdd(){
         <input id="f-sp" list="ago-sp-list" placeholder="VD: 2 AGO Mom + 1 AGO Eva" style="margin-top:8px">${spDatalist()}
         <div style="font-size:11px;color:var(--muted);margin-top:3px">Chọn sản phẩm + số lượng rồi bấm Thêm — hoặc gõ trực tiếp vào ô dưới.</div></div>
       <div><label>Trạng thái</label><select id="f-tt">${opt(STATUS)}</select></div>
-      <div><label>Ngày chăm sóc gần nhất</label><input id="f-ngaycham" type="date" value="${D(0)}"></div>
       <div><label>Ngày cần follow tiếp theo</label><input id="f-follow" type="date" value="${D(1)}"></div>
       <div><label>Doanh thu (nếu đã chốt, USD)</label><input id="f-dt" type="number" value="0"></div>
-      <div><label>Ngày lên đơn / chốt (nếu đã chốt)</label><input id="f-ngaychot" type="date" value="${D(0)}"></div>
       <div><label>Lý do chưa mua</label><select id="f-ly">
         <option value="">—</option>${opt({gia_cao:'Giá cao',hoi_chong:'Cần hỏi chồng',chua_tin:'Chưa tin',dang_ivf:'Đang IVF',chua_san_sang:'Chưa sẵn sàng',khong_phan_hoi:'Không phản hồi',khac:'Khác'})}</select></div>
       <div class="full"><label>Ghi chú tư vấn</label><textarea id="f-ghi" rows="3"></textarea></div>
@@ -877,7 +875,7 @@ function importExcel(){
         const benhT=get('Bệnh lý','Bệnh lý / nhu cầu','Nhu cầu');
         const benhKeys=benhT.split(/[;,\/]/).map(s=>revFind(BENH,s.trim())).filter(Boolean);
         const waT=get('WhatsApp','Đã có WhatsApp').toLowerCase();
-        const tt=revFind(STATUS,get('Trạng thái'))||'moi_vao';
+        const tt=revFind(STATUS,get('Trạng thái'))||'tuong_tac';
         const c={ id:Date.now()+n,
           owner: revFind(SALES,get('Sale','Sale chăm khách')) || (ME.role==='sale'?ME.id:Object.keys(SALES)[0]),
           mkt: revFind(MKT,get('MKT','MKT phụ trách')) || Object.keys(MKT)[0],
@@ -978,15 +976,8 @@ function renderList(){
     <table><tr><th>Khách</th><th class="c-qg">Quốc gia</th><th class="c-nguon">Nguồn</th><th class="c-benh">Bệnh lý</th><th class="c-sp">SP</th><th class="c-muc">Mức</th><th class="c-tt">Trạng thái</th><th class="c-follow">Follow</th>${fullView()?'<th class="c-mkt">MKT</th><th class="c-sale">Sale</th>':''}<th class="c-ghi">Ghi chú / Việc</th><th class="c-dt">DT</th></tr>`;
   if(!rows.length) t+=`<tr><td colspan="12" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
   const noteCell=c=>{
-    const ts=TASKS.filter(t=>!t.xong && String(t.customer_id)===String(c.id));
-    let s = c.ghi?`<div style="font-size:11px;color:var(--muted)">📝 ${c.ghi}</div>`:'';
-    if(c.dia_chi) s += `<div style="font-size:11px;color:var(--muted);margin-top:2px">📍 ${c.dia_chi}</div>`;
-    if(c.ngay_chot) s += `<div style="font-size:11px;color:var(--muted);margin-top:2px">🧾 Ngày lên đơn: ${c.ngay_chot}</div>`;
-    if(c.ngay_capnhat) s += `<div style="font-size:11px;color:var(--muted);margin-top:2px">🗓 Chăm gần nhất: ${c.ngay_capnhat}</div>`;
-    if(c.follow) s += `<div style="font-size:11px;color:var(--muted)">🔔 Follow tiếp: ${c.follow}</div>`;
-    s += ts.map(t=>{ const col=t.han<D(0)?'var(--over)':(t.han===D(0)?'#b07d00':'var(--muted)');
-      return `<div style="font-size:11px;margin-top:3px"><span class="pill" style="background:var(--cream);color:var(--teal-dark);font-size:10px;padding:1px 6px">${TASK_LOAI[t.loai]||t.loai}</span> ${t.noi_dung||''}${t.han?` · <b style="color:${col}">${t.han}</b>`:''}</div>`; }).join('');
-    return s||'<span style="color:var(--line)">—</span>';
+    const g=(''+(c.ghi||'')).trim();
+    return g? `<div style="font-size:11px;white-space:pre-wrap;max-width:240px">${g.replace(/</g,'&lt;')}</div>` : '<span style="color:var(--line)">—</span>';
   };
   rows.forEach(c=>{
     const f=flag(c); const fd= !c.follow?'—':
@@ -994,7 +985,7 @@ function renderList(){
     t+=`<tr class="${rowClass(c)}">
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="Bấm để sửa" onclick="editCustomer('${c.id}')">${c.ten}</b>${lanMuaBadge(c)} ${canEdit(c)?`<span style="cursor:pointer" title="Sửa" onclick="editCustomer('${c.id}')">✏️</span>`:''}${canDelete(c)?` <span style="cursor:pointer" title="Xoá khách" onclick="deleteCustomer('${c.id}')">🗑️</span>`:''}<br><span style="color:var(--muted);font-size:11px">${phoneCell(c)}</span></td>
       <td class="c-qg">${c.quoc_gia||'—'}</td><td class="c-nguon">${NGUON[c.nguon]||'—'}</td><td class="c-benh">${c.benh_list||BENH[c.benh]||'—'}</td>
-      <td class="c-sp">${c.sp||'—'}</td><td class="c-muc">${mucPill(c.muc)}</td><td class="c-tt">${STATUS[c.tt]}</td><td class="c-follow">${fd}</td>
+      <td class="c-sp">${c.sp||'—'}</td><td class="c-muc">${mucPill(c.muc)}</td><td class="c-tt">${STATUS[c.tt]||c.tt||'—'}</td><td class="c-follow">${fd}</td>
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
       <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
       <td class="c-dt">${tongChiTieu(c)?'$'+tongChiTieu(c).toLocaleString('en-US'):'—'}</td></tr>`;
@@ -1476,7 +1467,7 @@ async function saveCustomer(e){
   const rec={owner, mkt:g('f-mkt')||null, ten:g('f-ten'), phone:g('f-phone'), has_wa:document.getElementById('f-wa').checked,
     email:g('f-email'), quoc_gia:g('f-qg'), dia_chi:g('f-diachi')||null, nguon:g('f-nguon'), benh:'khac', benh_list:(g('f-benh')||'').trim(),
     sp:(g('f-sp')||'').trim()||'—', muc:g('f-muc'), tt:g('f-tt'), follow:g('f-follow')||null, ghi:g('f-ghi'),
-    dt:Number(g('f-dt'))||0, ngay_chot:(g('f-tt')==='da_chot'?(g('f-ngaychot')||D(0)):null), ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:(g('f-ngaycham')||D(0))};
+    dt:Number(g('f-dt'))||0, ngay_chot:g('f-ngaychot')||D(0), ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
   if(rec.tt==='da_chot') rec.loai_don='moi';
   const { data:ins, error } = await sb.from('customers').insert(rec).select('id').single();
   if(error){ alert('Lưu lỗi: '+error.message); return; }
@@ -1547,7 +1538,7 @@ function importExcel(){
       const ten=get('Tên khách hàng','Tên','Name'); if(!ten)return;
       const mucT=get('Mức độ','Mức').toLowerCase(); const muc=(mucT.includes('nóng')||mucT==='nong')?'nong':(mucT.includes('lạnh')||mucT==='lanh')?'lanh':'am';
       const benhT=get('Bệnh lý','Bệnh lý / nhu cầu','Nhu cầu'); const benhKeys=benhT.split(/[;,\/]/).map(s=>revFind(BENH,s.trim())).filter(Boolean);
-      const waT=get('WhatsApp','Đã có WhatsApp').toLowerCase(); const tt=revFind(STATUS,get('Trạng thái'))||'moi_vao';
+      const waT=get('WhatsApp','Đã có WhatsApp').toLowerCase(); const tt=revFind(STATUS,get('Trạng thái'))||'tuong_tac';
       const rec={ owner:revFind(SALES,get('Sale','Sale chăm khách'))||(ME.role==='sale'?ME.id:(Object.keys(SALES)[0]||ME.id)),
         mkt:revFind(MKT,get('MKT','MKT phụ trách'))||Object.keys(MKT)[0]||null,
         ten, phone:get('Số điện thoại','SĐT','Số điện thoại / WhatsApp','Phone'), has_wa:['có','x','yes','true','1','đã có'].includes(waT),
