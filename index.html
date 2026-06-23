@@ -1084,13 +1084,14 @@ function renderToday(){
       <button class="btn" type="button" onclick="addTask()">Thêm việc</button>
     </div>
     <div style="margin-top:10px"><input id="tk-q" class="search" value="${(TASK_Q||'').replace(/"/g,'&quot;')}" oninput="setTaskQ(this.value)" placeholder="🔎 Lọc việc theo tên khách hoặc nội dung..." style="max-width:360px"></div></div>`;
-  const taskRow=t=>{ const cn=taskCustName(t);
-    const cnHtml = cn ? (t.customer_id? ` · <b style="cursor:pointer;color:var(--teal-dark)" title="Bấm để sửa thông tin khách" onclick="editCustomer('${t.customer_id}')">${cn} ✏️</b>` : ` · <b>${cn}</b>`) : '';
+  const taskRow=t=>{ const cn=taskCustName(t); const tc=DATA.find(x=>String(x.id)===String(t.customer_id));
+    const khachCell = tc ? `<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten} ✏️</b>` : (cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">— Không gắn khách —</span>');
     return `<tr><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đánh dấu xong" onchange="toggleTask('${t.id}')"></td>
     <td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td>
-    <td>${t.noi_dung||''}${cnHtml}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
+    <td>${khachCell}</td>
+    <td>${t.noi_dung||''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
     <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
-  const taskTable=(title,arr,color)=> arr.length? `<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Nội dung</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${arr.map(taskRow).join('')}</table></div>`:'';
+  const taskTable=(title,arr,color)=> arr.length? `<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Khách</th><th>Nội dung</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${arr.map(taskRow).join('')}</table></div>`:'';
   html+=taskTable('Việc quá hạn',tOver,'var(--over)')+taskTable('Việc hôm nay',tToday,'#b07d00')+taskTable('Việc sắp tới',tUp,'var(--teal-dark)');
   if(!mt.length) html+=`<div class="card empty">Chưa có việc nào — thêm việc ở ô phía trên.</div>`;
   /* ===== Thống kê việc theo Sale + kích hoạt lại (chỉ quản lý/admin) ===== */
@@ -1103,9 +1104,10 @@ function renderToday(){
     html+=`<h2 class="sec" style="margin-top:24px">📊 Thống kê việc theo Sale (quản lý)</h2>
       <div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Sale</th><th style="text-align:center">Tổng việc</th><th style="text-align:center">Đã xong</th><th style="text-align:center">Chưa xong</th><th style="text-align:center">Quá hạn</th><th style="text-align:center">% hoàn thành</th></tr>${srow||'<tr><td colspan="6" class="empty">Chưa có việc.</td></tr>'}</table></div>`;
     if(done.length){
-      const drow=t=>{ const cn=taskCustName(t); const cnHtml=cn?` · <b>${cn}</b>`:'';
-        return `<tr style="background:#eefaf3"><td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td><td>${t.noi_dung||''}${cnHtml}</td><td>${t.han||'—'}</td><td>${SALES[t.owner]||'—'}</td><td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark);font-weight:700" onclick="reactivateTask('${t.id}')">🔄 Kích hoạt lại</span></td></tr>`; };
-      html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length})</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Bấm <b>Kích hoạt lại</b> để đưa việc về danh sách chưa làm — nhắc sale làm tiếp.</p><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Loại</th><th>Nội dung</th><th>Đến hạn</th><th>Sale</th><th></th></tr>${done.map(drow).join('')}</table></div>`;
+      const drow=t=>{ const cn=taskCustName(t); const tc=DATA.find(x=>String(x.id)===String(t.customer_id));
+        const khachCell=tc?`<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten}</b>`:(cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">—</span>');
+        return `<tr style="background:#eefaf3"><td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td><td>${khachCell}</td><td>${t.noi_dung||''}</td><td>${t.han||'—'}</td><td>${SALES[t.owner]||'—'}</td><td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark);font-weight:700" onclick="reactivateTask('${t.id}')">🔄 Kích hoạt lại</span></td></tr>`; };
+      html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length})</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Bấm <b>Kích hoạt lại</b> để đưa việc về danh sách chưa làm — nhắc sale làm tiếp.</p><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Loại</th><th>Khách</th><th>Nội dung</th><th>Đến hạn</th><th>Sale</th><th></th></tr>${done.map(drow).join('')}</table></div>`;
     }
   }
   const fb=(title,arr,color)=> arr.length?`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>SĐT</th><th>Trạng thái</th><th>Ngày follow</th></tr>${arr.map(c=>`<tr class="${rowClass(c)}"><td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b></td><td>${c.phone||'—'}</td><td>${ttPill(c.tt)}</td><td>${c.follow||'—'}</td></tr>`).join('')}</table></div>`:'';
