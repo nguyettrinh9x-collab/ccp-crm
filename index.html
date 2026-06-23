@@ -291,6 +291,13 @@ function rowClass(c){
   return cls;
 }
 function mucPill(m){return `<span class="pill tag-${m}">${m==='nong'?'🔥 Nóng':m==='am'?'☀️ Ấm':'❄️ Lạnh'}</span>`;}
+function isAdmin(){ return !!(ME && (ME.role==='admin'||ME.role==='owner')); }
+/* Màu trạng thái khách — giúp phân loại nhanh bằng mắt */
+const TT_COLOR={ da_chot:'#2f9e6e', chot_nguoi:'#2f7d9e', dang_care:'#b07d00', hen:'#7a5cc0',
+  tuong_tac:'#3b82b0', web:'#5b7a8c', ktt:'#d77a2a', kcnc:'#8a8f98', khach_chan:'#e23d3d' };
+const TT_ICON={ da_chot:'🔥', chot_nguoi:'❄️', dang_care:'🩺', hen:'📅', tuong_tac:'💬', web:'🌐', ktt:'📞', kcnc:'⏳', khach_chan:'⛔' };
+function ttPill(tt){ const c=TT_COLOR[tt]||'#8a8f98', lbl=STATUS[tt]||tt||'—', ic=TT_ICON[tt]||'';
+  return `<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:${c};background:${c}22;white-space:nowrap">${ic} ${lbl}</span>`; }
 function benhLabel(c){return c.benh_list||BENH[c.benh]||'—';}
 function phoneCell(c){return (c.phone||c.email||'')+(c.has_wa&&c.phone?' 💬':'');}
 /* ====== SỬA / XOÁ THÔNG TIN KHÁCH ====== */
@@ -777,8 +784,8 @@ function custTitle(c){
 }
 function careTableHTML(arr){
   let t=`<div class="card" style="padding:0;overflow-x:auto"><table>
-    <tr><th>STT</th><th>Khách</th><th>Ngày chốt</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th></tr>`;
-  if(!arr.length) t+=`<tr><td colspan="9" class="empty">Chưa có khách đã chốt.</td></tr>`;
+    <tr><th>STT</th><th>Khách</th><th>Ngày chốt</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Tình trạng dùng SP / Phản hồi</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th></tr>`;
+  if(!arr.length) t+=`<tr><td colspan="10" class="empty">Chưa có khách đã chốt.</td></tr>`;
   arr.forEach((c,i)=>{ const ph=c.phan_hoi||'';
     t+=`<tr class="${rowClass(c)}">
       <td>${i+1}</td>
@@ -788,6 +795,7 @@ function careTableHTML(arr){
       <td style="font-size:11px">${careCell(c.ngay_chot,20,25)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,28,35)}</td>
       <td><select onchange="savePhanHoi('${c.id}',this.value)" style="padding:4px;width:auto"><option value="" ${ph===''?'selected':''}>—</option><option value="co" ${ph==='co'?'selected':''}>✅ Có</option><option value="khong" ${ph==='khong'?'selected':''}>❌ Không</option></select></td>
+      <td><input value="${(c.su_dung||'').replace(/"/g,'&quot;')}" placeholder="VD: Dùng đều, giảm đau bụng kinh..." onchange="saveSuDung('${c.id}',this.value)" style="padding:4px;width:230px"></td>
       <td><input type="date" value="${c.follow||''}" onchange="saveFollowDate('${c.id}',this.value)" style="padding:4px;width:138px"></td>
       <td><input value="${(c.cham_kq||'').replace(/"/g,'&quot;')}" placeholder="Kết quả chăm..." onchange="saveChamKq('${c.id}',this.value)" style="padding:4px;width:210px"></td>
     </tr>`; });
@@ -800,7 +808,7 @@ function careRows(){
   let arr=DATA.filter(c=>isChot(c.tt));
   if(fSale) arr=arr.filter(c=>c.owner===fSale);
   if(fMkt) arr=arr.filter(c=>c.mkt===fMkt);
-  if(s) arr=arr.filter(c=>`${c.ten} ${c.phone} ${c.ghi} ${c.cham_kq||''}`.toLowerCase().includes(s));
+  if(s) arr=arr.filter(c=>`${c.ten} ${c.phone} ${c.ghi} ${c.cham_kq||''} ${c.su_dung||''}`.toLowerCase().includes(s));
   arr.sort((a,b)=>(b.ngay_chot||'').localeCompare(a.ngay_chot||''));
   return arr;
 }
@@ -820,6 +828,7 @@ function renderCare(){
 }
 async function savePhanHoi(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.phan_hoi=v; try{ if(window.sb) await sb.from('customers').update({phan_hoi:v}).eq('id',id); }catch(e){} }
 async function saveChamKq(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.cham_kq=v; try{ if(window.sb) await sb.from('customers').update({cham_kq:v}).eq('id',id); }catch(e){} }
+async function saveSuDung(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.su_dung=v; try{ if(window.sb) await sb.from('customers').update({su_dung:v}).eq('id',id); }catch(e){} }
 async function saveFollowDate(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.follow=v||null; try{ if(window.sb) await sb.from('customers').update({follow:v||null}).eq('id',id); }catch(e){} renderAlert(); }
 
 function renderAdd(){
@@ -1033,7 +1042,7 @@ function renderList(){
     t+=`<tr class="${rowClass(c)}">
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b>${lanMuaBadge(c)} ${canEdit(c)?`<span style="cursor:pointer" title="Sửa" onclick="editCustomer('${c.id}')">✏️</span>`:''}${canDelete(c)?` <span style="cursor:pointer" title="Xoá khách" onclick="deleteCustomer('${c.id}')">🗑️</span>`:''}<br><span style="color:var(--muted);font-size:11px">${phoneCell(c)}</span></td>
       <td class="c-qg">${c.quoc_gia||'—'}</td><td class="c-nguon">${NGUON[c.nguon]||'—'}</td><td class="c-benh">${c.benh_list||BENH[c.benh]||'—'}</td>
-      <td class="c-sp">${c.sp||'—'}</td><td class="c-muc">${mucPill(c.muc)}</td><td class="c-tt">${STATUS[c.tt]||c.tt||'—'}</td><td class="c-follow">${fd}</td>
+      <td class="c-sp">${c.sp||'—'}</td><td class="c-muc">${mucPill(c.muc)}</td><td class="c-tt">${ttPill(c.tt)}</td><td class="c-follow">${fd}</td>
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
       <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
       <td class="c-dt">${tongChiTieu(c)?'$'+tongChiTieu(c).toLocaleString('en-US'):'—'}</td></tr>`;
@@ -1084,7 +1093,22 @@ function renderToday(){
   const taskTable=(title,arr,color)=> arr.length? `<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Nội dung</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${arr.map(taskRow).join('')}</table></div>`:'';
   html+=taskTable('Việc quá hạn',tOver,'var(--over)')+taskTable('Việc hôm nay',tToday,'#b07d00')+taskTable('Việc sắp tới',tUp,'var(--teal-dark)');
   if(!mt.length) html+=`<div class="card empty">Chưa có việc nào — thêm việc ở ô phía trên.</div>`;
-  const fb=(title,arr,color)=> arr.length?`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>SĐT</th><th>Trạng thái</th><th>Ngày follow</th></tr>${arr.map(c=>`<tr class="${rowClass(c)}"><td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b></td><td>${c.phone||'—'}</td><td>${STATUS[c.tt]||c.tt||'—'}</td><td>${c.follow||'—'}</td></tr>`).join('')}</table></div>`:'';
+  /* ===== Thống kê việc theo Sale + kích hoạt lại (chỉ quản lý/admin) ===== */
+  if(isAdmin()){
+    const done=TASKS.filter(t=>t.xong);
+    const stat={};
+    TASKS.forEach(t=>{ const o=t.owner||'—'; const s=stat[o]||(stat[o]={tong:0,xong:0,chua:0,qhan:0});
+      s.tong++; if(t.xong) s.xong++; else { s.chua++; if((t.han||'')&&t.han<D(0)) s.qhan++; } });
+    const srow=Object.entries(stat).sort((a,b)=>b[1].chua-a[1].chua).map(([o,s])=>`<tr><td><b>${SALES[o]||o}</b></td><td style="text-align:center">${s.tong}</td><td style="text-align:center;color:var(--won);font-weight:700">${s.xong}</td><td style="text-align:center;color:#b07d00;font-weight:700">${s.chua}</td><td style="text-align:center;color:var(--over);font-weight:700">${s.qhan}</td><td style="text-align:center">${s.tong?Math.round(s.xong/s.tong*100):0}%</td></tr>`).join('');
+    html+=`<h2 class="sec" style="margin-top:24px">📊 Thống kê việc theo Sale (quản lý)</h2>
+      <div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Sale</th><th style="text-align:center">Tổng việc</th><th style="text-align:center">Đã xong</th><th style="text-align:center">Chưa xong</th><th style="text-align:center">Quá hạn</th><th style="text-align:center">% hoàn thành</th></tr>${srow||'<tr><td colspan="6" class="empty">Chưa có việc.</td></tr>'}</table></div>`;
+    if(done.length){
+      const drow=t=>{ const cn=taskCustName(t); const cnHtml=cn?` · <b>${cn}</b>`:'';
+        return `<tr style="background:#eefaf3"><td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td><td>${t.noi_dung||''}${cnHtml}</td><td>${t.han||'—'}</td><td>${SALES[t.owner]||'—'}</td><td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark);font-weight:700" onclick="reactivateTask('${t.id}')">🔄 Kích hoạt lại</span></td></tr>`; };
+      html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length})</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Bấm <b>Kích hoạt lại</b> để đưa việc về danh sách chưa làm — nhắc sale làm tiếp.</p><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Loại</th><th>Nội dung</th><th>Đến hạn</th><th>Sale</th><th></th></tr>${done.map(drow).join('')}</table></div>`;
+    }
+  }
+  const fb=(title,arr,color)=> arr.length?`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>SĐT</th><th>Trạng thái</th><th>Ngày follow</th></tr>${arr.map(c=>`<tr class="${rowClass(c)}"><td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b></td><td>${c.phone||'—'}</td><td>${ttPill(c.tt)}</td><td>${c.follow||'—'}</td></tr>`).join('')}</table></div>`:'';
   html+=`<h2 class="sec" style="margin-top:22px">Nhắc follow tự động</h2>`+((over.length||due.length)? fb('Quá hạn follow',over,'var(--over)')+fb('Đến hạn hôm nay',due,'#b07d00') : `<div class="card empty">Không có follow nào đến hạn.</div>`);
   const careArr=DATA.filter(c=>isChot(c.tt)).sort((a,b)=>(b.ngay_chot||'').localeCompare(a.ngay_chot||''));
   html+=`<h2 class="sec" style="margin-top:22px">📋 Lịch chăm khách đã chốt (cả team)</h2>`+careTableHTML(careArr);
@@ -1401,7 +1425,7 @@ async function loadAll(){
     follow:c.follow||'', ngay_tao:(c.ngay_tao||'').slice(0,10),
     ngay_capnhat:(c.ngay_capnhat||c.ngay_tao||'').slice(0,10), ngay_upsale:c.ngay_upsale||'',
     dt:Number(c.dt)||0, benh_list:c.benh_list||'', has_wa:!!c.has_wa, khach_cu:!!c.khach_cu, da_xoa:!!c.da_xoa,
-    phan_hoi:c.phan_hoi||'', cham_kq:c.cham_kq||'' }));
+    phan_hoi:c.phan_hoi||'', cham_kq:c.cham_kq||'', su_dung:c.su_dung||'' }));
   DATA = allc.filter(c=>!c.da_xoa);
   TRASH = allc.filter(c=>c.da_xoa);
   const { data:spd } = await sb.from('marketing_spend').select('*');
@@ -1436,6 +1460,7 @@ async function toggleTask(id){
   const { error }=await sb.from('tasks').update({xong:nv}).eq('id', id);
   if(error){ alert('Lỗi: '+error.message); return; } await loadAll(); renderAll();
 }
+async function reactivateTask(id){ if(!confirm('Kích hoạt lại việc này để nhắc sale làm tiếp?'))return; await toggleTask(id); }
 async function editTask(id){
   const t=TASKS.find(x=>String(x.id)===String(id)); if(!t)return;
   const nd=prompt('Nội dung việc:', t.noi_dung||''); if(nd===null)return;
