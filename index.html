@@ -238,6 +238,8 @@ let TARGETS = {}; // mục tiêu DT theo tháng: { 'owner|YYYY-MM': muc_tieu }
 let REPORT_MONTH = (new Date()).toISOString().slice(0,7); // tháng đang xem ở Báo cáo
 let TASK_Q = '';  // bộ lọc tên khách ở trang Việc cần làm
 function setTaskQ(v){ TASK_Q=v; renderToday(); const el=document.getElementById('tk-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
+let CARE_TODAY_Q='';  // bộ lọc bảng "Lịch chăm khách đã chốt" ở trang Việc cần làm
+function setCareTodayQ(v){ CARE_TODAY_Q=v; renderToday(); const el=document.getElementById('cct-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 // Bộ lọc khoảng ngày dùng chung cho nhiều trang (mỗi trang 1 state)
 const FILTERS = {
   dash:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'thang_nay' },
@@ -1119,8 +1121,11 @@ function renderToday(){
   }
   const fb=(title,arr,color)=> arr.length?`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>SĐT</th><th>Trạng thái</th><th>Ngày follow</th></tr>${arr.map(c=>`<tr class="${rowClass(c)}"><td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b></td><td>${c.phone||'—'}</td><td>${ttPill(c.tt)}</td><td>${c.follow||'—'}</td></tr>`).join('')}</table></div>`:'';
   html+=`<h2 class="sec" style="margin-top:22px">Nhắc follow tự động</h2>`+((over.length||due.length)? fb('Quá hạn follow',over,'var(--over)')+fb('Đến hạn hôm nay',due,'#b07d00') : `<div class="card empty">Không có follow nào đến hạn.</div>`);
-  const careArr=DATA.filter(c=>isChot(c.tt)).sort((a,b)=>(b.ngay_chot||'').localeCompare(a.ngay_chot||''));
-  html+=`<h2 class="sec" style="margin-top:22px">📋 Lịch chăm khách đã chốt (cả team)</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">💡 <b>Tự động lưu</b> trong lúc gõ (ngừng gõ ~1 giây là lưu) — hiện "✓ Đã lưu" ở góc phải. Không cần nút bấm.</p>`+careTableHTML(careArr);
+  let careArr=DATA.filter(c=>isChot(c.tt)).sort((a,b)=>(b.ngay_chot||'').localeCompare(a.ngay_chot||''));
+  const _cq=(CARE_TODAY_Q||'').toLowerCase();
+  if(_cq) careArr=careArr.filter(c=>`${c.ten||''} ${c.phone||''} ${c.su_dung||''} ${c.cham_kq||''} ${c.ghi||''}`.toLowerCase().includes(_cq));
+  html+=`<h2 class="sec" style="margin-top:22px">📋 Lịch chăm khách đã chốt (cả team)</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">💡 <b>Tự động lưu</b> trong lúc gõ (ngừng gõ ~1 giây là lưu) — hiện "✓ Đã lưu" ở góc phải. Không cần nút bấm.</p>
+    <div style="margin-bottom:10px"><input id="cct-q" class="search" value="${(CARE_TODAY_Q||'').replace(/"/g,'&quot;')}" oninput="setCareTodayQ(this.value)" placeholder="🔎 Tìm tên / SĐT / ghi chú / kết quả..." style="max-width:420px"></div>`+careTableHTML(careArr);
   document.getElementById('v-today').innerHTML=html;
 }
 
@@ -1430,6 +1435,7 @@ const SUPABASE_URL = 'https://wviyzewnokgirfkpdcvh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ein2Oxmzo36-WpKUheVlYg_HOms1mso';
 const sb = (window.supabase && SUPABASE_URL.startsWith('http'))
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ storage: window.sessionStorage, persistSession:true, autoRefreshToken:true } }) : null;
+window.sb = sb; /* để mọi nơi dùng window.sb đều hoạt động (sửa lỗi không lưu được dữ liệu) */
 /* ===== Bảo mật đăng nhập: tự đăng xuất sau 30 phút không dùng ===== */
 let __idleTimer=null;
 async function __idleLogout(){ try{ if(sb) await sb.auth.signOut(); }catch(e){} alert('🔒 Đã tự đăng xuất do không hoạt động 30 phút. Vui lòng đăng nhập lại.'); location.reload(); }
