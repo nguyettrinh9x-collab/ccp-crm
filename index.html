@@ -266,7 +266,10 @@ function login(){
 // Hiện/ẩn menu theo quyền được cấp cho người đang đăng nhập
 function applyMenu(){
   const allowed=PERMS[ME.uname]||[];
-  document.querySelectorAll('#nav a').forEach(a=>a.style.display=allowed.includes(a.dataset.v)?'flex':'none');
+  document.querySelectorAll('#nav a').forEach(a=>{
+    let v=a.dataset.v; if(v==='list_chot'||v==='list_chua') v='list';
+    a.style.display=allowed.includes(v)?'flex':'none';
+  });
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 
@@ -757,48 +760,67 @@ function careCard(c){
     </div>
   </div>`;
 }
-function renderCare(){
-  if(!document.getElementById('care-ctrl')){
-    const saleF = fullView()? `<select id="care-sale" onchange="renderCare()"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>`:'';
-    const mktF = fullView()? `<select id="care-mkt" onchange="renderCare()"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([k,v])=>`<option value="${k}">Khách của ${v}</option>`).join('')}</select>`:'';
-    document.getElementById('v-care').innerHTML=`
-    <p style="color:var(--muted);font-size:13px;margin-bottom:10px">Hệ thống tự xếp khách theo độ ưu tiên — làm từ trên xuống là chăm đủ, không bỏ sót ai. Mỗi khách kèm gợi ý hành động kế tiếp.</p>
-    <div id="care-ctrl" class="filters">
-      <input class="search" id="care-search" placeholder="🔎 Tìm tên / SĐT / ghi chú..." oninput="renderCare()">
-      ${saleF}${mktF}
-      <select id="care-sort" onchange="renderCare()">
-        <option value="priority">Sắp theo: Ưu tiên (gấp nhất)</option>
-        <option value="follow">Sắp theo: Ngày follow gần nhất</option>
-        <option value="muc">Sắp theo: Mức độ nóng</option>
-      </select>
-    </div>
-    <div id="care-summary"></div>
-    <div id="care-list"></div>`;
-  }
-  const s=(document.getElementById('care-search').value||'').toLowerCase();
-  const fSale=fullView()?(document.getElementById('care-sale')?.value||''):ME.id;
-  const fMkt=fullView()?(document.getElementById('care-mkt')?.value||''):'';
-  const sort=document.getElementById('care-sort').value;
-  let arr=myData().filter(c=>!['da_chot','chot_nguoi','khach_chan'].includes(c.tt));
+/* ===== Hỗ trợ bảng chăm sóc sau chốt ===== */
+function addToDate(str,n){ if(!str) return ''; const d=new Date(str+'T00:00:00Z'); if(isNaN(d)) return ''; d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function careCell(base,a,b){
+  if(!base) return '<span style="color:var(--line)">—</span>';
+  const s=addToDate(base,a), e=addToDate(base,b), t=D(0);
+  const due = t>=s && t<=e, over = t>e;
+  const col = due?'#b07d00':(over?'var(--muted)':'var(--text)');
+  return `<span style="color:${col};${due?'font-weight:700':''}">${s} → ${e}</span>${due?' ⏰':''}`;
+}
+function custTitle(c){
+  return [c.ten, 'SĐT: '+(c.phone||'—'), 'Quốc gia: '+(c.quoc_gia||'—'), 'Nguồn: '+(NGUON[c.nguon]||'—'),
+    'MKT: '+(MKT[c.mkt]||'—')+' · Sale: '+(SALES[c.owner]||'—'), 'Bệnh lý: '+(c.benh_list||BENH[c.benh]||'—'),
+    'SP: '+(c.sp||'—'), 'Trạng thái: '+(STATUS[c.tt]||c.tt||'—'), 'DT: $'+tongChiTieu(c),
+    c.dia_chi?('Địa chỉ: '+c.dia_chi):'', c.ghi?('Ghi chú: '+c.ghi):''].filter(Boolean).join('\n').replace(/"/g,'&quot;');
+}
+function careTableHTML(arr){
+  let t=`<div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>STT</th><th>Khách</th><th>Ngày chốt</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th></tr>`;
+  if(!arr.length) t+=`<tr><td colspan="9" class="empty">Chưa có khách đã chốt.</td></tr>`;
+  arr.forEach((c,i)=>{ const ph=c.phan_hoi||'';
+    t+=`<tr class="${rowClass(c)}">
+      <td>${i+1}</td>
+      <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b> <span title="Sửa" style="cursor:pointer" onclick="editCustomer('${c.id}')">✏️</span><br><span style="color:var(--muted);font-size:11px">${c.phone||''} · ${SALES[c.owner]||'—'}</span></td>
+      <td>${c.ngay_chot||'—'}</td>
+      <td style="font-size:11px">${careCell(c.ngay_chot,7,10)}</td>
+      <td style="font-size:11px">${careCell(c.ngay_chot,20,25)}</td>
+      <td style="font-size:11px">${careCell(c.ngay_chot,28,35)}</td>
+      <td><select onchange="savePhanHoi('${c.id}',this.value)" style="padding:4px;width:auto"><option value="" ${ph===''?'selected':''}>—</option><option value="co" ${ph==='co'?'selected':''}>✅ Có</option><option value="khong" ${ph==='khong'?'selected':''}>❌ Không</option></select></td>
+      <td><input type="date" value="${c.follow||''}" onchange="saveFollowDate('${c.id}',this.value)" style="padding:4px;width:138px"></td>
+      <td><input value="${(c.cham_kq||'').replace(/"/g,'&quot;')}" placeholder="Kết quả chăm..." onchange="saveChamKq('${c.id}',this.value)" style="padding:4px;width:210px"></td>
+    </tr>`; });
+  return t+`</table></div>`;
+}
+function careRows(){
+  const s=(document.getElementById('care-search')?.value||'').toLowerCase();
+  const fSale=document.getElementById('care-sale')?.value||'';
+  const fMkt=document.getElementById('care-mkt')?.value||'';
+  let arr=DATA.filter(c=>isChot(c.tt));
   if(fSale) arr=arr.filter(c=>c.owner===fSale);
   if(fMkt) arr=arr.filter(c=>c.mkt===fMkt);
-  if(s) arr=arr.filter(c=>`${c.ten} ${c.phone} ${c.ghi}`.toLowerCase().includes(s));
-  const mucOrd={nong:0,am:1,lanh:2};
-  arr.sort((a,b)=> sort==='follow' ? ((a.follow||'9999')<(b.follow||'9999')?-1:1)
-                : sort==='muc' ? ((mucOrd[a.muc]-mucOrd[b.muc])||(careScore(b)-careScore(a)))
-                : careScore(b)-careScore(a));
-  const khan=arr.filter(c=>careScore(c)>=50).length;
-  const cao =arr.filter(c=>{const x=careScore(c);return x>=30&&x<50;}).length;
-  const tb  =arr.filter(c=>{const x=careScore(c);return x>=15&&x<30;}).length;
-  document.getElementById('care-summary').innerHTML=`<div class="grid kpi-grid" style="margin-bottom:14px">
-    <div class="card kpi"><div class="lbl">🔴 Khẩn cấp</div><div class="val red">${khan}</div></div>
-    <div class="card kpi"><div class="lbl">🟠 Ưu tiên cao</div><div class="val" style="color:#d2691e">${cao}</div></div>
-    <div class="card kpi"><div class="lbl">🟡 Trung bình</div><div class="val amber">${tb}</div></div>
-    <div class="card kpi"><div class="lbl">Tổng cần chăm</div><div class="val">${arr.length}</div></div>
-  </div>`;
-  document.getElementById('care-list').innerHTML = arr.length? arr.map(careCard).join('')
-    : `<div class="card empty">🎉 Không còn khách nào cần chăm. Quá tuyệt!</div>`;
+  if(s) arr=arr.filter(c=>`${c.ten} ${c.phone} ${c.ghi} ${c.cham_kq||''}`.toLowerCase().includes(s));
+  arr.sort((a,b)=>(b.ngay_chot||'').localeCompare(a.ngay_chot||''));
+  return arr;
 }
+function renderCare(){
+  if(!document.getElementById('care-ctrl')){
+    const saleF = `<select id="care-sale" onchange="renderCare()"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>`;
+    const mktF = `<select id="care-mkt" onchange="renderCare()"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([k,v])=>`<option value="${k}">Khách của ${v}</option>`).join('')}</select>`;
+    document.getElementById('v-care').innerHTML=`
+    <p style="color:var(--muted);font-size:13px;margin-bottom:10px">Lịch chăm khách <b>đã chốt</b> sau liệu trình — mốc tô <b>đậm ⏰</b> là tới hạn hôm nay. Nhập Phản hồi / Kết quả ngay trên bảng, cả team đều thấy.</p>
+    <div id="care-ctrl" class="filters">
+      <input class="search" id="care-search" placeholder="🔎 Tìm tên / SĐT / ghi chú / kết quả..." oninput="renderCare()">
+      ${saleF}${mktF}
+    </div>
+    <div id="care-table"></div>`;
+  }
+  document.getElementById('care-table').innerHTML=careTableHTML(careRows());
+}
+async function savePhanHoi(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.phan_hoi=v; try{ if(window.sb) await sb.from('customers').update({phan_hoi:v}).eq('id',id); }catch(e){} }
+async function saveChamKq(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.cham_kq=v; try{ if(window.sb) await sb.from('customers').update({cham_kq:v}).eq('id',id); }catch(e){} }
+async function saveFollowDate(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.follow=v||null; try{ if(window.sb) await sb.from('customers').update({follow:v||null}).eq('id',id); }catch(e){} renderAlert(); }
 
 function renderAdd(){
   const opt=(o)=>Object.entries(o).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
@@ -1009,7 +1031,7 @@ function renderList(){
     const f=flag(c); const fd= !c.follow?'—':
       (f==='over'?`<b style="color:var(--over)">${c.follow} ⚠</b>`:f==='warn'?`<b style="color:#b07d00">${c.follow}</b>`:c.follow);
     t+=`<tr class="${rowClass(c)}">
-      <td><b style="cursor:pointer;color:var(--teal-dark)" title="Bấm để sửa" onclick="editCustomer('${c.id}')">${c.ten}</b>${lanMuaBadge(c)} ${canEdit(c)?`<span style="cursor:pointer" title="Sửa" onclick="editCustomer('${c.id}')">✏️</span>`:''}${canDelete(c)?` <span style="cursor:pointer" title="Xoá khách" onclick="deleteCustomer('${c.id}')">🗑️</span>`:''}<br><span style="color:var(--muted);font-size:11px">${phoneCell(c)}</span></td>
+      <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b>${lanMuaBadge(c)} ${canEdit(c)?`<span style="cursor:pointer" title="Sửa" onclick="editCustomer('${c.id}')">✏️</span>`:''}${canDelete(c)?` <span style="cursor:pointer" title="Xoá khách" onclick="deleteCustomer('${c.id}')">🗑️</span>`:''}<br><span style="color:var(--muted);font-size:11px">${phoneCell(c)}</span></td>
       <td class="c-qg">${c.quoc_gia||'—'}</td><td class="c-nguon">${NGUON[c.nguon]||'—'}</td><td class="c-benh">${c.benh_list||BENH[c.benh]||'—'}</td>
       <td class="c-sp">${c.sp||'—'}</td><td class="c-muc">${mucPill(c.muc)}</td><td class="c-tt">${STATUS[c.tt]||c.tt||'—'}</td><td class="c-follow">${fd}</td>
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
@@ -1027,7 +1049,7 @@ const TASK_LOAI={cham_chot:'Chăm khách đã chốt',cham_chua:'Chăm khách ch
 function taskCustName(t){ const c=DATA.find(x=>String(x.id)===String(t.customer_id)); return c?c.ten:''; }
 function myTasks(){ const closed=new Set(DATA.filter(c=>isChot(c.tt)).map(c=>String(c.id)));
   const all=TASKS.filter(t=>!t.xong).filter(t=> !(t.loai==='cham_chua' && t.customer_id!=null && closed.has(String(t.customer_id))));
-  const adminLike=(ME.role==='admin'||ME.role==='owner'||ME.role==='marketing'); return adminLike?all:all.filter(t=>t.owner===ME.id); }
+  return all; /* công khai: mọi sale đều thấy việc của nhau để nhắc nhau */ }
 function taskBucket(t){ const h=t.han||''; if(!h) return 'upcoming'; if(h<D(0))return 'over'; if(h===D(0))return 'today'; return 'upcoming'; }
 function renderToday(){
   const d=myData();
@@ -1062,8 +1084,10 @@ function renderToday(){
   const taskTable=(title,arr,color)=> arr.length? `<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Nội dung</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${arr.map(taskRow).join('')}</table></div>`:'';
   html+=taskTable('Việc quá hạn',tOver,'var(--over)')+taskTable('Việc hôm nay',tToday,'#b07d00')+taskTable('Việc sắp tới',tUp,'var(--teal-dark)');
   if(!mt.length) html+=`<div class="card empty">Chưa có việc nào — thêm việc ở ô phía trên.</div>`;
-  const fb=(title,arr,color)=> arr.length?`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>SĐT</th><th>Trạng thái</th><th>Ngày follow</th></tr>${arr.map(c=>`<tr class="${rowClass(c)}"><td><b>${c.ten}</b></td><td>${c.phone||'—'}</td><td>${STATUS[c.tt]}</td><td>${c.follow||'—'}</td></tr>`).join('')}</table></div>`:'';
+  const fb=(title,arr,color)=> arr.length?`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>SĐT</th><th>Trạng thái</th><th>Ngày follow</th></tr>${arr.map(c=>`<tr class="${rowClass(c)}"><td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b></td><td>${c.phone||'—'}</td><td>${STATUS[c.tt]||c.tt||'—'}</td><td>${c.follow||'—'}</td></tr>`).join('')}</table></div>`:'';
   html+=`<h2 class="sec" style="margin-top:22px">Nhắc follow tự động</h2>`+((over.length||due.length)? fb('Quá hạn follow',over,'var(--over)')+fb('Đến hạn hôm nay',due,'#b07d00') : `<div class="card empty">Không có follow nào đến hạn.</div>`);
+  const careArr=DATA.filter(c=>isChot(c.tt)).sort((a,b)=>(b.ngay_chot||'').localeCompare(a.ngay_chot||''));
+  html+=`<h2 class="sec" style="margin-top:22px">📋 Lịch chăm khách đã chốt (cả team)</h2>`+careTableHTML(careArr);
   document.getElementById('v-today').innerHTML=html;
 }
 
@@ -1131,7 +1155,7 @@ function renderMarketing(){
   const rg=getRange('mkt');
   const ROWS=MREPORTS.filter(r=> (!rg.s||r.ngay>=rg.s) && (!rg.e||r.ngay<=rg.e));
   const pct=(a,b)=> b? (Math.round(a/b*1000)/10)+'%' : '—';
-  const money=n=> '$'+(Math.round((Number(n)||0)*100)/100).toLocaleString('en-US');
+  const money=n=> (Math.round(Number(n)||0)).toLocaleString('vi-VN')+' đ';
 
   let html=renderDateFilterBar('mkt');
 
@@ -1161,7 +1185,7 @@ function renderMarketing(){
       <div><label>MKT phụ trách</label><select id="m-owner">${Object.entries(MKT).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
       <div><label>Tên Page</label><input id="m-page" placeholder="VD: AGO Women US"></div>
       <div><label>Camp</label><input id="m-camp" placeholder="Tên/ID campaign"></div>
-      <div><label>Số tiền / Camp (USD)</label><input id="m-tien" type="number" step="0.01" value="0"></div>
+      <div><label>Số tiền / Camp (VND đ)</label><input id="m-tien" type="number" step="1" value="0"></div>
       <div><label>SL MES (tin nhắn)</label><input id="m-mes" type="number" value="0"></div>
       <div><label>Số CMT</label><input id="m-cmt" type="number" value="0"></div>
       <div><label>MES TT (tương tác)</label><input id="m-tt" type="number" value="0"></div>
@@ -1170,30 +1194,56 @@ function renderMarketing(){
     </div></form>
     <p style="color:var(--muted);font-size:12px;margin-top:8px">CP/MES = Tiền ÷ (SL MES + CMT) · Tỷ lệ TT = MES TT ÷ SL MES · Tỷ lệ chốt = SĐ chốt ÷ SL MES.</p></div>`;
 
-  // ----- Bảng chi tiết theo Page / Camp -----
-  html+=`<h2 class="sec">📄 Chi tiết theo Page / Camp</h2><div class="card" style="padding:0;overflow-x:auto"><table>
-    <tr><th>Ngày</th><th>MKT</th><th>Tên Page</th><th>Camp</th><th>Số tiền/Camp</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th><th></th></tr>`;
-  if(!ROWS.length) html+=`<tr><td colspan="13" class="empty">Chưa có báo cáo nào trong kỳ.</td></tr>`;
-  ROWS.slice().sort((a,b)=>(b.ngay||'').localeCompare(a.ngay||'')).forEach(r=>{
-    const mes=Number(r.sl_mes)||0, cmt=Number(r.so_cmt)||0, tt=Number(r.mes_tt)||0, chot=Number(r.sd_chot)||0, tien=Number(r.tien)||0;
-    html+=`<tr><td>${r.ngay||'—'}</td><td>${MKT[r.owner]||r.owner||'—'}</td><td><b>${r.ten_page||'—'}</b></td><td>${r.camp||'—'}</td>
-      <td>${money(tien)}</td><td>${mes}</td><td>${cmt}</td><td>${(mes+cmt)?money(tien/(mes+cmt)):'—'}</td>
-      <td>${tt}</td><td>${pct(tt,mes)}</td><td>${chot}</td><td>${pct(chot,mes)}</td>
-      <td>${(fullView()||r.owner===ME.id)?`<span style="cursor:pointer" title="Xoá" onclick="deleteMReport('${r.id}')">🗑️</span>`:''}</td></tr>`;
+  // ----- Bảng chi tiết: gom theo MKT → theo Page -----
+  html+=`<h2 class="sec">📄 Chi tiết theo Page / Camp</h2>`;
+  const ownerKeys=Object.keys(MKT).filter(id=>ROWS.some(r=>r.owner===id));
+  const otherOwners=[...new Set(ROWS.filter(r=>!MKT[r.owner]).map(r=>r.owner))];
+  const allOwners=[...ownerKeys,...otherOwners];
+  if(!ROWS.length) html+=`<div class="card empty">Chưa có báo cáo nào trong kỳ.</div>`;
+  allOwners.forEach(oid=>{
+    const rows=ROWS.filter(r=>r.owner===oid).sort((a,b)=> (a.ten_page||'').localeCompare(b.ten_page||'') || (a.ngay||'').localeCompare(b.ngay||''));
+    let s={tien:0,mes:0,cmt:0,tt:0,chot:0}; rows.forEach(r=>{s.tien+=+r.tien||0;s.mes+=+r.sl_mes||0;s.cmt+=+r.so_cmt||0;s.tt+=+r.mes_tt||0;s.chot+=+r.sd_chot||0;});
+    html+=`<div class="card" style="padding:0;overflow-x:auto;margin-bottom:14px"><table>
+      <tr style="background:#7ee36a"><th colspan="13" style="text-align:center;font-size:15px;color:#14361f">${(MKT[oid]||oid||'—').toUpperCase()}</th></tr>
+      <tr><th>Tên Page</th><th>Camp</th><th>Số tiền/Camp</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th><th>Ngày</th><th></th></tr>
+      <tr style="background:#fffbe0;font-weight:700"><td>TỔNG</td><td></td><td>${money(s.tien)}</td><td>${s.mes}</td><td>${s.cmt}</td><td>${(s.mes+s.cmt)?money(s.tien/(s.mes+s.cmt)):'—'}</td><td>${s.tt}</td><td>${pct(s.tt,s.mes)}</td><td>${s.chot}</td><td>${pct(s.chot,s.mes)}</td><td></td><td></td></tr>`;
+    let lastPage=null;
+    rows.forEach(r=>{
+      const mes=+r.sl_mes||0, cmt=+r.so_cmt||0, tt=+r.mes_tt||0, chot=+r.sd_chot||0, tien=+r.tien||0;
+      const pg = (r.ten_page!==lastPage)? `<b>${r.ten_page||'—'}</b>` : ''; lastPage=r.ten_page;
+      html+=`<tr><td>${pg}</td><td>${r.camp||'—'}</td>
+        <td>${money(tien)}</td><td>${mes}</td><td>${cmt}</td><td>${(mes+cmt)?money(tien/(mes+cmt)):'—'}</td>
+        <td>${tt}</td><td>${pct(tt,mes)}</td><td>${chot}</td><td>${pct(chot,mes)}</td><td style="font-size:11px;color:var(--muted)">${r.ngay||'—'}</td>
+        <td style="white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" title="Sửa" onclick="editMReport('${r.id}')">✏️</span> <span style="cursor:pointer;color:var(--over)" title="Xoá" onclick="deleteMReport('${r.id}')">🗑️</span></td></tr>`;
+    });
+    html+=`</table></div>`;
   });
-  html+=`</table></div>`;
 
   document.getElementById('v-marketing').innerHTML=html;
 }
+let MEDIT=null;
+function editMReport(id){
+  const r=MREPORTS.find(x=>String(x.id)===String(id)); if(!r) return;
+  const set=(k,v)=>{const el=document.getElementById(k); if(el) el.value=v;};
+  set('m-ngay',r.ngay||D(0)); set('m-owner',r.owner); set('m-page',r.ten_page==='—'?'':r.ten_page);
+  set('m-camp',r.camp==='—'?'':r.camp); set('m-tien',r.tien); set('m-mes',r.sl_mes);
+  set('m-cmt',r.so_cmt); set('m-tt',r.mes_tt); set('m-chot',r.sd_chot);
+  MEDIT=id;
+  const f=document.getElementById('m-ngay'); if(f){ f.scrollIntoView({behavior:'smooth',block:'center'}); }
+  alert('✏️ Đang sửa báo cáo này — chỉnh xong bấm "Lưu báo cáo".');
+}
 async function saveMReport(e){
   e.preventDefault(); const g=id=>document.getElementById(id).value;
-  const rec={ id:Date.now(), owner:g('m-owner'), ngay:g('m-ngay')||D(0),
+  const data={ owner:g('m-owner'), ngay:g('m-ngay')||D(0),
     ten_page:(g('m-page')||'').trim()||'—', camp:(g('m-camp')||'').trim()||'—',
     tien:Number(g('m-tien'))||0, sl_mes:Number(g('m-mes'))||0, so_cmt:Number(g('m-cmt'))||0,
     mes_tt:Number(g('m-tt'))||0, sd_chot:Number(g('m-chot'))||0 };
-  const { error }=await sb.from('mkt_reports').insert(rec);
+  let error;
+  if(MEDIT){ ({ error }=await sb.from('mkt_reports').update(data).eq('id',MEDIT)); }
+  else { ({ error }=await sb.from('mkt_reports').insert({ id:Date.now(), ...data })); }
   if(error){ alert('Lưu lỗi: '+error.message); return; }
-  await loadAll(); renderMarketing(); alert('✅ Đã lưu báo cáo "'+rec.ten_page+'"');
+  const wasEdit=MEDIT; MEDIT=null;
+  await loadAll(); renderMarketing(); alert(wasEdit?'✅ Đã cập nhật báo cáo.':'✅ Đã lưu báo cáo "'+data.ten_page+'"');
 }
 async function deleteMReport(id){
   if(!confirm('Xoá báo cáo này?')) return;
@@ -1350,7 +1400,8 @@ async function loadAll(){
   const allc = (cs||[]).map(c=>({ ...c,
     follow:c.follow||'', ngay_tao:(c.ngay_tao||'').slice(0,10),
     ngay_capnhat:(c.ngay_capnhat||c.ngay_tao||'').slice(0,10), ngay_upsale:c.ngay_upsale||'',
-    dt:Number(c.dt)||0, benh_list:c.benh_list||'', has_wa:!!c.has_wa, khach_cu:!!c.khach_cu, da_xoa:!!c.da_xoa }));
+    dt:Number(c.dt)||0, benh_list:c.benh_list||'', has_wa:!!c.has_wa, khach_cu:!!c.khach_cu, da_xoa:!!c.da_xoa,
+    phan_hoi:c.phan_hoi||'', cham_kq:c.cham_kq||'' }));
   DATA = allc.filter(c=>!c.da_xoa);
   TRASH = allc.filter(c=>c.da_xoa);
   const { data:spd } = await sb.from('marketing_spend').select('*');
