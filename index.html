@@ -90,10 +90,6 @@
     <input id="u" placeholder="Tài khoản" autocomplete="off">
     <input id="p" type="password" placeholder="Mật khẩu">
     <button onclick="login()">Đăng nhập</button>
-    <div class="hint">
-      Đăng nhập bằng <b>email + mật khẩu</b> đã tạo trên Supabase.<br>
-      (Admin tạo tài khoản cho từng nhân sự — xem hướng dẫn deploy.)
-    </div>
   </div>
 </div>
 
@@ -1447,7 +1443,7 @@ async function changeMyPass(){
 const SUPABASE_URL = 'https://wviyzewnokgirfkpdcvh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ein2Oxmzo36-WpKUheVlYg_HOms1mso';
 const sb = (window.supabase && SUPABASE_URL.startsWith('http'))
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ storage: window.sessionStorage, persistSession:true, autoRefreshToken:true } }) : null;
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 window.sb = sb; /* để mọi nơi dùng window.sb đều hoạt động (sửa lỗi không lưu được dữ liệu) */
 /* ===== Bảo mật đăng nhập: tự đăng xuất sau 30 phút không dùng ===== */
 let __idleTimer=null;
@@ -1555,6 +1551,7 @@ async function afterLogin(){
   const allowed=PERMS[ME.uname]||[];
   go(allowed.includes('today')?'today':(allowed.includes('dashboard')?'dashboard':(allowed[0]||'dashboard')));
   renderAll();
+  try{ sessionStorage.setItem('ccp_active','1'); }catch(e){}
   startIdle();
 }
 /* ---- Đăng nhập / đăng xuất bằng Supabase Auth (email + mật khẩu) ---- */
@@ -1774,7 +1771,10 @@ async function adminResetPass(u){
 /* ---- Khởi động: đổi ô đăng nhập sang Email + tự đăng nhập nếu còn phiên ---- */
 window.addEventListener('DOMContentLoaded', ()=>{
   const u=document.getElementById('u'); if(u) u.placeholder='Email';
-  if(sb){ sb.auth.getSession().then(async ({data})=>{ if(data.session){ if(await ensureMFA()){ afterLogin(); } else { await sb.auth.signOut(); } } }); }
+  if(sb){ sb.auth.getSession().then(async ({data})=>{ if(data.session){
+    if(!sessionStorage.getItem('ccp_active')){ await sb.auth.signOut(); return; } /* tab/trình duyệt mới -> bắt đăng nhập lại */
+    if(await ensureMFA()){ afterLogin(); } else { await sb.auth.signOut(); }
+  } }); }
 });
 </script>
 </body>
