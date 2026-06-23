@@ -795,9 +795,9 @@ function careTableHTML(arr){
       <td style="font-size:11px">${careCell(c.ngay_chot,20,25)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,28,35)}</td>
       <td><select onchange="savePhanHoi('${c.id}',this.value)" style="padding:4px;width:auto"><option value="" ${ph===''?'selected':''}>—</option><option value="co" ${ph==='co'?'selected':''}>✅ Có</option><option value="khong" ${ph==='khong'?'selected':''}>❌ Không</option></select></td>
-      <td><input value="${(c.su_dung||'').replace(/"/g,'&quot;')}" placeholder="VD: Dùng đều, giảm đau bụng kinh..." onchange="saveSuDung('${c.id}',this.value)" style="padding:4px;width:230px"></td>
+      <td><input value="${(c.su_dung||'').replace(/"/g,'&quot;')}" placeholder="VD: Dùng đều, giảm đau bụng kinh..." oninput="debSave('su_dung','${c.id}',this.value)" onchange="saveSuDung('${c.id}',this.value)" style="padding:4px;width:230px"></td>
       <td><input type="date" value="${c.follow||''}" onchange="saveFollowDate('${c.id}',this.value)" style="padding:4px;width:138px"></td>
-      <td><input value="${(c.cham_kq||'').replace(/"/g,'&quot;')}" placeholder="Kết quả chăm..." onchange="saveChamKq('${c.id}',this.value)" style="padding:4px;width:210px"></td>
+      <td><input value="${(c.cham_kq||'').replace(/"/g,'&quot;')}" placeholder="Kết quả chăm..." oninput="debSave('cham_kq','${c.id}',this.value)" onchange="saveChamKq('${c.id}',this.value)" style="padding:4px;width:210px"></td>
     </tr>`; });
   return t+`</table></div>`;
 }
@@ -817,7 +817,7 @@ function renderCare(){
     const saleF = `<select id="care-sale" onchange="renderCare()"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>`;
     const mktF = `<select id="care-mkt" onchange="renderCare()"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([k,v])=>`<option value="${k}">Khách của ${v}</option>`).join('')}</select>`;
     document.getElementById('v-care').innerHTML=`
-    <p style="color:var(--muted);font-size:13px;margin-bottom:10px">Lịch chăm khách <b>đã chốt</b> sau liệu trình — mốc tô <b>đậm ⏰</b> là tới hạn hôm nay. Nhập Phản hồi / Kết quả ngay trên bảng, cả team đều thấy.</p>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:10px">Lịch chăm khách <b>đã chốt</b> sau liệu trình — mốc tô <b>đậm ⏰</b> là tới hạn hôm nay. Nhập ngay trên bảng — <b>tự lưu</b> trong lúc gõ (hiện "✓ Đã lưu"), cả team đều thấy.</p>
     <div id="care-ctrl" class="filters">
       <input class="search" id="care-search" placeholder="🔎 Tìm tên / SĐT / ghi chú / kết quả..." oninput="renderCare()">
       ${saleF}${mktF}
@@ -826,10 +826,14 @@ function renderCare(){
   }
   document.getElementById('care-table').innerHTML=careTableHTML(careRows());
 }
-async function savePhanHoi(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.phan_hoi=v; try{ if(window.sb) await sb.from('customers').update({phan_hoi:v}).eq('id',id); }catch(e){} }
-async function saveChamKq(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.cham_kq=v; try{ if(window.sb) await sb.from('customers').update({cham_kq:v}).eq('id',id); }catch(e){} }
-async function saveSuDung(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.su_dung=v; try{ if(window.sb) await sb.from('customers').update({su_dung:v}).eq('id',id); }catch(e){} }
-async function saveFollowDate(id,v){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c.follow=v||null; try{ if(window.sb) await sb.from('customers').update({follow:v||null}).eq('id',id); }catch(e){} renderAlert(); }
+function toast(msg,ok){ let t=document.getElementById('cpp-toast'); if(!t){t=document.createElement('div'); t.id='cpp-toast'; t.style.cssText='position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:10px;font-size:14px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:99999;opacity:0;transition:opacity .25s;color:#fff'; document.body.appendChild(t);} t.style.background=ok===false?'#e23d3d':'#2f9e6e'; t.textContent=msg; t.style.opacity='1'; clearTimeout(window.__toastT); window.__toastT=setTimeout(()=>{t.style.opacity='0';},1600); }
+async function saveCol(id,col,val){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=val; if(!window.sb){toast('✓ Đã lưu');return;} try{ const {error}=await sb.from('customers').update({[col]:val}).eq('id',id); if(error){toast('⚠ Lỗi lưu, thử lại',false);} else {toast('✓ Đã lưu');} }catch(e){toast('⚠ Lỗi lưu, thử lại',false);} }
+let __saveTimers={};
+function debSave(col,id,v){ const k=col+'|'+id; clearTimeout(__saveTimers[k]); if(v!==undefined){const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=v;} __saveTimers[k]=setTimeout(()=>{ saveCol(id,col,v); },700); }
+async function savePhanHoi(id,v){ await saveCol(id,'phan_hoi',v); }
+async function saveChamKq(id,v){ await saveCol(id,'cham_kq',v); }
+async function saveSuDung(id,v){ await saveCol(id,'su_dung',v); }
+async function saveFollowDate(id,v){ await saveCol(id,'follow',v||null); renderAlert(); }
 
 function renderAdd(){
   const opt=(o)=>Object.entries(o).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
@@ -1113,7 +1117,7 @@ function renderToday(){
   const fb=(title,arr,color)=> arr.length?`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>SĐT</th><th>Trạng thái</th><th>Ngày follow</th></tr>${arr.map(c=>`<tr class="${rowClass(c)}"><td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b></td><td>${c.phone||'—'}</td><td>${ttPill(c.tt)}</td><td>${c.follow||'—'}</td></tr>`).join('')}</table></div>`:'';
   html+=`<h2 class="sec" style="margin-top:22px">Nhắc follow tự động</h2>`+((over.length||due.length)? fb('Quá hạn follow',over,'var(--over)')+fb('Đến hạn hôm nay',due,'#b07d00') : `<div class="card empty">Không có follow nào đến hạn.</div>`);
   const careArr=DATA.filter(c=>isChot(c.tt)).sort((a,b)=>(b.ngay_chot||'').localeCompare(a.ngay_chot||''));
-  html+=`<h2 class="sec" style="margin-top:22px">📋 Lịch chăm khách đã chốt (cả team)</h2>`+careTableHTML(careArr);
+  html+=`<h2 class="sec" style="margin-top:22px">📋 Lịch chăm khách đã chốt (cả team)</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">💡 <b>Tự động lưu</b> trong lúc gõ (ngừng gõ ~1 giây là lưu) — hiện "✓ Đã lưu" ở góc phải. Không cần nút bấm.</p>`+careTableHTML(careArr);
   document.getElementById('v-today').innerHTML=html;
 }
 
