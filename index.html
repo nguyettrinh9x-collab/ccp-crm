@@ -225,6 +225,7 @@ let DATA = [];
 
 /* Chi phí marketing theo nguồn + MKT (USD) - demo */
 let SPEND = [];  // chưa có chi phí marketing — nhập ở trang Báo cáo Marketing
+let MREPORTS = []; // báo cáo marketing theo page/camp: {id,owner,ngay,ten_page,camp,tien,sl_mes,so_cmt,mes_tt,sd_chot}
 
 /* ============ AUTH ============ */
 let ME = null;
@@ -1103,71 +1104,77 @@ function renderReport(){
 
 function renderMarketing(){
   const rg=getRange('mkt');
-  const CUS=DATA.filter(c=>inDateRange('mkt',c));
-  const SPD=SPEND.filter(s=>s.ngay>=rg.s&&s.ngay<=rg.e);
-  // gom theo nguồn
-  const agg=(keyFn)=>{
-    const m={};
-    CUS.forEach(c=>{const k=keyFn(c); m[k]=m[k]||{lead:0,chot:0,rev:0,spend:0}; m[k].lead++;
-      if(c.tt==='da_chot'){m[k].chot++; m[k].rev+=c.dt;}});
-    SPD.forEach(s=>{const k=keyFn(s); m[k]=m[k]||{lead:0,chot:0,rev:0,spend:0}; m[k].spend+=s.chi_phi;});
-    return m;
-  };
-  const fmtCPL=(sp,lead)=> lead? '$'+(sp/lead).toFixed(1) : '—';
-  const fmtROI=(rev,sp)=> sp? '<b style="color:'+(rev>=sp?'var(--won)':'var(--over)')+'">'+(rev/sp).toFixed(1)+'x</b>' : (rev?'<b style="color:var(--won)">∞</b>':'—');
-  const rateBar=(c,l)=>{const r=l?Math.round(c/l*100):0;return `<div class="bar" style="width:70px;display:inline-block;vertical-align:middle"><div style="width:${r}%"></div></div> ${r}%`;};
+  const ROWS=MREPORTS.filter(r=> (!rg.s||r.ngay>=rg.s) && (!rg.e||r.ngay<=rg.e));
+  const pct=(a,b)=> b? (Math.round(a/b*1000)/10)+'%' : '—';
+  const money=n=> '$'+(Math.round((Number(n)||0)*100)/100).toLocaleString('en-US');
 
-  const totLead=CUS.length, totChot=CUS.filter(c=>c.tt==='da_chot').length;
-  const totRev=CUS.filter(c=>c.tt==='da_chot').reduce((s,c)=>s+c.dt,0);
-  const totSpend=SPD.reduce((s,x)=>s+x.chi_phi,0);
+  let html=renderDateFilterBar('mkt');
 
-  let html=renderDateFilterBar('mkt')+`<div class="grid kpi-grid">
-    <div class="card kpi"><div class="lbl">Tổng lead</div><div class="val">${totLead}</div></div>
-    <div class="card kpi"><div class="lbl">Tổng chi phí QC</div><div class="val red">$${totSpend}</div></div>
-    <div class="card kpi"><div class="lbl">CPL trung bình</div><div class="val amber">${fmtCPL(totSpend,totLead)}</div></div>
-    <div class="card kpi"><div class="lbl">ROI tổng (DT/Chi phí)</div><div class="val green">${totSpend?(totRev/totSpend).toFixed(1)+'x':'—'}</div></div>
-  </div>`;
-
-  // ----- Doanh số theo từng Marketing -----
-  const aggMkt = agg(c=>c.mkt);
-  const maxRev = Math.max(1,...Object.values(aggMkt).map(v=>v.rev));
-  html+=`<h2 class="sec">💰 Doanh số theo Marketing</h2><div class="grid" style="grid-template-columns:repeat(${Object.keys(MKT).length||1},1fr)">`;
+  // ----- Bảng tổng hợp theo từng MKT (check hàng ngày) -----
+  const byMkt={};
+  ROWS.forEach(r=>{ const k=r.owner||'—'; const m=byMkt[k]=byMkt[k]||{tien:0,mes:0,cmt:0,tt:0,chot:0};
+    m.tien+=Number(r.tien)||0; m.mes+=Number(r.sl_mes)||0; m.cmt+=Number(r.so_cmt)||0; m.tt+=Number(r.mes_tt)||0; m.chot+=Number(r.sd_chot)||0; });
+  let TT={tien:0,mes:0,cmt:0,tt:0,chot:0};
+  html+=`<h2 class="sec">📊 Tổng hợp theo MKT (check hàng ngày)</h2><div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>MKT</th><th>Tổng tiền</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th></tr>`;
   Object.entries(MKT).forEach(([id,name])=>{
-    const v=aggMkt[id]||{lead:0,chot:0,rev:0,spend:0};
-    const share = totRev? Math.round(v.rev/totRev*100):0;
-    html+=`<div class="card kpi">
-      <div class="lbl">MKT · ${name}</div>
-      <div class="val green">$${v.rev}</div>
-      <div style="font-size:12px;color:var(--muted);margin:6px 0 8px">${v.chot} đơn chốt · ${v.lead} lead · đóng góp ${share}%</div>
-      <div class="bar"><div style="width:${v.rev/maxRev*100}%"></div></div>
-    </div>`;
+    const m=byMkt[id]; if(!m) return;
+    TT.tien+=m.tien;TT.mes+=m.mes;TT.cmt+=m.cmt;TT.tt+=m.tt;TT.chot+=m.chot;
+    html+=`<tr><td><b>${name}</b></td><td>${money(m.tien)}</td><td>${m.mes}</td><td>${m.cmt}</td>
+      <td>${(m.mes+m.cmt)?money(m.tien/(m.mes+m.cmt)):'—'}</td><td>${m.tt}</td><td>${pct(m.tt,m.mes)}</td>
+      <td>${m.chot}</td><td>${pct(m.chot,m.mes)}</td></tr>`;
   });
-  html+=`</div>`;
+  if(!Object.keys(byMkt).length) html+=`<tr><td colspan="9" class="empty">Chưa có báo cáo nào trong kỳ.</td></tr>`;
+  else html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>${money(TT.tien)}</td><td>${TT.mes}</td><td>${TT.cmt}</td>
+    <td>${(TT.mes+TT.cmt)?money(TT.tien/(TT.mes+TT.cmt)):'—'}</td><td>${TT.tt}</td><td>${pct(TT.tt,TT.mes)}</td><td>${TT.chot}</td><td>${pct(TT.chot,TT.mes)}</td></tr>`;
+  html+=`</table></div>`;
 
-  const tableBy=(title,colLabel,m,labelMap)=>{
-    let t=`<h2 class="sec">${title}</h2><div class="card" style="padding:0"><table>
-      <tr><th>${colLabel}</th><th>Lead</th><th>Chốt</th><th>Tỷ lệ chốt</th><th>Chi phí</th><th>CPL</th><th>Doanh thu</th><th>ROI</th></tr>`;
-    Object.entries(m).sort((a,b)=>b[1].rev-a[1].rev).forEach(([k,v])=>{
-      t+=`<tr><td><b>${labelMap?(labelMap[k]||k):k}</b></td><td>${v.lead}</td><td>${v.chot}</td>
-        <td>${rateBar(v.chot,v.lead)}</td><td>$${v.spend}</td><td>${fmtCPL(v.spend,v.lead)}</td>
-        <td>$${v.rev}</td><td>${fmtROI(v.rev,v.spend)}</td></tr>`;
-    });
-    return t+`</table></div>`;
-  };
-  html+=tableBy('Theo nguồn khách','Nguồn', agg(c=>c.nguon), NGUON);
-  html+=tableBy('Theo nhân sự MKT','MKT', agg(c=>c.mkt), MKT);
-
-  // Form nhập chi phí (admin + marketing)
-  html+=`<h2 class="sec">➕ Nhập chi phí quảng cáo</h2><div class="card"><form onsubmit="saveSpend(event)">
+  // ----- Form nhập báo cáo (2 bạn MKT) -----
+  html+=`<h2 class="sec">➕ Nhập báo cáo Marketing</h2><div class="card"><form onsubmit="saveMReport(event)">
     <div class="form-grid">
-      <div><label>Ngày</label><input id="s-ngay" type="date" value="${D(0)}"></div>
-      <div><label>Nguồn</label><select id="s-nguon">${Object.entries(NGUON).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
-      <div><label>MKT phụ trách</label><select id="s-mkt">${Object.entries(MKT).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
-      <div><label>Chi phí (USD)</label><input id="s-chi" type="number" value="0"></div>
-      <div class="full"><button class="btn" type="submit">💾 Lưu chi phí</button></div>
-    </div></form></div>
-    <p style="color:var(--muted);font-size:12px;margin-top:10px">CPL = Chi phí / số lead · ROI = Doanh thu / Chi phí. Bản thật có thể tự kéo chi phí từ Facebook/TikTok Ads qua Make/n8n.</p>`;
+      <div><label>Ngày</label><input id="m-ngay" type="date" value="${D(0)}"></div>
+      <div><label>MKT phụ trách</label><select id="m-owner">${Object.entries(MKT).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
+      <div><label>Tên Page</label><input id="m-page" placeholder="VD: AGO Women US"></div>
+      <div><label>Camp</label><input id="m-camp" placeholder="Tên/ID campaign"></div>
+      <div><label>Số tiền / Camp (USD)</label><input id="m-tien" type="number" step="0.01" value="0"></div>
+      <div><label>SL MES (tin nhắn)</label><input id="m-mes" type="number" value="0"></div>
+      <div><label>Số CMT</label><input id="m-cmt" type="number" value="0"></div>
+      <div><label>MES TT (tương tác)</label><input id="m-tt" type="number" value="0"></div>
+      <div><label>SĐ chốt</label><input id="m-chot" type="number" value="0"></div>
+      <div class="full"><button class="btn" type="submit">💾 Lưu báo cáo</button></div>
+    </div></form>
+    <p style="color:var(--muted);font-size:12px;margin-top:8px">CP/MES = Tiền ÷ (SL MES + CMT) · Tỷ lệ TT = MES TT ÷ SL MES · Tỷ lệ chốt = SĐ chốt ÷ SL MES.</p></div>`;
+
+  // ----- Bảng chi tiết theo Page / Camp -----
+  html+=`<h2 class="sec">📄 Chi tiết theo Page / Camp</h2><div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Ngày</th><th>MKT</th><th>Tên Page</th><th>Camp</th><th>Số tiền/Camp</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th><th></th></tr>`;
+  if(!ROWS.length) html+=`<tr><td colspan="13" class="empty">Chưa có báo cáo nào trong kỳ.</td></tr>`;
+  ROWS.slice().sort((a,b)=>(b.ngay||'').localeCompare(a.ngay||'')).forEach(r=>{
+    const mes=Number(r.sl_mes)||0, cmt=Number(r.so_cmt)||0, tt=Number(r.mes_tt)||0, chot=Number(r.sd_chot)||0, tien=Number(r.tien)||0;
+    html+=`<tr><td>${r.ngay||'—'}</td><td>${MKT[r.owner]||r.owner||'—'}</td><td><b>${r.ten_page||'—'}</b></td><td>${r.camp||'—'}</td>
+      <td>${money(tien)}</td><td>${mes}</td><td>${cmt}</td><td>${(mes+cmt)?money(tien/(mes+cmt)):'—'}</td>
+      <td>${tt}</td><td>${pct(tt,mes)}</td><td>${chot}</td><td>${pct(chot,mes)}</td>
+      <td>${(fullView()||r.owner===ME.id)?`<span style="cursor:pointer" title="Xoá" onclick="deleteMReport('${r.id}')">🗑️</span>`:''}</td></tr>`;
+  });
+  html+=`</table></div>`;
+
   document.getElementById('v-marketing').innerHTML=html;
+}
+async function saveMReport(e){
+  e.preventDefault(); const g=id=>document.getElementById(id).value;
+  const rec={ id:Date.now(), owner:g('m-owner'), ngay:g('m-ngay')||D(0),
+    ten_page:(g('m-page')||'').trim()||'—', camp:(g('m-camp')||'').trim()||'—',
+    tien:Number(g('m-tien'))||0, sl_mes:Number(g('m-mes'))||0, so_cmt:Number(g('m-cmt'))||0,
+    mes_tt:Number(g('m-tt'))||0, sd_chot:Number(g('m-chot'))||0 };
+  const { error }=await sb.from('mkt_reports').insert(rec);
+  if(error){ alert('Lưu lỗi: '+error.message); return; }
+  await loadAll(); renderMarketing(); alert('✅ Đã lưu báo cáo "'+rec.ten_page+'"');
+}
+async function deleteMReport(id){
+  if(!confirm('Xoá báo cáo này?')) return;
+  const { error }=await sb.from('mkt_reports').delete().eq('id', id);
+  if(error){ alert('Lỗi xoá: '+error.message); return; }
+  await loadAll(); renderMarketing();
 }
 function saveSpend(e){
   e.preventDefault(); const g=id=>document.getElementById(id).value;
@@ -1332,6 +1339,10 @@ async function loadAll(){
   TARGETS = {};
   const { data:tg } = await sb.from('sale_targets').select('*');
   (tg||[]).forEach(t=>{ TARGETS[t.owner+'|'+t.thang]=Number(t.muc_tieu)||0; });
+  MREPORTS = [];
+  const { data:mr } = await sb.from('mkt_reports').select('*');
+  MREPORTS = (mr||[]).map(r=>({id:r.id, owner:r.owner, ngay:(r.ngay||'').slice(0,10), ten_page:r.ten_page, camp:r.camp,
+    tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0}));
   return true;
 }
 /* ---- Việc cần làm / nhắc việc (Supabase) ---- */
