@@ -418,6 +418,63 @@ function editCustomer(id){
     </div></form>${orderHistoryHTML(c)}</div>`;
 }
 function closeEdit(){ const ov=document.getElementById('edit-overlay'); if(ov)ov.style.display='none'; }
+
+/* ===== PANEL CHĂM SÓC CHI TIẾT (mốc tự động + nhật ký) ===== */
+let CARE_PANEL_ID=null;
+function getCham(c){ let d=c.cham_data; if(typeof d==='string'){ try{d=JSON.parse(d);}catch(e){d=null;} }
+  if(!d||typeof d!=='object') d={moc:[],log:[]}; if(!Array.isArray(d.moc)) d.moc=[]; if(!Array.isArray(d.log)) d.log=[]; return d; }
+function addMonths(dstr,n){ const b=new Date((dstr||D(0))+'T00:00:00'); b.setMonth(b.getMonth()+n); return b.toISOString().slice(0,10); }
+function ensureMoc(c,d){ if(d.moc.length) return false; const base=c.ngay_chot||D(0);
+  d.moc=[ {key:'l1',label:'Trạng thái khách hàng lần 1',han:addMonths(base,1),done:false,note:''},
+    {key:'l2',label:'Trạng thái khách hàng lần 2',han:addMonths(base,2),done:false,note:''},
+    {key:'l3',label:'Trạng thái khách hàng lần 3',han:addMonths(base,3),done:false,note:''},
+    {key:'up',label:'Up liệu trình mới',han:addMonths(base,4),done:false,note:'',isUp:true,upStatus:''} ]; return true; }
+async function saveCham(id,d){ const c=DATA.find(x=>String(x.id)===String(id)); if(c) c.cham_data=d;
+  if(!window.sb) return; const {error}=await sb.from('customers').update({cham_data:d}).eq('id',id);
+  if(error){ console.warn('cham_data',error.message); if(/cham_data/.test(error.message||'')) alert('⚠️ Chưa có cột cham_data trên Supabase. Chạy SQL:\nalter table customers add column if not exists cham_data jsonb;'); } }
+function careLog(d,text){ d.log.push({at:D(0),who:(ME&&ME.name)||'',text}); }
+function mocStatus(m){ if(m.done) return {label:'Đã xong',color:'var(--won)',bg:''};
+  const t=D(0); if(m.han&&m.han<t) return {label:'Quá hạn',color:'var(--over)',bg:'#fff5f5'};
+  if(m.han===t) return {label:'Đến hạn',color:'#b07d00',bg:'#fffaf0'}; return {label:'Chưa tới',color:'var(--muted)',bg:''}; }
+function openCarePanel(id){ const c=DATA.find(x=>String(x.id)===String(id)); if(!c){alert('Không tìm thấy khách.');return;}
+  CARE_PANEL_ID=id; const d=getCham(c); if(ensureMoc(c,d)) saveCham(id,d); renderCarePanel(); }
+function closeCarePanel(){ const ov=document.getElementById('care-overlay'); if(ov) ov.style.display='none'; CARE_PANEL_ID=null; }
+function careMocToggle(key){ const c=DATA.find(x=>String(x.id)===String(CARE_PANEL_ID)); if(!c) return; const d=getCham(c);
+  const m=d.moc.find(x=>x.key===key); if(!m) return; m.done=!m.done; m.done_at=m.done?D(0):'';
+  careLog(d,(m.done?'✅ ':'↩ ')+m.label+(m.note?': '+m.note:'')); saveCham(c.id,d); renderCarePanel(); }
+function careMocNote(key,val){ const c=DATA.find(x=>String(x.id)===String(CARE_PANEL_ID)); if(!c) return; const d=getCham(c);
+  const m=d.moc.find(x=>x.key===key); if(!m) return; m.note=val; saveCham(c.id,d); }
+function careUp(key,action){ const c=DATA.find(x=>String(x.id)===String(CARE_PANEL_ID)); if(!c) return; const d=getCham(c);
+  const m=d.moc.find(x=>x.key===key); if(!m) return; const map={lenmoi:'🎯 Lên liệu trình mới',theodoi:'👁 Theo dõi thêm',tubo:'✖ Từ bỏ'};
+  m.upStatus=map[action]||''; m.done=(action!=='theodoi'); m.done_at=m.done?D(0):'';
+  careLog(d,map[action]+(m.note?': '+m.note:'')); saveCham(c.id,d); renderCarePanel(); }
+function renderCarePanel(){ const c=DATA.find(x=>String(x.id)===String(CARE_PANEL_ID)); if(!c) return; const d=getCham(c);
+  let ov=document.getElementById('care-overlay');
+  if(!ov){ ov=document.createElement('div'); ov.id='care-overlay'; ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px'; document.body.appendChild(ov); }
+  ov.style.display='flex';
+  const anyOver=d.moc.some(m=>!m.done&&m.han&&m.han<D(0));
+  const headBadge=anyOver?`<span style="color:var(--over);font-weight:700">● Quá hạn</span>`:`<span style="color:var(--won);font-weight:700">● Đang chăm</span>`;
+  const mocCards=d.moc.map(m=>{ const st=mocStatus(m);
+    const btns=m.isUp?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn" type="button" style="background:#2f7d6e;padding:7px 12px" onclick="careUp('${m.key}','lenmoi')">🎯 Lên liệu trình mới</button>
+        <button class="btn ghost" type="button" style="padding:7px 12px" onclick="careUp('${m.key}','theodoi')">👁 Theo dõi thêm</button>
+        <button class="btn" type="button" style="background:#c25b56;padding:7px 12px" onclick="careUp('${m.key}','tubo')">✖ Từ bỏ</button></div>`
+      :`<button class="btn" type="button" style="margin-top:8px;padding:7px 12px;background:${m.done?'#8a8f98':'#2f7d6e'}" onclick="careMocToggle('${m.key}')">${m.done?'↩ Bỏ đánh dấu hoàn thành':'✓ Đánh dấu đã cập nhật'}</button>`;
+    return `<div class="card" style="margin:0 0 12px${st.bg?';background:'+st.bg:''}">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b>${m.isUp?'🎯 ':''}${m.label}</b><span style="color:${st.color};font-size:12px;font-weight:700">● ${st.label}</span></div>
+      <div style="color:var(--muted);font-size:12px;margin:4px 0 8px">Hạn: ${m.han||'—'}${m.done&&m.done_at?` · Hoàn thành: ${m.done_at}`:''}${m.isUp&&m.upStatus?` · ${m.upStatus}`:''}</div>
+      <input value="${(m.note||'').replace(/"/g,'&quot;')}" placeholder="Ghi chú tình trạng khách..." onchange="careMocNote('${m.key}',this.value)" style="width:100%">
+      ${btns}</div>`; }).join('');
+  const logHtml=d.log.length? d.log.slice().reverse().map(l=>`<div style="display:flex;gap:8px;padding:8px 0;border-top:1px solid var(--line)"><span style="color:var(--teal);font-size:16px;line-height:1.2">●</span><div><div style="font-size:13px">${l.text||''}</div><div style="color:var(--muted);font-size:11px">${l.who||''} · ${l.at||''}</div></div></div>`).join('') : `<div class="empty" style="padding:14px">Chưa có nhật ký.</div>`;
+  ov.innerHTML=`<div class="card" style="max-width:600px;width:100%;margin:auto">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+      <div style="display:flex;gap:12px;align-items:center"><div style="width:46px;height:46px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">${(c.ten||'?').slice(0,1).toUpperCase()}</div>
+        <div><div style="font-size:18px;font-weight:800">${c.ten||''}</div><div style="color:var(--muted);font-size:12px">${c.phone||''} · ${SALES[c.owner]||'—'}</div></div></div>
+      <div style="display:flex;gap:10px;align-items:center">${headBadge}<button class="btn ghost" style="padding:5px 12px" onclick="closeCarePanel()">✕ Đóng</button></div></div>
+    <h2 class="sec" style="margin:0 0 10px;font-size:12px;letter-spacing:.5px;color:var(--muted)">CẬP NHẬT &amp; UP ĐƠN</h2>
+    ${mocCards}
+    <h2 class="sec" style="margin:16px 0 4px;font-size:12px;letter-spacing:.5px;color:var(--muted)">NHẬT KÝ TƯƠNG TÁC</h2>
+    ${logHtml}</div>`; }
 function collectEdit(){ const g=x=>document.getElementById(x).value;
   return { ten:g('e-ten'), phone:g('e-phone'), has_wa:document.getElementById('e-wa').checked, email:g('e-email'),
     quoc_gia:g('e-qg'), dia_chi:g('e-diachi')||null, nguon:g('e-nguon'), mkt:g('e-mkt')||null, owner:g('e-owner'), muc:g('e-muc'), tt:g('e-tt'),
@@ -850,7 +907,7 @@ function careTableHTML(arr){
   arr.forEach((c,i)=>{ const ph=c.phan_hoi||'';
     t+=`<tr class="${rowClass(c)}">
       <td>${i+1}</td>
-      <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b> <span title="Sửa" style="cursor:pointer" onclick="editCustomer('${c.id}')">✏️</span><br><span style="color:var(--muted);font-size:11px">${c.phone||''} · ${SALES[c.owner]||'—'}</span></td>
+      <td><b style="cursor:pointer;color:var(--teal-dark)" title="Mở bảng chăm sóc chi tiết" onclick="openCarePanel('${c.id}')">${c.ten}</b> <span title="Mở chăm sóc chi tiết" style="cursor:pointer" onclick="openCarePanel('${c.id}')">🩺</span> <span title="Sửa thông tin" style="cursor:pointer" onclick="editCustomer('${c.id}')">✏️</span><br><span style="color:var(--muted);font-size:11px">${c.phone||''} · ${SALES[c.owner]||'—'}</span></td>
       <td>${c.ngay_chot||'—'}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,7,10)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,20,25)}</td>
