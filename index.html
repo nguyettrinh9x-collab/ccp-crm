@@ -626,13 +626,15 @@ function renderDash(){
     <div class="card kpi"><div class="lbl">Doanh thu trong kỳ</div><div class="val green">$${revKy}<span style="font-size:13px;color:var(--muted)"> · ${chotKy} đơn</span></div></div>
   </div>`;
 
-  // ----- 1 · DỮ LIỆU SALE -----
+  // ----- 1 · DỮ LIỆU SALE (lọc theo Ngày lên đơn, khoảng ngày đã chọn) -----
+  const _drg=getRange('dash'), _dod=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10);
+  const dpd=d.filter(c=>{const x=_dod(c); return x&&x>=_drg.s&&x<=_drg.e;});
   const salesRows = isAdmin ? Object.entries(SALES) : [[ME.id, ME.name]];
   html+=`<h2 class="sec">1 · Dữ liệu Sale</h2><div class="card" style="padding:0"><table>
     <tr><th>Sale</th><th>Tổng khách</th><th>Đang chăm</th><th>Đã chốt</th><th>Doanh thu</th><th>Tỷ lệ chốt</th></tr>`;
   salesRows.forEach(([id,name])=>{
-    const sd=DATA.filter(c=>c.owner===id);
-    const cham=sd.filter(c=>['da_tu_van','da_bao_gia','hen_follow'].includes(c.tt)).length;
+    const sd=dpd.filter(c=>c.owner===id);
+    const cham=sd.filter(c=>c.tt==='dang_care').length;
     const w=sd.filter(c=>isChot(c.tt)); const rev=w.reduce((s,c)=>s+c.dt,0);
     const rate=sd.length?Math.round(w.length/sd.length*100):0;
     html+=`<tr><td><b>${name}</b></td><td>${sd.length}</td><td>${cham}</td><td>${w.length}</td><td>$${rev}</td>
@@ -644,7 +646,7 @@ function renderDash(){
   html+=`<h2 class="sec">2 · Marketing đẩy về cho Sale</h2><div class="card" style="padding:0"><table>
     <tr><th>MKT</th><th>Lead đẩy về</th><th>Đã chốt</th><th>Tỷ lệ chốt</th><th>Doanh thu mang về</th></tr>`;
   Object.entries(MKT).forEach(([id,name])=>{
-    const md=d.filter(c=>c.mkt===id); const w=md.filter(c=>isChot(c.tt));
+    const md=dpd.filter(c=>c.mkt===id); const w=md.filter(c=>isChot(c.tt));
     const rev=w.reduce((s,c)=>s+c.dt,0); const rate=md.length?Math.round(w.length/md.length*100):0;
     html+=`<tr><td><b>${name}</b></td><td>${md.length}</td><td>${w.length}</td><td>${rate}%</td><td>$${rev}</td></tr>`;
   });
@@ -1399,7 +1401,7 @@ function renderMarketing(){
     const rows=ROWS.filter(r=>r.owner===oid).sort((a,b)=> (a.ten_page||'').localeCompare(b.ten_page||'') || (a.ngay||'').localeCompare(b.ngay||''));
     let s={tien:0,mes:0,cmt:0,tt:0,chot:0}; rows.forEach(r=>{s.tien+=+r.tien||0;s.mes+=+r.sl_mes||0;s.cmt+=+r.so_cmt||0;s.tt+=+r.mes_tt||0;s.chot+=+r.sd_chot||0;});
     html+=`<div class="card" style="padding:0;overflow-x:auto;margin-bottom:14px"><table>
-      <tr style="background:#7ee36a"><th colspan="13" style="text-align:center;font-size:15px;color:#14361f">${(MKT[oid]||oid||'—').toUpperCase()}</th></tr>
+      <tr style="background:#7ee36a"><th colspan="12" style="text-align:center;font-size:15px;color:#14361f">${(MKT[oid]||oid||'—').toUpperCase()} <button class="btn ghost" type="button" style="padding:3px 10px;font-size:12px;margin-left:8px" onclick="copyAllMReport('${oid}')">📋 Sao chép tất cả sang hôm nay</button></th></tr>
       <tr><th>Tên Page</th><th>Camp</th><th>Số tiền/Camp</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th><th>Ngày</th><th></th></tr>
       <tr style="background:#fffbe0;font-weight:700"><td>TỔNG</td><td></td><td>${money(s.tien)}</td><td>${s.mes}</td><td>${s.cmt}</td><td>${(s.mes+s.cmt)?money(s.tien/(s.mes+s.cmt)):'—'}</td><td>${s.tt}</td><td>${pct(s.tt,s.mes)}</td><td>${s.chot}</td><td>${pct(s.chot,s.mes)}</td><td></td><td></td></tr>`;
     let lastPage=null;
@@ -1409,7 +1411,7 @@ function renderMarketing(){
       html+=`<tr><td>${pg}</td><td>${r.camp||'—'}</td>
         <td>${money(tien)}</td><td>${mes}</td><td>${cmt}</td><td>${(mes+cmt)?money(tien/(mes+cmt)):'—'}</td>
         <td>${tt}</td><td>${pct(tt,mes)}</td><td>${chot}</td><td>${pct(chot,mes)}</td><td style="font-size:11px;color:var(--muted)">${r.ngay||'—'}</td>
-        <td style="white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" title="Sửa" onclick="editMReport('${r.id}')">✏️</span> <span style="cursor:pointer;color:var(--over)" title="Xoá" onclick="deleteMReport('${r.id}')">🗑️</span></td></tr>`;
+        <td style="white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" title="Sao chép dòng này vào form (ngày = hôm nay) để sửa nhanh" onclick="copyMReport('${r.id}')">📋</span> <span style="cursor:pointer;color:var(--teal-dark)" title="Sửa" onclick="editMReport('${r.id}')">✏️</span> <span style="cursor:pointer;color:var(--over)" title="Xoá" onclick="deleteMReport('${r.id}')">🗑️</span></td></tr>`;
     });
     html+=`</table></div>`;
   });
@@ -1426,6 +1428,24 @@ function editMReport(id){
   MEDIT=id;
   const f=document.getElementById('m-ngay'); if(f){ f.scrollIntoView({behavior:'smooth',block:'center'}); }
   alert('✏️ Đang sửa báo cáo này — chỉnh xong bấm "Lưu báo cáo".');
+}
+function copyMReport(id){
+  const r=MREPORTS.find(x=>String(x.id)===String(id)); if(!r) return;
+  const set=(k,v)=>{const el=document.getElementById(k); if(el) el.value=v;};
+  set('m-ngay', D(0)); set('m-owner',r.owner); set('m-page',r.ten_page==='—'?'':r.ten_page);
+  set('m-camp',r.camp==='—'?'':r.camp); set('m-tien',r.tien); set('m-mes',r.sl_mes);
+  set('m-cmt',r.so_cmt); set('m-tt',r.mes_tt); set('m-chot',r.sd_chot);
+  MEDIT=null;
+  const f=document.getElementById('m-ngay'); if(f){ f.scrollIntoView({behavior:'smooth',block:'center'}); }
+  alert('📋 Đã sao chép dữ liệu vào form (ngày = hôm nay). Sửa lại rồi bấm "💾 Lưu báo cáo" để tạo bản mới.');
+}
+async function copyAllMReport(oid){
+  const rows=MREPORTS.filter(r=>String(r.owner)===String(oid)); if(!rows.length) return;
+  if(!confirm(`Sao chép tất cả ${rows.length} dòng của ${(MKT[oid]||oid)} sang HÔM NAY (${D(0)})? Sau đó bạn vào sửa lại số liệu từng dòng.`)) return;
+  let base=Date.now(); const recs=rows.map((r,i)=>({ id:base+i, owner:r.owner, ngay:D(0), ten_page:r.ten_page||'—', camp:r.camp||'—', tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0 }));
+  const { error }=await sb.from('mkt_reports').insert(recs);
+  if(error){ alert('Lỗi sao chép: '+error.message); return; }
+  await loadAll(); renderMarketing(); alert(`✅ Đã sao chép ${recs.length} dòng sang hôm nay. Bấm ✏️ để sửa lại số liệu từng dòng.`);
 }
 async function saveMReport(e){
   e.preventDefault(); const g=id=>document.getElementById(id).value;
