@@ -1603,8 +1603,24 @@ function saveSpend(e){
   alert('✅ Đã lưu chi phí $'+g('s-chi')); renderMarketing();
 }
 
+let IMAGES={};
+function pickImage(key,maxW){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    const r=new FileReader(); r.onload=()=>{ const img=new Image(); img.onload=async()=>{
+      const sc=Math.min(1,maxW/img.width); const w=Math.round(img.width*sc), h=Math.round(img.height*sc);
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+      const data=cv.toDataURL('image/jpeg',0.82); IMAGES[key]=data;
+      if(window.sb){ const { error }=await sb.from('app_images').upsert({key,data,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi lưu ảnh: '+error.message+'\\n(Có thể chưa tạo bảng app_images trên Supabase)'); return; } }
+      renderTeam(); alert('✅ Đã cập nhật ảnh.');
+    }; img.src=r.result; }; r.readAsDataURL(f); };
+  inp.click();
+}
+async function removeImage(key){ if(!confirm('Xoá ảnh này?')) return; delete IMAGES[key]; if(window.sb){ await sb.from('app_images').delete().eq('key',key); } renderTeam(); }
+function saleAvatar(id,size){ const u=IMAGES['sale_'+id]; return u?`<img src="${u}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:2px solid #e0a458;vertical-align:middle">`:''; }
 function bestSaleHTML(){
   const today=D(0), ym=today.slice(0,7);
+  const isAdminU=(ME&&ME.role==='admin');
   const rankBy=pred=>{ const m={}; Object.keys(SALES).forEach(id=>m[id]=0);
     DATA.forEach(c=>{ if(!isChot(c.tt)||!SALES[c.owner]) return; const dd=(c.ngay_chot||c.ngay_tao||'').slice(0,10); if(dd&&pred(dd)) m[c.owner]+=tongChiTieu(c); });
     return Object.entries(m).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]); };
@@ -1613,13 +1629,18 @@ function bestSaleHTML(){
   const podium=(title,sub,rank)=>{
     let inner;
     if(!rank.length) inner=`<div class="empty" style="padding:22px">Chưa có doanh thu chốt ${sub}.</div>`;
-    else inner=`<div style="text-align:center;padding:6px 0 10px"><div style="font-size:48px;line-height:1">🏆</div>
-      <div style="font-size:22px;font-weight:800;color:var(--teal-dark)">${medal[0]} ${SALES[rank[0][0]]}</div>
+    else { const champ=rank[0][0]; const av=saleAvatar(champ,76);
+      inner=`<div style="text-align:center;padding:6px 0 10px">${av?`<div style="position:relative;display:inline-block">${av}<div style="position:absolute;top:-10px;right:-10px;font-size:26px">🏆</div></div>`:`<div style="font-size:48px;line-height:1">🏆</div>`}
+      <div style="font-size:22px;font-weight:800;color:var(--teal-dark);margin-top:4px">${medal[0]} ${SALES[champ]}</div>
       <div style="color:var(--won);font-weight:800;font-size:19px">$${rank[0][1].toLocaleString('en-US')}</div></div>
-      ${rank.slice(1,3).map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding:9px 4px"><span style="font-size:22px">${medal[i+1]}</span><span style="flex:1;font-weight:600">${SALES[r[0]]}</span><b style="color:var(--won)">$${r[1].toLocaleString('en-US')}</b></div>`).join('')}`;
+      ${rank.slice(1,3).map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding:9px 4px"><span style="font-size:22px">${medal[i+1]}</span>${saleAvatar(r[0],28)?saleAvatar(r[0],28)+' ':''}<span style="flex:1;font-weight:600">${SALES[r[0]]}</span><b style="color:var(--won)">$${r[1].toLocaleString('en-US')}</b></div>`).join('')}`; }
     return `<div class="card" style="flex:1;min-width:280px;margin:0;border:2px solid #f0e6c8"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><h2 class="sec" style="margin:0">${title}</h2><span style="font-size:12px;color:var(--muted)">${sub}</span></div>${inner}</div>`;
   };
+  const banner=IMAGES.banner?`<div style="position:relative;margin-bottom:14px"><img src="${IMAGES.banner}" style="width:100%;max-height:180px;object-fit:cover;border-radius:14px;display:block">${isAdminU?`<button class="btn ghost" type="button" style="position:absolute;top:8px;right:8px;padding:4px 10px;font-size:12px;background:rgba(255,255,255,.85)" onclick="removeImage('banner')">✕ Xoá banner</button>`:''}</div>`
+    :(isAdminU?`<div style="margin-bottom:12px"><button class="btn ghost" type="button" style="padding:6px 14px;font-size:13px" onclick="pickImage('banner',1000)">🖼 Tải ảnh banner vinh danh</button></div>`:'');
+  const avatarBtns=isAdminU?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 14px;align-items:center"><span style="font-size:12px;color:var(--muted)">🖼 Ảnh sale:</span>${Object.entries(SALES).map(([id,nm])=>`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="pickImage('sale_${id}',300)">${nm}${IMAGES['sale_'+id]?' ✓':''}</button>`).join('')}</div>`:'';
   return `<h2 class="sec" style="margin-bottom:6px">🏆 Vinh danh Best Sale</h2><p style="color:var(--muted);font-size:12px;margin:0 0 12px">Xếp theo doanh thu chốt (theo Ngày lên đơn). Cố lên — ai cũng có thể là số 1! 🔥</p>
+    ${banner}${avatarBtns}
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:22px">${podium('Best Sale hôm nay',today,dayRank)}${podium('Best Sale tháng này',ym,monRank)}</div>`;
 }
 function renderTeam(){
@@ -1817,6 +1838,7 @@ async function loadAll(){
   TRASH = allc.filter(c=>c.da_xoa);
   const { data:spd } = await sb.from('marketing_spend').select('*');
   SPEND = (spd||[]).map(s=>({ngay:(s.ngay||'').slice(0,10), nguon:s.nguon, mkt:s.mkt, chi_phi:Number(s.chi_phi)||0}));
+  try{ const { data:imgs } = await sb.from('app_images').select('*'); IMAGES={}; (imgs||[]).forEach(r=>IMAGES[r.key]=r.data); }catch(e){ IMAGES=IMAGES||{}; }
   ORDERS = {};
   const { data:od } = await sb.from('orders').select('*');
   (od||[]).forEach(o=>{ const k=String(o.customer_id); (ORDERS[k]=ORDERS[k]||[]).push({id:o.id, ngay:(o.ngay||'').slice(0,10), san_pham:o.san_pham, so_tien:Number(o.so_tien)||0}); });
