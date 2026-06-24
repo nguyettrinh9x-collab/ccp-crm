@@ -895,21 +895,22 @@ function setAddListTo(v){ ADD_LIST_TO=v; refreshAddList(); }
 function clearAddListDate(){ ADD_LIST_FROM=''; ADD_LIST_TO=''; refreshAddList(); }
 function setAddListQ(v){ ADD_LIST_Q=v; const w=document.getElementById('addlist-wrap'); if(w){ w.innerHTML=addListHTML(); const el=document.getElementById('addl-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } } }
 function addListHTML(){
-  let arr=DATA.slice().sort((a,b)=>String(b.ngay_tao||b.id).localeCompare(String(a.ngay_tao||a.id)));
+  const odl=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10); // Ngày lên đơn (fallback Ngày tạo)
+  let arr=DATA.slice().sort((a,b)=>String(odl(b)||b.id).localeCompare(String(odl(a)||a.id)));
   if(ADD_LIST_SALE) arr=arr.filter(c=>c.owner===ADD_LIST_SALE);
-  if(ADD_LIST_FROM) arr=arr.filter(c=>(c.ngay_tao||'').slice(0,10)>=ADD_LIST_FROM);
-  if(ADD_LIST_TO) arr=arr.filter(c=>(c.ngay_tao||'').slice(0,10)<=ADD_LIST_TO);
+  if(ADD_LIST_FROM) arr=arr.filter(c=>odl(c)>=ADD_LIST_FROM);
+  if(ADD_LIST_TO) arr=arr.filter(c=>odl(c)<=ADD_LIST_TO);
   const q=(ADD_LIST_Q||'').toLowerCase();
   if(q) arr=arr.filter(c=>`${c.ten||''} ${c.phone||''} ${SALES[c.owner]||''} ${MKT[c.mkt]||''}`.toLowerCase().includes(q));
   const saleSel=`<select onchange="setAddListSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${ADD_LIST_SALE===k?'selected':''}>${v}</option>`).join('')}</select>`;
   let t=`<h2 class="sec" style="margin-top:22px">📋 Danh sách khách đã thêm (theo sale)</h2>
     <p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Khách mới thêm hiện lên đầu — dễ kiểm soát từng sale. Bấm <b>➕ Việc</b> để giao việc cần làm cho khách đó (hiện ở mục Việc cần làm).</p>
-    <div class="filters" style="margin-bottom:10px"><input id="addl-q" class="search" value="${(ADD_LIST_Q||'').replace(/"/g,'&quot;')}" oninput="setAddListQ(this.value)" placeholder="🔎 Tìm tên / SĐT / sale / MKT..." style="max-width:300px">${saleSel}<span style="font-size:12px;color:var(--muted)">Ngày tạo:</span><input type="date" value="${ADD_LIST_FROM}" onchange="setAddListFrom(this.value)" title="Từ ngày" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" value="${ADD_LIST_TO}" onchange="setAddListTo(this.value)" title="Đến ngày" style="width:auto">${(ADD_LIST_FROM||ADD_LIST_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearAddListDate()">Xoá lọc ngày</button>`:''}<span style="font-size:12px;color:var(--muted)">Tổng: <b>${arr.length}</b> khách</span></div>
-    <div class="card" style="padding:0;overflow-x:auto"><table><tr><th>STT</th><th>Khách</th><th>Sale</th><th>MKT</th><th>Quốc gia</th><th>Nguồn</th><th>Mức</th><th>Trạng thái</th><th>Ngày tạo</th><th>Việc cần làm</th></tr>`;
+    <div class="filters" style="margin-bottom:10px"><input id="addl-q" class="search" value="${(ADD_LIST_Q||'').replace(/"/g,'&quot;')}" oninput="setAddListQ(this.value)" placeholder="🔎 Tìm tên / SĐT / sale / MKT..." style="max-width:300px">${saleSel}<span style="font-size:12px;color:var(--muted)">Ngày lên đơn:</span><input type="date" value="${ADD_LIST_FROM}" onchange="setAddListFrom(this.value)" title="Từ ngày" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" value="${ADD_LIST_TO}" onchange="setAddListTo(this.value)" title="Đến ngày" style="width:auto">${(ADD_LIST_FROM||ADD_LIST_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearAddListDate()">Xoá lọc ngày</button>`:''}<span style="font-size:12px;color:var(--muted)">Tổng: <b>${arr.length}</b> khách</span></div>
+    <div class="card" style="padding:0;overflow-x:auto"><table><tr><th>STT</th><th>Khách</th><th>Sale</th><th>MKT</th><th>Quốc gia</th><th>Nguồn</th><th>Mức</th><th>Trạng thái</th><th>Ngày lên đơn</th><th>Việc cần làm</th></tr>`;
   if(!arr.length) t+=`<tr><td colspan="10" class="empty">Chưa có khách.</td></tr>`;
   arr.slice(0,300).forEach((c,i)=>{ t+=`<tr class="${rowClass(c)}"><td>${i+1}</td>
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b><br><span style="color:var(--muted);font-size:11px">${c.phone||''}</span></td>
-    <td>${SALES[c.owner]||'—'}</td><td>${MKT[c.mkt]||'—'}</td><td>${c.quoc_gia||'—'}</td><td>${NGUON[c.nguon]||c.nguon||'—'}</td><td>${mucPill(c.muc)}</td><td>${ttPill(c.tt)}</td><td style="white-space:nowrap">${(c.ngay_tao||'').slice(0,10)||'—'}</td>
+    <td>${SALES[c.owner]||'—'}</td><td>${MKT[c.mkt]||'—'}</td><td>${c.quoc_gia||'—'}</td><td>${NGUON[c.nguon]||c.nguon||'—'}</td><td>${mucPill(c.muc)}</td><td>${ttPill(c.tt)}</td><td style="white-space:nowrap">${odl(c)||'—'}</td>
     <td><button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--teal-dark)" onclick="quickAddTask('${c.id}')">➕ Việc</button></td></tr>`; });
   return t+`</table></div>`;
 }
