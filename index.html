@@ -919,8 +919,8 @@ function custTitle(c){
 }
 function careTableHTML(arr){
   let t=`<div class="card" style="padding:0;overflow-x:auto"><table>
-    <tr><th>STT</th><th>Khách</th><th>Ngày chốt</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Tình trạng dùng SP / Phản hồi</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th></tr>`;
-  if(!arr.length) t+=`<tr><td colspan="10" class="empty">Chưa có khách đã chốt.</td></tr>`;
+    <tr><th>STT</th><th>Khách</th><th>Ngày chốt</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Tình trạng dùng SP / Phản hồi</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th><th>💰 Tiền gốc</th><th>💸 Nợ gốc</th><th>📅 Ngày thu nợ</th></tr>`;
+  if(!arr.length) t+=`<tr><td colspan="13" class="empty">Chưa có khách đã chốt.</td></tr>`;
   arr.forEach((c,i)=>{ const ph=c.phan_hoi||'';
     t+=`<tr class="${rowClass(c)}">
       <td>${i+1}</td>
@@ -933,6 +933,9 @@ function careTableHTML(arr){
       <td><input data-k="${c.id}|su_dung" value="${(c.su_dung||'').replace(/"/g,'&quot;')}" placeholder="VD: Dùng đều, giảm đau bụng kinh..." oninput="debSave('su_dung','${c.id}',this.value)" onchange="saveSuDung('${c.id}',this.value)" style="padding:4px;width:230px"></td>
       <td><input data-k="${c.id}|follow" type="date" value="${c.follow||''}" onchange="saveFollowDate('${c.id}',this.value)" style="padding:4px;width:138px"></td>
       <td><input data-k="${c.id}|cham_kq" value="${(c.cham_kq||'').replace(/"/g,'&quot;')}" placeholder="Kết quả chăm..." oninput="debSave('cham_kq','${c.id}',this.value)" onchange="saveChamKq('${c.id}',this.value)" style="padding:4px;width:210px"></td>
+      <td style="white-space:nowrap"><input data-k="${c.id}|tien_goc" type="number" value="${Number(c.tien_goc)||0}" oninput="debSave('tien_goc','${c.id}',this.value)" onchange="saveCol('${c.id}','tien_goc',this.value)" style="padding:4px;width:84px"> <span style="color:var(--muted);font-size:11px">${curSym(c)}</span></td>
+      <td><input data-k="${c.id}|no_goc" type="number" value="${Number(c.no_goc)||0}" oninput="debSave('no_goc','${c.id}',this.value)" onchange="saveCol('${c.id}','no_goc',this.value)" style="padding:4px;width:84px${Number(c.no_goc)?';color:var(--over);font-weight:700':''}"></td>
+      <td><input data-k="${c.id}|ngay_thu_no" type="date" value="${c.ngay_thu_no||''}" onchange="saveCol('${c.id}','ngay_thu_no',this.value)" style="padding:4px;width:138px${(Number(c.no_goc)&&c.ngay_thu_no&&c.ngay_thu_no<=D(0))?';border-color:var(--over)':''}"></td>
     </tr>`; });
   return t+`</table></div>`;
 }
