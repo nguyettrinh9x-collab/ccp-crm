@@ -234,6 +234,11 @@ let TARGETS = {}; // mục tiêu DT theo tháng: { 'owner|YYYY-MM': muc_tieu }
 let REPORT_MONTH = (new Date()).toISOString().slice(0,7); // tháng đang xem ở Báo cáo
 let TASK_Q = '';  // bộ lọc tên khách ở trang Việc cần làm
 function setTaskQ(v){ TASK_Q=v; renderToday(); const el=document.getElementById('tk-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
+let TASK_SALE='', TASK_FROM='', TASK_TO='';
+function setTaskSale(v){ TASK_SALE=v; renderToday(); }
+function setTaskFrom(v){ TASK_FROM=v; renderToday(); }
+function setTaskTo(v){ TASK_TO=v; renderToday(); }
+function clearTaskFilters(){ TASK_Q=''; TASK_SALE=''; TASK_FROM=''; TASK_TO=''; renderToday(); }
 let CARE_TODAY_Q='', CARE_TODAY_SALE='', CARE_TODAY_MKT='';  // bộ lọc bảng "Lịch chăm khách đã chốt" ở trang Việc cần làm
 function setCareTodayQ(v){ CARE_TODAY_Q=v; renderToday(); const el=document.getElementById('cct-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 function setCareTodaySale(v){ CARE_TODAY_SALE=v; renderToday(); }
@@ -1103,7 +1108,10 @@ function renderToday(){
   const due=d.filter(c=>flag(c)==='warn');
   const over=d.filter(c=>flag(c)==='over');
   const _q=(TASK_Q||'').toLowerCase();
-  const mt=myTasks().filter(t=> !_q || (taskCustName(t)||'').toLowerCase().includes(_q) || (t.noi_dung||'').toLowerCase().includes(_q));
+  const mt=myTasks().filter(t=> !_q || (taskCustName(t)||'').toLowerCase().includes(_q) || (t.noi_dung||'').toLowerCase().includes(_q))
+    .filter(t=> !TASK_SALE || t.owner===TASK_SALE)
+    .filter(t=> !TASK_FROM || (t.han && t.han>=TASK_FROM))
+    .filter(t=> !TASK_TO || (t.han && t.han<=TASK_TO));
   const tOver=mt.filter(t=>taskBucket(t)==='over'), tToday=mt.filter(t=>taskBucket(t)==='today'), tUp=mt.filter(t=>taskBucket(t)==='upcoming');
   let html=`<div class="grid kpi-grid">
     <div class="card kpi"><div class="lbl">Việc quá hạn</div><div class="val red">${tOver.length}</div></div>
@@ -1121,7 +1129,15 @@ function renderToday(){
       ${fullView()?`<div><label>Giao cho Sale</label><select id="t-owner">${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>`:''}
       <button class="btn" type="button" onclick="addTask()">Thêm việc</button>
     </div>
-    <div style="margin-top:10px"><input id="tk-q" class="search" value="${(TASK_Q||'').replace(/"/g,'&quot;')}" oninput="setTaskQ(this.value)" placeholder="🔎 Lọc việc theo tên khách hoặc nội dung..." style="max-width:360px"></div></div>`;
+    <div class="filters" style="margin-top:10px">
+      <input id="tk-q" class="search" value="${(TASK_Q||'').replace(/"/g,'&quot;')}" oninput="setTaskQ(this.value)" placeholder="🔎 Lọc theo tên khách hoặc nội dung..." style="max-width:320px">
+      <select onchange="setTaskSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${TASK_SALE===k?'selected':''}>${v}</option>`).join('')}</select>
+      <span style="font-size:12px;color:var(--muted)">Đến hạn:</span>
+      <input type="date" value="${TASK_FROM}" onchange="setTaskFrom(this.value)" title="Từ ngày" style="width:auto">
+      <span style="color:var(--muted)">→</span>
+      <input type="date" value="${TASK_TO}" onchange="setTaskTo(this.value)" title="Đến ngày" style="width:auto">
+      ${(TASK_Q||TASK_SALE||TASK_FROM||TASK_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearTaskFilters()">Xoá lọc</button>`:''}
+    </div></div>`;
   const taskRow=t=>{ const cn=taskCustName(t); const tc=DATA.find(x=>String(x.id)===String(t.customer_id));
     const khachCell = tc ? `<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten} ✏️</b>` : (cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">— Không gắn khách —</span>');
     return `<tr><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đánh dấu xong" onchange="toggleTask('${t.id}')"></td>
@@ -1685,8 +1701,8 @@ async function saveCustomer(e){
     await sb.from('tasks').insert({ owner:rec.owner, customer_id:ins.id, loai:'cham_chua',
       noi_dung:'Chăm sóc khách mới: '+rec.ten, han:D(0), xong:false });
   }
-  e.target.reset(); await loadAll(); renderAll(); go('today');
-  alert('✅ Đã lưu khách "'+rec.ten+'" và tạo việc chăm sóc cho Sale (xem ở Việc cần làm).');
+  e.target.reset(); await loadAll(); renderAll(); go('add');
+  alert('✅ Đã lưu khách "'+rec.ten+'". Khách đã hiện ở danh sách bên dưới — có thể thêm khách tiếp ngay.');
 }
 async function markCared(id){ const c=findC(id); if(!c)return;
   const upd={follow:D(3), ngay_capnhat:D(0)};
