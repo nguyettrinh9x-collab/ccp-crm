@@ -1275,6 +1275,19 @@ function statusDonutHTML(arr){
   const legend=segs.map(s=>`<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:7px"><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:${TT_COLOR[s.k]||'#8a8f98'};flex-shrink:0"></span><span style="flex:1">${(TT_ICON[s.k]||'')} ${STATUS[s.k]||s.k}</span><b>${s.n}</b><span style="color:var(--muted);width:48px;text-align:right">${Math.round(s.pct*100)}%</span></div>`).join('');
   return `<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:center">${svg}<div style="flex:1;min-width:240px">${legend||'<span class="empty">Chưa có khách trong khoảng ngày này.</span>'}</div></div>`;
 }
+function marketDonutHTML(arr){
+  const order=['US','Canada','Euro','Khác'];
+  const label={US:'🇺🇸 US',Canada:'🇨🇦 Canada',Euro:'🇪🇺 Euro','Khác':'🌍 Khác'};
+  const color={US:'#4a90a4',Canada:'#c25b56',Euro:'#2f7d6e','Khác':'#8a8f98'};
+  const cnt={}; let total=0;
+  arr.forEach(c=>{ const g=countryGroup(c.quoc_gia); cnt[g]=(cnt[g]||0)+1; total++; });
+  const segs=order.filter(k=>cnt[k]).map(k=>({k,n:cnt[k],pct:total?cnt[k]/total:0}));
+  const C=439.82,r=70,cx=90,cy=90,sw=28; let acc=0,circles='';
+  segs.forEach(s=>{ const len=s.pct*C; circles+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color[s.k]}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-acc*C).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"></circle>`; acc+=s.pct; });
+  const svg=`<svg viewBox="0 0 180 180" width="160" height="160" style="flex-shrink:0">${total?circles:`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#eee" stroke-width="${sw}"></circle>`}<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="32" font-weight="800" fill="var(--teal-dark)">${total}</text><text x="${cx}" y="${cy+20}" text-anchor="middle" font-size="12" fill="var(--muted)">khách</text></svg>`;
+  const legend=segs.slice().sort((a,b)=>b.n-a.n).map(s=>`<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:7px"><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:${color[s.k]};flex-shrink:0"></span><span style="flex:1">${label[s.k]}</span><b>${s.n}</b><span style="color:var(--muted);width:48px;text-align:right">${Math.round(s.pct*100)}%</span></div>`).join('');
+  return `<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">${svg}<div style="flex:1;min-width:200px">${legend||'<span class="empty">Chưa có khách trong khoảng ngày này.</span>'}</div></div>`;
+}
 function renderReport(){
   const rows = ME.role==='admin'? Object.entries(SALES) : [[ME.id, ME.name]];
   const _rrg=getRange('report'), _rod=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10); // Ngày lên đơn (khớp Tổng quan)
@@ -1283,7 +1296,10 @@ function renderReport(){
   else if(REPORT_DONUT_SALE) donutArr=donutArr.filter(c=>c.owner===REPORT_DONUT_SALE);
   const donutSaleSel=(ME.role==='admin')?`<select onchange="setReportDonutSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${REPORT_DONUT_SALE===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
   let html=renderDateFilterBar('report')
-    +`<div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px"><h2 class="sec" style="margin:0">📊 Tỉ lệ trạng thái khách (báo cáo cuối ngày)</h2>${donutSaleSel}</div><p style="color:var(--muted);font-size:12px;margin:0 0 12px">Tính theo <b>Ngày lên đơn</b> (khớp với Tổng quan), trong khoảng ngày đã chọn. Sale dùng để báo cáo cuối ngày: mỗi trạng thái có bao nhiêu khách.</p>${statusDonutHTML(donutArr)}</div>`
+    +`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+      <div class="card" style="flex:1;min-width:340px;margin:0"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px"><h2 class="sec" style="margin:0">📊 Tỉ lệ trạng thái khách</h2>${donutSaleSel}</div><p style="color:var(--muted);font-size:12px;margin:0 0 12px">Tính theo <b>Ngày lên đơn</b> (khớp Tổng quan), trong khoảng ngày đã chọn.</p>${statusDonutHTML(donutArr)}</div>
+      <div class="card" style="flex:1;min-width:340px;margin:0"><h2 class="sec" style="margin:0 0 6px">🌍 Thị trường nhiều khách nhất</h2><p style="color:var(--muted);font-size:12px;margin:0 0 12px">Số khách theo thị trường (US · Canada · Euro) — cùng bộ lọc ngày &amp; sale.</p>${marketDonutHTML(donutArr)}</div>
+    </div>`
     +`<div class="card" style="padding:0;overflow-x:auto"><table>
     <tr><th>Sale</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th></tr>`;
   let T={total:0,dtMoi:0,dtCu:0};
