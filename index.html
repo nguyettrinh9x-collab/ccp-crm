@@ -581,6 +581,8 @@ function renderDateFilterBar(key){
 }
 // Lọc 1 khách theo khoảng ngày của 1 trang
 function inDateRange(key,c){const rg=getRange(key);const ds=FILTERS[key].field==='capnhat'?(c.ngay_capnhat||c.ngay_tao):c.ngay_tao;return ds>=rg.s&&ds<=rg.e;}
+// Lọc theo NGÀY LÊN ĐƠN (ngay_chot) — dùng cho báo cáo doanh thu/chốt để khớp ngày lên đơn của khách
+function inChotRange(key,c){const rg=getRange(key);const x=(c.ngay_chot||c.ngay_tao||'').slice(0,10);return x>=rg.s&&x<=rg.e;}
 
 let DASH_STATUS_SALE='';
 function setDashStatusSale(v){ DASH_STATUS_SALE=v; renderDash(); }
@@ -1306,7 +1308,7 @@ function renderReport(){
     <tr><th>Sale</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th></tr>`;
   let T={total:0,dtMoi:0,dtCu:0};
   rows.forEach(([id,name])=>{
-    const sd=DATA.filter(c=>c.owner===id && inDateRange('report',c));
+    const sd=DATA.filter(c=>c.owner===id && inChotRange('report',c));
     const x=saleStats(sd); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu;
     html+=`<tr><td><b>${name}</b></td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td>
       <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td></tr>`;
@@ -1496,7 +1498,7 @@ function renderTeam(){
     <tr><th>Nhân viên</th><th>Vai trò</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th></tr>`;
   let T={total:0,dtMoi:0,dtCu:0};
   Object.entries(SALES).forEach(([id,name])=>{
-    const sd=DATA.filter(c=>c.owner===id && inDateRange('team',c));
+    const sd=DATA.filter(c=>c.owner===id && inChotRange('team',c));
     const x=saleStats(sd); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu;
     html+=`<tr><td><b>${name}</b></td><td>Sale</td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td>
       <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td></tr>`;
