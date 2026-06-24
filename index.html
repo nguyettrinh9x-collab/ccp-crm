@@ -646,19 +646,19 @@ function renderDash(){
 
   // ----- 2b · BÁO CÁO KHÁCH MỚI THEO NGÀY (Sale & Marketing) -----
   {
-    const days=[...new Set(dp.map(c=>(c.ngay_tao||'').slice(0,10)).filter(Boolean))].sort().reverse();
-    const saleIds=Object.keys(SALES).filter(id=>dp.some(c=>c.owner===id));
-    const mktIds=Object.keys(MKT).filter(id=>dp.some(c=>c.mkt===id));
-    const onDay=(c,day)=>(c.ngay_tao||'').slice(0,10)===day;
+    const rg=getRange('dash');
+    const od=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10); // Ngày lên đơn (fallback Ngày tạo)
+    const rp=d.filter(c=>{const x=od(c); return x&&x>=rg.s&&x<=rg.e;});
+    const onDay=(c,day)=>od(c)===day;
     const qp=[['hom_nay','Hôm nay'],['hom_qua','Hôm qua'],['7ngay','7 ngày'],['thang_nay','Tháng này'],['30ngay','30 ngày']];
     html+=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:22px 0 6px"><span style="font-size:13px;color:var(--muted);font-weight:600">📅 Lọc nhanh báo cáo:</span>${qp.map(([k,l])=>`<button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px" onclick="applyPreset('dash','${k}')">${l}</button>`).join('')}</div>`;
     html+=`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px">
-      <div class="card" style="flex:1;min-width:320px"><h2 class="sec" style="margin:0 0 12px">📊 Khách mới theo Sale</h2>${groupDonutHTML(dp,'owner',SALES)}</div>
-      <div class="card" style="flex:1;min-width:320px"><h2 class="sec" style="margin:0 0 12px">📊 Khách mới theo Marketing</h2>${groupDonutHTML(dp,'mkt',MKT)}</div>
+      <div class="card" style="flex:1;min-width:320px"><h2 class="sec" style="margin:0 0 12px">📊 Khách mới theo Sale</h2>${groupDonutHTML(rp,'owner',SALES)}</div>
+      <div class="card" style="flex:1;min-width:320px"><h2 class="sec" style="margin:0 0 12px">📊 Khách mới theo Marketing</h2>${groupDonutHTML(rp,'mkt',MKT)}</div>
     </div>`;
     const stIds=['kcnc','ktt','tuong_tac','web','khach_chan','da_chot','chot_nguoi','dang_care','hen']; // hiện đủ 9 trạng thái
-    let stDp=dp; if(DASH_STATUS_SALE) stDp=stDp.filter(c=>c.owner===DASH_STATUS_SALE); if(DASH_STATUS_MKT) stDp=stDp.filter(c=>c.mkt===DASH_STATUS_MKT);
-    const stDays=[...new Set(stDp.map(c=>(c.ngay_tao||'').slice(0,10)).filter(Boolean))].sort().reverse();
+    let stDp=rp; if(DASH_STATUS_SALE) stDp=stDp.filter(c=>c.owner===DASH_STATUS_SALE); if(DASH_STATUS_MKT) stDp=stDp.filter(c=>c.mkt===DASH_STATUS_MKT);
+    const stDays=[...new Set(stDp.map(c=>od(c)).filter(Boolean))].sort().reverse();
     const stSaleSel=(ME.role==='admin')?`<select onchange="setDashStatusSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([id,nm])=>`<option value="${id}" ${DASH_STATUS_SALE===id?'selected':''}>${nm}</option>`).join('')}</select>`:'';
     const stMktSel=(ME.role==='admin')?`<select onchange="setDashStatusMkt(this.value)" style="width:auto"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([id,nm])=>`<option value="${id}" ${DASH_STATUS_MKT===id?'selected':''}>${nm}</option>`).join('')}</select>`:'';
     html+=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:18px"><h2 class="sec" style="margin:0">📅 Báo cáo khách mới theo ngày — theo Trạng thái</h2><div style="display:flex;gap:6px;flex-wrap:wrap">${stSaleSel}${stMktSel}</div></div><div class="card" style="padding:0;overflow-x:auto"><table>
@@ -666,7 +666,7 @@ function renderDash(){
     if(!stDays.length) html+=`<tr><td colspan="${stIds.length+2}" class="empty">Không có khách trong khoảng ngày này.</td></tr>`;
     stDays.forEach(day=>{ const dd=stDp.filter(c=>onDay(c,day)); html+=`<tr><td><b>${day}</b></td>${stIds.map(k=>{const n=dd.filter(c=>c.tt===k).length;return '<td>'+(n||'—')+'</td>';}).join('')}<td><b>${dd.length}</b></td></tr>`; });
     if(stDays.length) html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${stIds.map(k=>`<td>${stDp.filter(c=>c.tt===k).length}</td>`).join('')}<td>${stDp.length}</td></tr>`;
-    html+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:8px">Số khách mới (theo Ngày tạo) chia theo từng Sale, từng Marketing và từng Trạng thái — theo khoảng ngày đã chọn ở trên.</p>`;
+    html+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:8px">Số khách (theo Ngày lên đơn) chia theo từng Sale, từng Marketing và từng Trạng thái — theo khoảng ngày đã chọn ở trên.</p>`;
   }
   // ----- 3 · 4 · CƠ CẤU DOANH THU -----
   const tot=dtMoi+dtCu||1;
