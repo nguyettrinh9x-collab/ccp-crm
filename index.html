@@ -1483,6 +1483,29 @@ function renderMarketing(){
     <td>${(TT.mes+TT.cmt)?money(TT.tien/(TT.mes+TT.cmt)):'—'}</td><td>${TT.tt}</td><td>${pct(TT.tt,TT.mes)}</td><td>${TT.chot}</td><td>${pct(TT.chot,TT.mes)}</td></tr>`;
   html+=`</table></div>`;
 
+  // ----- ĐỐI CHIẾU: data tay marketer nhập vs khách thực tế (sale note) -----
+  {
+    const odM=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10);
+    const custM=DATA.filter(c=>{const x=odM(c); return (!rg.s||x>=rg.s)&&(!rg.e||x<=rg.e);});
+    let cmpRows='', anyLech=false;
+    Object.entries(MKT).forEach(([id,name])=>{
+      const ks=custM.filter(c=>c.mkt===id); const chotReal=ks.filter(c=>isChot(c.tt)).length;
+      const chotRep=(byMkt[id]&&byMkt[id].chot)||0;
+      if(!ks.length && !chotRep) return;
+      const ok=chotReal===chotRep; if(!ok) anyLech=true;
+      cmpRows+=`<tr><td><b>${name}</b></td><td style="text-align:center">${ks.length}</td><td style="text-align:center">${chotReal}</td><td style="text-align:center">${chotRep}</td><td style="text-align:center">${ok?'<span style="color:var(--won);font-weight:700">✓ Khớp</span>':'<span style="color:var(--over);font-weight:700">⚠ Lệch '+Math.abs(chotReal-chotRep)+'</span>'}</td></tr>`;
+    });
+    html+=`<h2 class="sec" style="margin-top:24px">🔄 Đối chiếu MKT: số tay nhập vs khách thực tế (sale note)</h2>
+      <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Vòng tròn = khách thực tế sale đã note cho từng MKT. Bảng so sánh <b>SĐ chốt thực tế</b> (từ data khách) với <b>SĐ chốt marketer tự báo cáo</b> — lệch nhiều là cần kiểm tra lại.</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div class="card" style="flex:1;min-width:320px"><h2 class="sec" style="margin:0 0 10px">📊 Khách thực tế theo MKT</h2>${groupDonutHTML(custM,'mkt',MKT)}</div>
+        <div class="card" style="flex:1;min-width:320px;padding:0;overflow-x:auto"><table>
+          <tr><th>MKT</th><th style="text-align:center">Khách thực tế</th><th style="text-align:center">Chốt thực tế</th><th style="text-align:center">SĐ chốt báo cáo</th><th style="text-align:center">Khớp?</th></tr>
+          ${cmpRows||'<tr><td colspan="5" class="empty">Chưa có dữ liệu trong kỳ.</td></tr>'}
+        </table></div>
+      </div>`;
+  }
+
   // ----- Form nhập báo cáo (2 bạn MKT) -----
   html+=`<h2 class="sec">➕ Nhập báo cáo Marketing</h2><div class="card"><form onsubmit="saveMReport(event)">
     <div class="form-grid">
@@ -1703,6 +1726,11 @@ function renderSettings(){
     <p style="color:var(--muted);font-size:12px">Đây là bản demo giao diện. Phần code thật (Next.js + Supabase) sẽ kết nối database & đăng nhập thật.</p>
   </div>
   <div class="card" style="margin-top:16px">
+    <h2 class="sec" style="margin-top:0">💾 Dung lượng dữ liệu</h2>
+    <p style="font-size:13px;color:var(--muted);line-height:1.7">Gói miễn phí Supabase cho <b>500 MB</b>. Khi đầy sẽ không nạp thêm khách được — cần nâng cấp.</p>
+    <div id="db-usage"><span style="color:var(--muted)">Đang tải dung lượng…</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
     <h2 class="sec" style="margin-top:0">🔐 Bảo mật 2 lớp (2FA)</h2>
     <p style="font-size:13px;color:var(--muted);line-height:1.7">Thêm 1 lớp xác thực bằng mã 6 số từ app <b>Google Authenticator</b> hoặc <b>Authy</b>. Sau khi bật, mỗi lần đăng nhập sẽ cần nhập mã từ điện thoại — kẻ gian biết mật khẩu vẫn không vào được. Khuyên dùng cho tài khoản Admin.</p>
     <button class="btn" type="button" onclick="enrollMFA()">🔐 Bật 2FA cho tài khoản này</button>
@@ -1717,6 +1745,21 @@ function renderSettings(){
       <button class="btn" type="button" onclick="changeMyPass()">Đổi mật khẩu</button>
     </div>
   </div>`;
+  loadDbUsage();
+}
+async function loadDbUsage(){
+  const el=document.getElementById('db-usage'); if(!el) return;
+  if(!window.sb){ el.innerHTML='<span style="color:var(--muted)">Chưa kết nối hệ thống.</span>'; return; }
+  try{
+    const { data, error }=await sb.rpc('db_usage');
+    if(error||!data){ el.innerHTML='<span style="color:var(--muted)">Không đọc được dung lượng. Hãy tạo hàm db_usage trên Supabase.</span>'; return; }
+    const d=(typeof data==='string')?JSON.parse(data):data;
+    const pct=Number(d.pct)||0, mb=Number(d.mb)||0, khach=Number(d.khach)||0;
+    const col=pct>=90?'var(--over)':pct>=70?'#b07d00':'var(--won)';
+    el.innerHTML=`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span><b>${mb} MB</b> / 500 MB · <b>${khach}</b> khách</span><span style="color:${col};font-weight:700">${pct}%</span></div>
+      <div class="bar" style="height:14px"><div style="width:${Math.min(pct,100)}%;background:${col}"></div></div>
+      <p style="color:var(--muted);font-size:12px;margin-top:8px">${pct>=90?'⚠ Sắp đầy — nên nâng cấp gói Pro (8GB).':pct>=70?'Đang dùng khá nhiều, theo dõi thêm nhé.':'Còn rất nhiều dung lượng. 👍'}</p>`;
+  }catch(e){ el.innerHTML='<span style="color:var(--muted)">Lỗi đọc dung lượng.</span>'; }
 }
 async function changeMyPass(){
   if(!sb){ alert('Chưa kết nối hệ thống.'); return; }
