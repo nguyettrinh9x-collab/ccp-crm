@@ -580,6 +580,18 @@ let DASH_STATUS_SALE='';
 function setDashStatusSale(v){ DASH_STATUS_SALE=v; renderDash(); }
 let DASH_STATUS_MKT='';
 function setDashStatusMkt(v){ DASH_STATUS_MKT=v; renderDash(); }
+const DONUT_PALETTE=['#2f7d6e','#e0a458','#7e9aa6','#c25b56','#6a8d4f','#9b6bba','#4a90a4','#d98c5f','#b5485d','#5a7d9a'];
+function groupDonutHTML(arr,field,map){
+  const cnt={}; let total=0;
+  arr.forEach(c=>{ const k=c[field]; if(!k) return; cnt[k]=(cnt[k]||0)+1; total++; });
+  const ids=Object.keys(map).filter(id=>cnt[id]).sort((a,b)=>cnt[b]-cnt[a]);
+  const col={}; ids.forEach((id,i)=>col[id]=DONUT_PALETTE[i%DONUT_PALETTE.length]);
+  const C=439.82, r=70, cx=90, cy=90, sw=28; let acc=0, circles='';
+  ids.forEach(id=>{ const pct=cnt[id]/total, len=pct*C; circles+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col[id]}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-acc*C).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"></circle>`; acc+=pct; });
+  const svg=`<svg viewBox="0 0 180 180" width="160" height="160" style="flex-shrink:0">${total?circles:`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#eee" stroke-width="${sw}"></circle>`}<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="32" font-weight="800" fill="var(--teal-dark)">${total}</text><text x="${cx}" y="${cy+20}" text-anchor="middle" font-size="12" fill="var(--muted)">khách</text></svg>`;
+  const legend=ids.map(id=>`<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:7px"><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:${col[id]};flex-shrink:0"></span><span style="flex:1">${map[id]}</span><b>${cnt[id]}</b><span style="color:var(--muted);width:46px;text-align:right">${Math.round(cnt[id]/total*100)}%</span></div>`).join('');
+  return `<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">${svg}<div style="flex:1;min-width:180px">${legend||'<span class="empty">Chưa có khách trong khoảng ngày này.</span>'}</div></div>`;
+}
 function renderDash(){
   const d=myData();
   const isAdmin=ME.role==='admin';
@@ -640,18 +652,10 @@ function renderDash(){
     const onDay=(c,day)=>(c.ngay_tao||'').slice(0,10)===day;
     const qp=[['hom_nay','Hôm nay'],['hom_qua','Hôm qua'],['7ngay','7 ngày'],['thang_nay','Tháng này'],['30ngay','30 ngày']];
     html+=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:22px 0 6px"><span style="font-size:13px;color:var(--muted);font-weight:600">📅 Lọc nhanh báo cáo:</span>${qp.map(([k,l])=>`<button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px" onclick="applyPreset('dash','${k}')">${l}</button>`).join('')}</div>`;
-    html+=`<h2 class="sec" style="margin-top:6px">📅 Báo cáo khách mới theo ngày — theo Sale</h2><div class="card" style="padding:0;overflow-x:auto"><table>
-      <tr><th>Ngày</th>${saleIds.map(id=>`<th style="white-space:nowrap">${SALES[id]}</th>`).join('')}<th>Tổng</th></tr>`;
-    if(!days.length) html+=`<tr><td colspan="${saleIds.length+2}" class="empty">Không có khách trong khoảng ngày này.</td></tr>`;
-    days.forEach(day=>{ const dd=dp.filter(c=>onDay(c,day)); html+=`<tr><td><b>${day}</b></td>${saleIds.map(id=>{const n=dd.filter(c=>c.owner===id).length;return `<td>${n||'—'}</td>`;}).join('')}<td><b>${dd.length}</b></td></tr>`; });
-    if(days.length) html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${saleIds.map(id=>`<td>${dp.filter(c=>c.owner===id).length}</td>`).join('')}<td>${dp.length}</td></tr>`;
-    html+=`</table></div>`;
-    html+=`<h2 class="sec">📅 Báo cáo khách mới theo ngày — theo Marketing</h2><div class="card" style="padding:0;overflow-x:auto"><table>
-      <tr><th>Ngày</th>${mktIds.map(id=>`<th style="white-space:nowrap">${MKT[id]}</th>`).join('')}<th>Tổng</th></tr>`;
-    if(!days.length) html+=`<tr><td colspan="${mktIds.length+2}" class="empty">Không có khách trong khoảng ngày này.</td></tr>`;
-    days.forEach(day=>{ const dd=dp.filter(c=>onDay(c,day)); html+=`<tr><td><b>${day}</b></td>${mktIds.map(id=>{const n=dd.filter(c=>c.mkt===id).length;return `<td>${n||'—'}</td>`;}).join('')}<td><b>${dd.length}</b></td></tr>`; });
-    if(days.length) html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${mktIds.map(id=>`<td>${dp.filter(c=>c.mkt===id).length}</td>`).join('')}<td>${dp.length}</td></tr>`;
-    html+=`</table></div>`;
+    html+=`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px">
+      <div class="card" style="flex:1;min-width:320px"><h2 class="sec" style="margin:0 0 12px">📊 Khách mới theo Sale</h2>${groupDonutHTML(dp,'owner',SALES)}</div>
+      <div class="card" style="flex:1;min-width:320px"><h2 class="sec" style="margin:0 0 12px">📊 Khách mới theo Marketing</h2>${groupDonutHTML(dp,'mkt',MKT)}</div>
+    </div>`;
     const stIds=['kcnc','ktt','tuong_tac','web','khach_chan','da_chot','chot_nguoi','dang_care','hen']; // hiện đủ 9 trạng thái
     let stDp=dp; if(DASH_STATUS_SALE) stDp=stDp.filter(c=>c.owner===DASH_STATUS_SALE); if(DASH_STATUS_MKT) stDp=stDp.filter(c=>c.mkt===DASH_STATUS_MKT);
     const stDays=[...new Set(stDp.map(c=>(c.ngay_tao||'').slice(0,10)).filter(Boolean))].sort().reverse();
