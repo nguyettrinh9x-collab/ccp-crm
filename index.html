@@ -240,6 +240,10 @@ function setTaskSale(v){ TASK_SALE=v; renderToday(); }
 function setTaskFrom(v){ TASK_FROM=v; renderToday(); }
 function setTaskTo(v){ TASK_TO=v; renderToday(); }
 function clearTaskFilters(){ TASK_Q=''; TASK_SALE=''; TASK_FROM=''; TASK_TO=''; renderToday(); }
+let TASK_BUCKET='', TASK_PANEL_OPEN=false, CARE_TODAY_OPEN=false; // lọc nhanh nhóm việc + thu gọn form & bảng chăm
+function setTaskBucket(v){ TASK_BUCKET=v; renderToday(); }
+function toggleTaskPanel(){ TASK_PANEL_OPEN=!TASK_PANEL_OPEN; renderToday(); }
+function toggleCareToday(){ CARE_TODAY_OPEN=!CARE_TODAY_OPEN; renderToday(); }
 let CARE_TODAY_Q='', CARE_TODAY_SALE='', CARE_TODAY_MKT='';  // bộ lọc bảng "Lịch chăm khách đã chốt" ở trang Việc cần làm
 function setCareTodayQ(v){ CARE_TODAY_Q=v; renderToday(); const el=document.getElementById('cct-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 function setCareTodaySale(v){ CARE_TODAY_SALE=v; renderToday(); }
@@ -1162,13 +1166,21 @@ function renderToday(){
     .filter(t=> !TASK_FROM || (t.han && t.han>=TASK_FROM))
     .filter(t=> !TASK_TO || (t.han && t.han<=TASK_TO));
   const tOver=mt.filter(t=>taskBucket(t)==='over'), tToday=mt.filter(t=>taskBucket(t)==='today'), tUp=mt.filter(t=>taskBucket(t)==='upcoming');
+  const followFilter=c=> (!_q || (c.ten||'').toLowerCase().includes(_q)) && (!TASK_SALE || c.owner===TASK_SALE);
+  const foOver=over.filter(followFilter), foToday=due.filter(followFilter);
+  const nOver=tOver.length+foOver.length, nToday=tToday.length+foToday.length, nUp=tUp.length;
   let html=`<div class="grid kpi-grid">
     <div class="card kpi"><div class="lbl">Việc quá hạn</div><div class="val red">${tOver.length}</div></div>
     <div class="card kpi"><div class="lbl">Việc hôm nay</div><div class="val amber">${tToday.length}</div></div>
     <div class="card kpi"><div class="lbl">Follow quá hạn</div><div class="val red">${over.length}</div></div>
     <div class="card kpi"><div class="lbl">Follow hôm nay</div><div class="val amber">${due.length}</div></div>
   </div>`;
-  html+=`<div class="card" style="margin:16px 0">
+  const chip=(key,label,n)=>`<button class="btn ${TASK_BUCKET===key?'':'ghost'}" type="button" onclick="setTaskBucket('${key}')" style="padding:6px 14px;font-size:13px">${label} (${n})</button>`;
+  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 8px">
+    ${chip('','Tất cả',nOver+nToday+nUp)}${chip('over','🔴 Quá hạn',nOver)}${chip('today','🟡 Hôm nay',nToday)}${chip('upcoming','🟢 Sắp tới',nUp)}
+    <button class="btn ghost" type="button" onclick="toggleTaskPanel()" style="padding:6px 14px;font-size:13px;margin-left:auto">${TASK_PANEL_OPEN?'✕ Đóng':'➕ Thêm việc / Bộ lọc'}${((TASK_Q||TASK_SALE||TASK_FROM||TASK_TO)&&!TASK_PANEL_OPEN)?' 🔵':''}</button>
+  </div>`;
+  if(TASK_PANEL_OPEN) html+=`<div class="card" style="margin:0 0 16px">
     <h2 class="sec" style="margin-top:0">Thêm việc cần làm</h2>
     <div style="display:grid;grid-template-columns:1.3fr 1.6fr 2fr 1fr ${fullView()?'1.1fr ':''}auto;gap:8px;align-items:end">
       <div><label>Loại việc</label><select id="t-loai">${Object.entries(TASK_LOAI).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
@@ -1194,9 +1206,17 @@ function renderToday(){
     <td>${khachCell}</td>
     <td>${t.noi_dung||''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
     <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
-  const taskTable=(title,arr,color)=> arr.length? `<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Khách</th><th>Nội dung</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${arr.map(taskRow).join('')}</table></div>`:'';
-  html+=taskTable('Việc quá hạn',tOver,'var(--over)')+taskTable('Việc hôm nay',tToday,'#b07d00')+taskTable('Việc sắp tới',tUp,'var(--teal-dark)');
-  if(!mt.length) html+=`<div class="card empty">Chưa có việc nào — thêm việc ở ô phía trên.</div>`;
+  const followRow=c=>`<tr style="background:#fff8f0"><td style="width:36px;text-align:center" title="Nhắc follow">📞</td>
+    <td><span class="pill" style="background:#fde9d9;color:#b06a00">Follow</span></td>
+    <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten} ✏️</b></td>
+    <td>${ttPill(c.tt)} <span style="color:var(--muted);font-size:11px">${c.phone||''}</span></td><td>${c.follow||'—'}</td>${fullView()?`<td>${SALES[c.owner]||'—'}</td>`:''}
+    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer('${c.id}')">Mở khách</span></td></tr>`;
+  const bucketTable=(title,rowsHtml,count,color)=> count? `<h2 class="sec" style="color:${color}">${title} (${count})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Khách</th><th>Nội dung / Trạng thái</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${rowsHtml}</table></div>`:'';
+  const showB=k=> !TASK_BUCKET || TASK_BUCKET===k;
+  if(showB('over')) html+=bucketTable('🔴 Việc & follow quá hạn', tOver.map(taskRow).join('')+foOver.map(followRow).join(''), nOver, 'var(--over)');
+  if(showB('today')) html+=bucketTable('🟡 Việc & follow hôm nay', tToday.map(taskRow).join('')+foToday.map(followRow).join(''), nToday, '#b07d00');
+  if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới', tUp.map(taskRow).join(''), nUp, 'var(--teal-dark)');
+  if(!(nOver+nToday+nUp)) html+=`<div class="card empty">Không có việc hay follow nào đến hạn. 🎉</div>`;
   /* ===== Thống kê việc theo Sale + kích hoạt lại (chỉ quản lý/admin) ===== */
   if(isAdmin()){
     const done=TASKS.filter(t=>t.xong);
@@ -1213,8 +1233,7 @@ function renderToday(){
       html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length})</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Bấm <b>Kích hoạt lại</b> để đưa việc về danh sách chưa làm — nhắc sale làm tiếp.</p><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Loại</th><th>Khách</th><th>Nội dung</th><th>Đến hạn</th><th>Sale</th><th></th></tr>${done.map(drow).join('')}</table></div>`;
     }
   }
-  const fb=(title,arr,color)=> arr.length?`<h2 class="sec" style="color:${color}">${title} (${arr.length})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>SĐT</th><th>Trạng thái</th><th>Ngày follow</th></tr>${arr.map(c=>`<tr class="${rowClass(c)}"><td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b></td><td>${c.phone||'—'}</td><td>${ttPill(c.tt)}</td><td>${c.follow||'—'}</td></tr>`).join('')}</table></div>`:'';
-  html+=`<h2 class="sec" style="margin-top:22px">Nhắc follow tự động</h2>`+((over.length||due.length)? fb('Quá hạn follow',over,'var(--over)')+fb('Đến hạn hôm nay',due,'#b07d00') : `<div class="card empty">Không có follow nào đến hạn.</div>`);
+  /* Nhắc follow đã được gộp vào nhóm "Quá hạn" / "Hôm nay" ở bảng việc phía trên */
   let careArr=DATA.filter(c=>isChot(c.tt)).sort((a,b)=>(b.ngay_chot||'').localeCompare(a.ngay_chot||''));
   const _cq=(CARE_TODAY_Q||'').toLowerCase();
   if(CARE_TODAY_SALE) careArr=careArr.filter(c=>c.owner===CARE_TODAY_SALE);
@@ -1225,7 +1244,8 @@ function renderToday(){
   const cctSale=`<select onchange="setCareTodaySale(this.value)"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${CARE_TODAY_SALE===k?'selected':''}>${v}</option>`).join('')}</select>`;
   const cctMkt=`<select onchange="setCareTodayMkt(this.value)"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([k,v])=>`<option value="${k}" ${CARE_TODAY_MKT===k?'selected':''}>Khách của ${v}</option>`).join('')}</select>`;
   const cctDate=`<span style="font-size:12px;color:var(--muted)">Ngày chốt:</span><input type="date" value="${CARE_TODAY_FROM}" onchange="setCareTodayFrom(this.value)" title="Từ ngày" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" value="${CARE_TODAY_TO}" onchange="setCareTodayTo(this.value)" title="Đến ngày" style="width:auto">${(CARE_TODAY_FROM||CARE_TODAY_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearCareTodayDate()">Xoá lọc ngày</button>`:''}`;
-  html+=`<h2 class="sec" style="margin-top:22px">📋 Lịch chăm khách đã chốt (cả team)</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">💡 <b>Tự động lưu</b> trong lúc gõ (ngừng gõ ~1 giây là lưu) — hiện "✓ Đã lưu" ở góc phải. Không cần nút bấm.</p>
+  html+=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:26px"><h2 class="sec" style="margin:0">📋 Lịch chăm khách đã chốt (cả team)</h2><button class="btn ghost" type="button" onclick="toggleCareToday()" style="padding:5px 12px;font-size:12px">${CARE_TODAY_OPEN?'✕ Thu gọn':`Mở ra (${careArr.length})`}</button></div>`;
+  if(CARE_TODAY_OPEN) html+=`<p style="color:var(--muted);font-size:12px;margin:8px 0 8px">💡 <b>Tự động lưu</b> trong lúc gõ (ngừng gõ ~1 giây là lưu) — hiện "✓ Đã lưu" ở góc phải. Bảng này cũng có ở trang <b>Chăm sóc khách</b>.</p>
     <div class="filters" style="margin-bottom:10px"><input id="cct-q" class="search" value="${(CARE_TODAY_Q||'').replace(/"/g,'&quot;')}" oninput="setCareTodayQ(this.value)" placeholder="🔎 Tìm tên / SĐT / ghi chú / kết quả..." style="max-width:420px">${cctSale}${cctMkt}${cctDate}</div>`+careTableHTML(careArr);
   document.getElementById('v-today').innerHTML=html;
 }
@@ -1257,12 +1277,13 @@ function statusDonutHTML(arr){
 }
 function renderReport(){
   const rows = ME.role==='admin'? Object.entries(SALES) : [[ME.id, ME.name]];
-  let donutArr=DATA.filter(c=>inDateRange('report',c));
+  const _rrg=getRange('report'), _rod=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10); // Ngày lên đơn (khớp Tổng quan)
+  let donutArr=DATA.filter(c=>{const x=_rod(c); return x&&x>=_rrg.s&&x<=_rrg.e;});
   if(ME.role!=='admin') donutArr=donutArr.filter(c=>c.owner===ME.id);
   else if(REPORT_DONUT_SALE) donutArr=donutArr.filter(c=>c.owner===REPORT_DONUT_SALE);
   const donutSaleSel=(ME.role==='admin')?`<select onchange="setReportDonutSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${REPORT_DONUT_SALE===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
   let html=renderDateFilterBar('report')
-    +`<div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px"><h2 class="sec" style="margin:0">📊 Tỉ lệ trạng thái khách (báo cáo cuối ngày)</h2>${donutSaleSel}</div><p style="color:var(--muted);font-size:12px;margin:0 0 12px">Theo khoảng ngày đã chọn ở trên. Sale dùng để báo cáo cuối ngày: mỗi trạng thái có bao nhiêu khách.</p>${statusDonutHTML(donutArr)}</div>`
+    +`<div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px"><h2 class="sec" style="margin:0">📊 Tỉ lệ trạng thái khách (báo cáo cuối ngày)</h2>${donutSaleSel}</div><p style="color:var(--muted);font-size:12px;margin:0 0 12px">Tính theo <b>Ngày lên đơn</b> (khớp với Tổng quan), trong khoảng ngày đã chọn. Sale dùng để báo cáo cuối ngày: mỗi trạng thái có bao nhiêu khách.</p>${statusDonutHTML(donutArr)}</div>`
     +`<div class="card" style="padding:0;overflow-x:auto"><table>
     <tr><th>Sale</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th></tr>`;
   let T={total:0,dtMoi:0,dtCu:0};
