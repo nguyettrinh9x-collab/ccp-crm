@@ -578,6 +578,8 @@ function inDateRange(key,c){const rg=getRange(key);const ds=FILTERS[key].field==
 
 let DASH_STATUS_SALE='';
 function setDashStatusSale(v){ DASH_STATUS_SALE=v; renderDash(); }
+let DASH_STATUS_MKT='';
+function setDashStatusMkt(v){ DASH_STATUS_MKT=v; renderDash(); }
 function renderDash(){
   const d=myData();
   const isAdmin=ME.role==='admin';
@@ -651,10 +653,11 @@ function renderDash(){
     if(days.length) html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${mktIds.map(id=>`<td>${dp.filter(c=>c.mkt===id).length}</td>`).join('')}<td>${dp.length}</td></tr>`;
     html+=`</table></div>`;
     const stIds=['kcnc','ktt','tuong_tac','web','khach_chan','da_chot','chot_nguoi','dang_care','hen']; // hiện đủ 9 trạng thái
-    let stDp=dp; if(DASH_STATUS_SALE) stDp=dp.filter(c=>c.owner===DASH_STATUS_SALE);
+    let stDp=dp; if(DASH_STATUS_SALE) stDp=stDp.filter(c=>c.owner===DASH_STATUS_SALE); if(DASH_STATUS_MKT) stDp=stDp.filter(c=>c.mkt===DASH_STATUS_MKT);
     const stDays=[...new Set(stDp.map(c=>(c.ngay_tao||'').slice(0,10)).filter(Boolean))].sort().reverse();
     const stSaleSel=(ME.role==='admin')?`<select onchange="setDashStatusSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([id,nm])=>`<option value="${id}" ${DASH_STATUS_SALE===id?'selected':''}>${nm}</option>`).join('')}</select>`:'';
-    html+=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:18px"><h2 class="sec" style="margin:0">📅 Báo cáo khách mới theo ngày — theo Trạng thái</h2>${stSaleSel}</div><div class="card" style="padding:0;overflow-x:auto"><table>
+    const stMktSel=(ME.role==='admin')?`<select onchange="setDashStatusMkt(this.value)" style="width:auto"><option value="">Tất cả MKT</option>${Object.entries(MKT).map(([id,nm])=>`<option value="${id}" ${DASH_STATUS_MKT===id?'selected':''}>${nm}</option>`).join('')}</select>`:'';
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:18px"><h2 class="sec" style="margin:0">📅 Báo cáo khách mới theo ngày — theo Trạng thái</h2><div style="display:flex;gap:6px;flex-wrap:wrap">${stSaleSel}${stMktSel}</div></div><div class="card" style="padding:0;overflow-x:auto"><table>
       <tr><th>Ngày</th>${stIds.map(k=>`<th style="white-space:nowrap">${(TT_ICON[k]||'')} ${STATUS[k]||k}</th>`).join('')}<th>Tổng</th></tr>`;
     if(!stDays.length) html+=`<tr><td colspan="${stIds.length+2}" class="empty">Không có khách trong khoảng ngày này.</td></tr>`;
     stDays.forEach(day=>{ const dd=stDp.filter(c=>onDay(c,day)); html+=`<tr><td><b>${day}</b></td>${stIds.map(k=>{const n=dd.filter(c=>c.tt===k).length;return '<td>'+(n||'—')+'</td>';}).join('')}<td><b>${dd.length}</b></td></tr>`; });
