@@ -628,6 +628,25 @@ function renderDash(){
   });
   html+=`</table></div>`;
 
+  // ----- 2b · BÁO CÁO KHÁCH MỚI THEO NGÀY (Sale & Marketing) -----
+  {
+    const days=[...new Set(dp.map(c=>(c.ngay_tao||'').slice(0,10)).filter(Boolean))].sort().reverse();
+    const saleIds=Object.keys(SALES).filter(id=>dp.some(c=>c.owner===id));
+    const mktIds=Object.keys(MKT).filter(id=>dp.some(c=>c.mkt===id));
+    const onDay=(c,day)=>(c.ngay_tao||'').slice(0,10)===day;
+    html+=`<h2 class="sec">📅 Báo cáo khách mới theo ngày — theo Sale</h2><div class="card" style="padding:0;overflow-x:auto"><table>
+      <tr><th>Ngày</th>${saleIds.map(id=>`<th style="white-space:nowrap">${SALES[id]}</th>`).join('')}<th>Tổng</th></tr>`;
+    if(!days.length) html+=`<tr><td colspan="${saleIds.length+2}" class="empty">Không có khách trong khoảng ngày này.</td></tr>`;
+    days.forEach(day=>{ const dd=dp.filter(c=>onDay(c,day)); html+=`<tr><td><b>${day}</b></td>${saleIds.map(id=>{const n=dd.filter(c=>c.owner===id).length;return `<td>${n||'—'}</td>`;}).join('')}<td><b>${dd.length}</b></td></tr>`; });
+    if(days.length) html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${saleIds.map(id=>`<td>${dp.filter(c=>c.owner===id).length}</td>`).join('')}<td>${dp.length}</td></tr>`;
+    html+=`</table></div>`;
+    html+=`<h2 class="sec">📅 Báo cáo khách mới theo ngày — theo Marketing</h2><div class="card" style="padding:0;overflow-x:auto"><table>
+      <tr><th>Ngày</th>${mktIds.map(id=>`<th style="white-space:nowrap">${MKT[id]}</th>`).join('')}<th>Tổng</th></tr>`;
+    if(!days.length) html+=`<tr><td colspan="${mktIds.length+2}" class="empty">Không có khách trong khoảng ngày này.</td></tr>`;
+    days.forEach(day=>{ const dd=dp.filter(c=>onDay(c,day)); html+=`<tr><td><b>${day}</b></td>${mktIds.map(id=>{const n=dd.filter(c=>c.mkt===id).length;return `<td>${n||'—'}</td>`;}).join('')}<td><b>${dd.length}</b></td></tr>`; });
+    if(days.length) html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${mktIds.map(id=>`<td>${dp.filter(c=>c.mkt===id).length}</td>`).join('')}<td>${dp.length}</td></tr>`;
+    html+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:8px">Số khách mới (theo Ngày tạo) trong khoảng ngày đã chọn ở trên — chia theo từng Sale và từng Marketing để báo cáo hằng ngày.</p>`;
+  }
   // ----- 3 · 4 · CƠ CẤU DOANH THU -----
   const tot=dtMoi+dtCu||1;
   html+=`<h2 class="sec">3 · 4 · Cơ cấu doanh thu</h2><div class="card">
@@ -847,18 +866,24 @@ async function saveChamKq(id,v){ await saveCol(id,'cham_kq',v); }
 async function saveSuDung(id,v){ await saveCol(id,'su_dung',v); }
 async function saveFollowDate(id,v){ await saveCol(id,'follow',v||null); renderAlert(); }
 
-let ADD_LIST_SALE='', ADD_LIST_Q='';
+let ADD_LIST_SALE='', ADD_LIST_Q='', ADD_LIST_FROM='', ADD_LIST_TO='';
+function refreshAddList(){ const w=document.getElementById('addlist-wrap'); if(w) w.innerHTML=addListHTML(); }
 function setAddListSale(v){ ADD_LIST_SALE=v; const w=document.getElementById('addlist-wrap'); if(w) w.innerHTML=addListHTML(); }
+function setAddListFrom(v){ ADD_LIST_FROM=v; refreshAddList(); }
+function setAddListTo(v){ ADD_LIST_TO=v; refreshAddList(); }
+function clearAddListDate(){ ADD_LIST_FROM=''; ADD_LIST_TO=''; refreshAddList(); }
 function setAddListQ(v){ ADD_LIST_Q=v; const w=document.getElementById('addlist-wrap'); if(w){ w.innerHTML=addListHTML(); const el=document.getElementById('addl-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } } }
 function addListHTML(){
   let arr=DATA.slice().sort((a,b)=>String(b.ngay_tao||b.id).localeCompare(String(a.ngay_tao||a.id)));
   if(ADD_LIST_SALE) arr=arr.filter(c=>c.owner===ADD_LIST_SALE);
+  if(ADD_LIST_FROM) arr=arr.filter(c=>(c.ngay_tao||'').slice(0,10)>=ADD_LIST_FROM);
+  if(ADD_LIST_TO) arr=arr.filter(c=>(c.ngay_tao||'').slice(0,10)<=ADD_LIST_TO);
   const q=(ADD_LIST_Q||'').toLowerCase();
   if(q) arr=arr.filter(c=>`${c.ten||''} ${c.phone||''} ${SALES[c.owner]||''} ${MKT[c.mkt]||''}`.toLowerCase().includes(q));
   const saleSel=`<select onchange="setAddListSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${ADD_LIST_SALE===k?'selected':''}>${v}</option>`).join('')}</select>`;
   let t=`<h2 class="sec" style="margin-top:22px">📋 Danh sách khách đã thêm (theo sale)</h2>
     <p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Khách mới thêm hiện lên đầu — dễ kiểm soát từng sale. Bấm <b>➕ Việc</b> để giao việc cần làm cho khách đó (hiện ở mục Việc cần làm).</p>
-    <div class="filters" style="margin-bottom:10px"><input id="addl-q" class="search" value="${(ADD_LIST_Q||'').replace(/"/g,'&quot;')}" oninput="setAddListQ(this.value)" placeholder="🔎 Tìm tên / SĐT / sale / MKT..." style="max-width:360px">${saleSel}<span style="font-size:12px;color:var(--muted);align-self:center">Tổng: <b>${arr.length}</b> khách</span></div>
+    <div class="filters" style="margin-bottom:10px"><input id="addl-q" class="search" value="${(ADD_LIST_Q||'').replace(/"/g,'&quot;')}" oninput="setAddListQ(this.value)" placeholder="🔎 Tìm tên / SĐT / sale / MKT..." style="max-width:300px">${saleSel}<span style="font-size:12px;color:var(--muted)">Ngày tạo:</span><input type="date" value="${ADD_LIST_FROM}" onchange="setAddListFrom(this.value)" title="Từ ngày" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" value="${ADD_LIST_TO}" onchange="setAddListTo(this.value)" title="Đến ngày" style="width:auto">${(ADD_LIST_FROM||ADD_LIST_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearAddListDate()">Xoá lọc ngày</button>`:''}<span style="font-size:12px;color:var(--muted)">Tổng: <b>${arr.length}</b> khách</span></div>
     <div class="card" style="padding:0;overflow-x:auto"><table><tr><th>STT</th><th>Khách</th><th>Sale</th><th>MKT</th><th>Quốc gia</th><th>Nguồn</th><th>Mức</th><th>Trạng thái</th><th>Ngày tạo</th><th>Việc cần làm</th></tr>`;
   if(!arr.length) t+=`<tr><td colspan="10" class="empty">Chưa có khách.</td></tr>`;
   arr.slice(0,300).forEach((c,i)=>{ t+=`<tr class="${rowClass(c)}"><td>${i+1}</td>
