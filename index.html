@@ -410,6 +410,9 @@ function editCustomer(id){
       <div><label>Ngày follow tiếp theo</label><input id="e-follow" type="date" value="${c.follow||''}"></div>
       <div class="full"><label>Bệnh lý / nhu cầu</label><input id="e-benh" value="${esc(c.benh_list||BENH[c.benh]||'')}" placeholder="Sale tự ghi: VD PCOS, tắc vòi trứng..."></div>
       <div><label>Doanh thu (USD)</label><input id="e-dt" type="number" value="${Number(c.dt)||0}"></div>
+      <div><label>💰 Tiền gốc (${curSym(c)})</label><input id="e-tiengoc" type="number" value="${Number(c.tien_goc)||0}"></div>
+      <div><label>💸 Nợ gốc (${curSym(c)})</label><input id="e-nogoc" type="number" value="${Number(c.no_goc)||0}"></div>
+      <div><label>📅 Ngày thu hồi nợ</label><input id="e-thuno" type="date" value="${c.ngay_thu_no||''}"></div>
       <div class="full"><label>Địa chỉ khách hàng (nếu có)</label><input id="e-diachi" value="${esc(c.dia_chi)}" placeholder="Số nhà, đường, thành phố, quốc gia..."></div>
       <div class="full"><label>Sản phẩm quan tâm</label><input id="e-sp" list="ago-sp-list" value="${esc(c.sp)}">${spChips('e-sp')}${spDatalist()}</div>
       <div class="full"><label>Ghi chú tư vấn</label><textarea id="e-ghi" rows="3">${(''+(c.ghi||'')).replace(/</g,'&lt;')}</textarea></div>
@@ -444,6 +447,10 @@ function careMocToggle(key){ const c=DATA.find(x=>String(x.id)===String(CARE_PAN
   careLog(d,(m.done?'✅ ':'↩ ')+m.label+(m.note?': '+m.note:'')); saveCham(c.id,d); renderCarePanel(); }
 function careMocNote(key,val){ const c=DATA.find(x=>String(x.id)===String(CARE_PANEL_ID)); if(!c) return; const d=getCham(c);
   const m=d.moc.find(x=>x.key===key); if(!m) return; m.note=val; saveCham(c.id,d); }
+async function careDebtSave(field,val){ const c=DATA.find(x=>String(x.id)===String(CARE_PANEL_ID)); if(!c) return;
+  const v=(field==='ngay_thu_no')?(val||null):(Number(val)||0); c[field]=v;
+  if(window.sb){ const {error}=await sb.from('customers').update({[field]:v}).eq('id',c.id); if(error){ alert('Lưu lỗi: '+error.message); return; } }
+  renderCarePanel(); }
 function careUp(key,action){ const c=DATA.find(x=>String(x.id)===String(CARE_PANEL_ID)); if(!c) return; const d=getCham(c);
   const m=d.moc.find(x=>x.key===key); if(!m) return; const map={lenmoi:'🎯 Lên liệu trình mới',theodoi:'👁 Theo dõi thêm',tubo:'✖ Từ bỏ'};
   m.upStatus=map[action]||''; m.done=(action!=='theodoi'); m.done_at=m.done?D(0):'';
@@ -471,6 +478,15 @@ function renderCarePanel(){ const c=DATA.find(x=>String(x.id)===String(CARE_PANE
       <div style="display:flex;gap:12px;align-items:center"><div style="width:46px;height:46px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">${(c.ten||'?').slice(0,1).toUpperCase()}</div>
         <div><div style="font-size:18px;font-weight:800">${c.ten||''}</div><div style="color:var(--muted);font-size:12px">${c.phone||''} · ${SALES[c.owner]||'—'}</div></div></div>
       <div style="display:flex;gap:10px;align-items:center">${headBadge}<button class="btn ghost" style="padding:5px 12px" onclick="closeCarePanel()">✕ Đóng</button></div></div>
+    <div class="card" style="margin:0 0 14px;background:#fffaf3">
+      <h2 class="sec" style="margin:0 0 8px;font-size:12px;letter-spacing:.5px;color:var(--muted)">💰 CÔNG NỢ</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:12px;color:var(--muted)">Tiền gốc (${curSym(c)})</label><input type="number" value="${Number(c.tien_goc)||0}" onchange="careDebtSave('tien_goc',this.value)" style="width:100%"></div>
+        <div><label style="font-size:12px;color:var(--muted)">Nợ gốc (${curSym(c)})</label><input type="number" value="${Number(c.no_goc)||0}" onchange="careDebtSave('no_goc',this.value)" style="width:100%"></div>
+        <div style="grid-column:1/3"><label style="font-size:12px;color:var(--muted)">📅 Ngày thu hồi nợ</label><input type="date" value="${c.ngay_thu_no||''}" onchange="careDebtSave('ngay_thu_no',this.value)" style="width:100%"></div>
+      </div>
+      ${(Number(c.no_goc)&&c.ngay_thu_no)?`<div style="margin-top:8px;font-size:12px;color:${c.ngay_thu_no<=D(0)?'var(--over)':'var(--muted)'}">${c.ngay_thu_no<=D(0)?'⚠ Đã tới hạn thu hồi nợ':'⏰ Hẹn thu hồi nợ: '+c.ngay_thu_no} — còn nợ <b>${fmtCur(c,c.no_goc)}</b></div>`:''}
+    </div>
     <h2 class="sec" style="margin:0 0 10px;font-size:12px;letter-spacing:.5px;color:var(--muted)">CẬP NHẬT &amp; UP ĐƠN</h2>
     ${mocCards}
     <h2 class="sec" style="margin:16px 0 4px;font-size:12px;letter-spacing:.5px;color:var(--muted)">NHẬT KÝ TƯƠNG TÁC</h2>
@@ -478,7 +494,8 @@ function renderCarePanel(){ const c=DATA.find(x=>String(x.id)===String(CARE_PANE
 function collectEdit(){ const g=x=>document.getElementById(x).value;
   return { ten:g('e-ten'), phone:g('e-phone'), has_wa:document.getElementById('e-wa').checked, email:g('e-email'),
     quoc_gia:g('e-qg'), dia_chi:g('e-diachi')||null, nguon:g('e-nguon'), mkt:g('e-mkt')||null, owner:g('e-owner'), muc:g('e-muc'), tt:g('e-tt'),
-    follow:g('e-follow')||null, benh:'khac', benh_list:(g('e-benh')||'').trim(), dt:Number(g('e-dt'))||0, ngay_chot:g('e-ngaychot')||null, sp:g('e-sp'), ghi:g('e-ghi'), ngay_capnhat:D(0) }; }
+    follow:g('e-follow')||null, benh:'khac', benh_list:(g('e-benh')||'').trim(), dt:Number(g('e-dt'))||0, ngay_chot:g('e-ngaychot')||null, sp:g('e-sp'), ghi:g('e-ghi'),
+    tien_goc:Number(g('e-tiengoc'))||0, no_goc:Number(g('e-nogoc'))||0, ngay_thu_no:g('e-thuno')||null, ngay_capnhat:D(0) }; }
 function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
   Object.assign(c, collectEdit()); if(isChot(c.tt)&&!c.loai_don)c.loai_don=c.khach_cu?'upsell':'moi';
   closeEdit(); alert('✅ Đã lưu thay đổi'); renderAll(); }
@@ -1111,7 +1128,7 @@ function importExcel(){
 }
 
 /* ====== CỘT HIỂN THỊ + TỔNG DT THEO QUỐC GIA ====== */
-const LIST_COLS=[{k:'qg',label:'Quốc gia'},{k:'nguon',label:'Nguồn'},{k:'benh',label:'Bệnh lý'},{k:'sp',label:'SP'},{k:'muc',label:'Mức'},{k:'tt',label:'Trạng thái'},{k:'follow',label:'Follow'},{k:'mkt',label:'MKT'},{k:'sale',label:'Sale'},{k:'ghi',label:'Ghi chú / Việc'},{k:'dt',label:'DT'}];
+const LIST_COLS=[{k:'qg',label:'Quốc gia'},{k:'nguon',label:'Nguồn'},{k:'benh',label:'Bệnh lý'},{k:'sp',label:'SP'},{k:'muc',label:'Mức'},{k:'tt',label:'Trạng thái'},{k:'follow',label:'Follow'},{k:'mkt',label:'MKT'},{k:'sale',label:'Sale'},{k:'ghi',label:'Ghi chú / Việc'},{k:'dt',label:'DT'},{k:'tiengoc',label:'Tiền gốc'},{k:'nogoc',label:'Nợ gốc'},{k:'thuno',label:'Ngày thu nợ'}];
 let COL_HIDE={}; try{COL_HIDE=JSON.parse(localStorage.getItem('ccp_col_hide')||'{}');}catch(e){COL_HIDE={};}
 function applyColVis(){ const css=LIST_COLS.filter(c=>COL_HIDE[c.k]).map(c=>`#list-table .c-${c.k}{display:none}`).join(''); let st=document.getElementById('col-vis-style'); if(!st){st=document.createElement('style');st.id='col-vis-style';document.head.appendChild(st);} st.textContent=css; }
 function toggleCol(k){ COL_HIDE[k]=!COL_HIDE[k]; try{localStorage.setItem('ccp_col_hide',JSON.stringify(COL_HIDE));}catch(e){} applyColVis(); }
@@ -1120,6 +1137,8 @@ function countryGroup(q){ q=(q||'').toUpperCase().trim().replace(/[.\s]/g,'');
   if(['CA','CAD','CAN','CANADA'].includes(q)) return 'Canada';
   if(['EU','EUR','EURO','EUROPE','DE','FR','IT','ES','NL','BE','AT','PT','IE','FI','GR','LU','SK','SI','EE','LV','LT','CY','MT','HR','UK','GB','CH','SE','NO','DK','PL','CZ'].includes(q)) return 'Euro';
   return 'Khác'; }
+function curSym(c){ const g=countryGroup(c&&c.quoc_gia); return g==='Euro'?'€':g==='Canada'?'CA$':'$'; }
+function fmtCur(c,n){ n=Number(n)||0; return curSym(c)+n.toLocaleString('en-US'); }
 function renderRevenue(rows){ const el=document.getElementById('list-revenue'); if(!el) return;
   const rev={US:{n:0,s:0},Canada:{n:0,s:0},Euro:{n:0,s:0},'Khác':{n:0,s:0}};
   rows.forEach(c=>{ const g=countryGroup(c.quoc_gia); rev[g].n++; rev[g].s+=tongChiTieu(c); });
@@ -1187,8 +1206,8 @@ function renderList(){
   let t=`<div style="padding:10px 14px;font-size:13px;border-bottom:1px solid var(--line);background:var(--cream)">
     ✅ Đã chốt: <b style="color:var(--won)">${_nChot}</b> &nbsp;·&nbsp; ⏳ Chưa chốt: <b style="color:#b07d00">${_nChua}</b>
     &nbsp;·&nbsp; Hiển thị: <b>${rows.length}</b></div>
-    <table><tr><th>Khách</th><th class="c-qg">Quốc gia</th><th class="c-nguon">Nguồn</th><th class="c-benh">Bệnh lý</th><th class="c-sp">SP</th><th class="c-muc">Mức</th><th class="c-tt">Trạng thái</th><th class="c-follow">Follow</th>${fullView()?'<th class="c-mkt">MKT</th><th class="c-sale">Sale</th>':''}<th class="c-ghi">Ghi chú / Việc</th><th class="c-dt">DT</th></tr>`;
-  if(!rows.length) t+=`<tr><td colspan="12" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
+    <table><tr><th>Khách</th><th class="c-qg">Quốc gia</th><th class="c-nguon">Nguồn</th><th class="c-benh">Bệnh lý</th><th class="c-sp">SP</th><th class="c-muc">Mức</th><th class="c-tt">Trạng thái</th><th class="c-follow">Follow</th>${fullView()?'<th class="c-mkt">MKT</th><th class="c-sale">Sale</th>':''}<th class="c-ghi">Ghi chú / Việc</th><th class="c-dt">DT</th><th class="c-tiengoc">Tiền gốc</th><th class="c-nogoc">Nợ gốc</th><th class="c-thuno">Ngày thu nợ</th></tr>`;
+  if(!rows.length) t+=`<tr><td colspan="15" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
   const noteCell=c=>{
     const g=(''+(c.ghi||'')).trim();
     return g? `<div style="font-size:11px;white-space:pre-wrap;max-width:240px">${g.replace(/</g,'&lt;')}</div>` : '<span style="color:var(--line)">—</span>';
@@ -1202,7 +1221,10 @@ function renderList(){
       <td class="c-sp">${c.sp||'—'}</td><td class="c-muc">${mucPill(c.muc)}</td><td class="c-tt">${ttPill(c.tt)}</td><td class="c-follow">${fd}</td>
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
       <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
-      <td class="c-dt">${tongChiTieu(c)?'$'+tongChiTieu(c).toLocaleString('en-US'):'—'}</td></tr>`;
+      <td class="c-dt">${tongChiTieu(c)?'$'+tongChiTieu(c).toLocaleString('en-US'):'—'}</td>
+      <td class="c-tiengoc">${Number(c.tien_goc)?fmtCur(c,c.tien_goc):'—'}</td>
+      <td class="c-nogoc">${Number(c.no_goc)?'<b style="color:var(--over)">'+fmtCur(c,c.no_goc)+'</b>':'—'}</td>
+      <td class="c-thuno">${c.ngay_thu_no?(Number(c.no_goc)&&c.ngay_thu_no<=D(0)?'<b style="color:var(--over)">'+c.ngay_thu_no+' ⚠</b>':c.ngay_thu_no):'—'}</td></tr>`;
   });
   t+=`</table>`;
   document.getElementById('list-table').innerHTML=t;
@@ -1229,7 +1251,9 @@ function renderToday(){
   const tOver=mt.filter(t=>taskBucket(t)==='over'), tToday=mt.filter(t=>taskBucket(t)==='today'), tUp=mt.filter(t=>taskBucket(t)==='upcoming');
   const followFilter=c=> (!_q || (c.ten||'').toLowerCase().includes(_q)) && (!TASK_SALE || c.owner===TASK_SALE);
   const foOver=over.filter(followFilter), foToday=due.filter(followFilter);
-  const nOver=tOver.length+foOver.length, nToday=tToday.length+foToday.length, nUp=tUp.length;
+  const deOver=d.filter(c=>Number(c.no_goc)>0&&c.ngay_thu_no&&c.ngay_thu_no<D(0)&&followFilter(c));
+  const deToday=d.filter(c=>Number(c.no_goc)>0&&c.ngay_thu_no===D(0)&&followFilter(c));
+  const nOver=tOver.length+foOver.length+deOver.length, nToday=tToday.length+foToday.length+deToday.length, nUp=tUp.length;
   let html=`<div class="grid kpi-grid">
     <div class="card kpi"><div class="lbl">Việc quá hạn</div><div class="val red">${tOver.length}</div></div>
     <div class="card kpi"><div class="lbl">Việc hôm nay</div><div class="val amber">${tToday.length}</div></div>
@@ -1272,10 +1296,15 @@ function renderToday(){
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten} ✏️</b></td>
     <td>${ttPill(c.tt)} <span style="color:var(--muted);font-size:11px">${c.phone||''}</span></td><td>${c.follow||'—'}</td>${fullView()?`<td>${SALES[c.owner]||'—'}</td>`:''}
     <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer('${c.id}')">Mở khách</span></td></tr>`;
+  const debtRow=c=>`<tr style="background:#fdf3f3"><td style="width:36px;text-align:center" title="Thu hồi nợ">💰</td>
+    <td><span class="pill" style="background:#f7dada;color:#a83a3a">Thu nợ</span></td>
+    <td><b style="cursor:pointer;color:var(--teal-dark)" title="Mở chăm sóc" onclick="openCarePanel('${c.id}')">${c.ten} 🩺</b></td>
+    <td>Còn nợ <b style="color:var(--over)">${fmtCur(c,c.no_goc)}</b></td><td>${c.ngay_thu_no||'—'}</td>${fullView()?`<td>${SALES[c.owner]||'—'}</td>`:''}
+    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="openCarePanel('${c.id}')">Mở</span></td></tr>`;
   const bucketTable=(title,rowsHtml,count,color)=> count? `<h2 class="sec" style="color:${color}">${title} (${count})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Khách</th><th>Nội dung / Trạng thái</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${rowsHtml}</table></div>`:'';
   const showB=k=> !TASK_BUCKET || TASK_BUCKET===k;
-  if(showB('over')) html+=bucketTable('🔴 Việc & follow quá hạn', tOver.map(taskRow).join('')+foOver.map(followRow).join(''), nOver, 'var(--over)');
-  if(showB('today')) html+=bucketTable('🟡 Việc & follow hôm nay', tToday.map(taskRow).join('')+foToday.map(followRow).join(''), nToday, '#b07d00');
+  if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn', tOver.map(taskRow).join('')+foOver.map(followRow).join('')+deOver.map(debtRow).join(''), nOver, 'var(--over)');
+  if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay', tToday.map(taskRow).join('')+foToday.map(followRow).join('')+deToday.map(debtRow).join(''), nToday, '#b07d00');
   if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới', tUp.map(taskRow).join(''), nUp, 'var(--teal-dark)');
   if(!(nOver+nToday+nUp)) html+=`<div class="card empty">Không có việc hay follow nào đến hạn. 🎉</div>`;
   /* ===== Thống kê việc theo Sale + kích hoạt lại (chỉ quản lý/admin) ===== */
