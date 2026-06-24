@@ -100,6 +100,7 @@
     <nav class="nav" id="nav">
       <a data-v="today" class="active">Việc cần làm</a>
       <a data-v="care">Chăm sóc khách</a>
+      <a data-v="list_all">Tất cả khách</a>
       <a data-v="list_chot">Khách đã chốt</a>
       <a data-v="list_chua">Khách chưa chốt</a>
       <a data-v="add">Thêm khách</a>
@@ -276,7 +277,7 @@ function login(){
 function applyMenu(){
   const allowed=PERMS[ME.uname]||[];
   document.querySelectorAll('#nav a').forEach(a=>{
-    let v=a.dataset.v; if(v==='list_chot'||v==='list_chua') v='list';
+    let v=a.dataset.v; if(v==='list_chot'||v==='list_chua'||v==='list_all') v='list';
     a.style.display=allowed.includes(v)?'flex':'none';
   });
 }
@@ -423,7 +424,7 @@ function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)==
 
 /* ============ NAV ============ */
 const TITLES={dashboard:'Tổng quan',care:'Chăm sóc khách',add:'Thêm khách',list:'Khách hàng',
-  list_chot:'Khách hàng đã chốt',list_chua:'Khách hàng chưa chốt',
+  list_all:'Tất cả khách',list_chot:'Khách hàng đã chốt',list_chua:'Khách hàng chưa chốt',
   today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác'};
 let LIST_MODE='all'; let LIST_ROWS=[];
 function exportList(){
@@ -446,6 +447,7 @@ function go(v){
   let view=v;
   if(v==='list_chot'){view='list';LIST_MODE='chot';}
   else if(v==='list_chua'){view='list';LIST_MODE='chua';}
+  else if(v==='list_all'){view='list';LIST_MODE='all';}
   else if(v==='list'){LIST_MODE='all';}
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.v===v));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
