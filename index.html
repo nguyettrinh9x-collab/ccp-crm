@@ -1150,9 +1150,28 @@ async function saveTarget(owner){
   }
   TARGETS[owner+'|'+REPORT_MONTH]=val; renderReport();
 }
+let REPORT_DONUT_SALE='';
+function setReportDonutSale(v){ REPORT_DONUT_SALE=v; renderReport(); }
+function statusDonutHTML(arr){
+  const order=['kcnc','ktt','tuong_tac','web','khach_chan','da_chot','chot_nguoi','dang_care','hen'];
+  const cnt={}; let total=0;
+  arr.forEach(c=>{ const k=order.includes(c.tt)?c.tt:'kcnc'; cnt[k]=(cnt[k]||0)+1; total++; });
+  const segs=order.filter(k=>cnt[k]).map(k=>({k,n:cnt[k],pct: total?cnt[k]/total:0}));
+  const C=439.82, r=70, cx=90, cy=90, sw=28; let acc=0, circles='';
+  segs.forEach(s=>{ const len=s.pct*C; circles+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${TT_COLOR[s.k]||'#8a8f98'}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-acc*C).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"></circle>`; acc+=s.pct; });
+  const svg=`<svg viewBox="0 0 180 180" width="180" height="180" style="flex-shrink:0">${total?circles:`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#eee" stroke-width="${sw}"></circle>`}<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="32" font-weight="800" fill="var(--teal-dark)">${total}</text><text x="${cx}" y="${cy+20}" text-anchor="middle" font-size="12" fill="var(--muted)">khách</text></svg>`;
+  const legend=segs.map(s=>`<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:7px"><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:${TT_COLOR[s.k]||'#8a8f98'};flex-shrink:0"></span><span style="flex:1">${(TT_ICON[s.k]||'')} ${STATUS[s.k]||s.k}</span><b>${s.n}</b><span style="color:var(--muted);width:48px;text-align:right">${Math.round(s.pct*100)}%</span></div>`).join('');
+  return `<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:center">${svg}<div style="flex:1;min-width:240px">${legend||'<span class="empty">Chưa có khách trong khoảng ngày này.</span>'}</div></div>`;
+}
 function renderReport(){
   const rows = ME.role==='admin'? Object.entries(SALES) : [[ME.id, ME.name]];
-  let html=renderDateFilterBar('report')+`<div class="card" style="padding:0;overflow-x:auto"><table>
+  let donutArr=DATA.filter(c=>inDateRange('report',c));
+  if(ME.role!=='admin') donutArr=donutArr.filter(c=>c.owner===ME.id);
+  else if(REPORT_DONUT_SALE) donutArr=donutArr.filter(c=>c.owner===REPORT_DONUT_SALE);
+  const donutSaleSel=(ME.role==='admin')?`<select onchange="setReportDonutSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${REPORT_DONUT_SALE===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
+  let html=renderDateFilterBar('report')
+    +`<div class="card" style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px"><h2 class="sec" style="margin:0">📊 Tỉ lệ trạng thái khách (báo cáo cuối ngày)</h2>${donutSaleSel}</div><p style="color:var(--muted);font-size:12px;margin:0 0 12px">Theo khoảng ngày đã chọn ở trên. Sale dùng để báo cáo cuối ngày: mỗi trạng thái có bao nhiêu khách.</p>${statusDonutHTML(donutArr)}</div>`
+    +`<div class="card" style="padding:0;overflow-x:auto"><table>
     <tr><th>Sale</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th></tr>`;
   let T={total:0,dtMoi:0,dtCu:0};
   rows.forEach(([id,name])=>{
