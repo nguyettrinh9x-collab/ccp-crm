@@ -634,7 +634,9 @@ function renderDash(){
     const saleIds=Object.keys(SALES).filter(id=>dp.some(c=>c.owner===id));
     const mktIds=Object.keys(MKT).filter(id=>dp.some(c=>c.mkt===id));
     const onDay=(c,day)=>(c.ngay_tao||'').slice(0,10)===day;
-    html+=`<h2 class="sec">📅 Báo cáo khách mới theo ngày — theo Sale</h2><div class="card" style="padding:0;overflow-x:auto"><table>
+    const qp=[['hom_nay','Hôm nay'],['hom_qua','Hôm qua'],['7ngay','7 ngày'],['thang_nay','Tháng này'],['30ngay','30 ngày']];
+    html+=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:22px 0 6px"><span style="font-size:13px;color:var(--muted);font-weight:600">📅 Lọc nhanh báo cáo:</span>${qp.map(([k,l])=>`<button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px" onclick="applyPreset('dash','${k}')">${l}</button>`).join('')}</div>`;
+    html+=`<h2 class="sec" style="margin-top:6px">📅 Báo cáo khách mới theo ngày — theo Sale</h2><div class="card" style="padding:0;overflow-x:auto"><table>
       <tr><th>Ngày</th>${saleIds.map(id=>`<th style="white-space:nowrap">${SALES[id]}</th>`).join('')}<th>Tổng</th></tr>`;
     if(!days.length) html+=`<tr><td colspan="${saleIds.length+2}" class="empty">Không có khách trong khoảng ngày này.</td></tr>`;
     days.forEach(day=>{ const dd=dp.filter(c=>onDay(c,day)); html+=`<tr><td><b>${day}</b></td>${saleIds.map(id=>{const n=dd.filter(c=>c.owner===id).length;return `<td>${n||'—'}</td>`;}).join('')}<td><b>${dd.length}</b></td></tr>`; });
@@ -645,7 +647,15 @@ function renderDash(){
     if(!days.length) html+=`<tr><td colspan="${mktIds.length+2}" class="empty">Không có khách trong khoảng ngày này.</td></tr>`;
     days.forEach(day=>{ const dd=dp.filter(c=>onDay(c,day)); html+=`<tr><td><b>${day}</b></td>${mktIds.map(id=>{const n=dd.filter(c=>c.mkt===id).length;return `<td>${n||'—'}</td>`;}).join('')}<td><b>${dd.length}</b></td></tr>`; });
     if(days.length) html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${mktIds.map(id=>`<td>${dp.filter(c=>c.mkt===id).length}</td>`).join('')}<td>${dp.length}</td></tr>`;
-    html+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:8px">Số khách mới (theo Ngày tạo) trong khoảng ngày đã chọn ở trên — chia theo từng Sale và từng Marketing để báo cáo hằng ngày.</p>`;
+    html+=`</table></div>`;
+    const stOrder=['kcnc','ktt','tuong_tac','web','khach_chan','da_chot','chot_nguoi','dang_care','hen'];
+    const stIds=stOrder.filter(k=>dp.some(c=>c.tt===k));
+    html+=`<h2 class="sec">📅 Báo cáo khách mới theo ngày — theo Trạng thái</h2><div class="card" style="padding:0;overflow-x:auto"><table>
+      <tr><th>Ngày</th>${stIds.map(k=>`<th style="white-space:nowrap">${(TT_ICON[k]||'')} ${STATUS[k]||k}</th>`).join('')}<th>Tổng</th></tr>`;
+    if(!days.length) html+=`<tr><td colspan="${stIds.length+2}" class="empty">Không có khách trong khoảng ngày này.</td></tr>`;
+    days.forEach(day=>{ const dd=dp.filter(c=>onDay(c,day)); html+=`<tr><td><b>${day}</b></td>${stIds.map(k=>{const n=dd.filter(c=>c.tt===k).length;return '<td>'+(n||'—')+'</td>';}).join('')}<td><b>${dd.length}</b></td></tr>`; });
+    if(days.length) html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${stIds.map(k=>`<td>${dp.filter(c=>c.tt===k).length}</td>`).join('')}<td>${dp.length}</td></tr>`;
+    html+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:8px">Số khách mới (theo Ngày tạo) chia theo từng Sale, từng Marketing và từng Trạng thái — theo khoảng ngày đã chọn ở trên.</p>`;
   }
   // ----- 3 · 4 · CƠ CẤU DOANH THU -----
   const tot=dtMoi+dtCu||1;
@@ -918,7 +928,7 @@ function renderAdd(){
       <div><label>Số điện thoại / WhatsApp</label><input id="f-phone">
         <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px;color:var(--text)">
           <input type="checkbox" id="f-wa" style="width:auto"> 💬 Số này đã kết nối WhatsApp</label></div>
-      <div><label>Quốc gia</label><input id="f-qg" list="qg-list" placeholder="US, CA, DE..."><datalist id="qg-list"><option value="US"><option value="CA"><option value="DE"><option value="FR"><option value="IT"><option value="ES"><option value="NL"><option value="BE"><option value="AT"><option value="UK"><option value="AU"><option value="EU"></datalist><div style="font-size:11px;color:var(--muted);margin-top:3px">US · CA=Canada · DE/FR/IT… = Euro</div></div>
+      <div><label>Quốc gia</label><select id="f-qg"><option value="US">🇺🇸 US</option><option value="CAD">🇨🇦 CAD (Canada)</option><option value="EU">🇪🇺 EU (Euro)</option></select></div>
       <div><label>Email (nếu có)</label><input id="f-email" type="email"></div>
       <div><label>Nguồn khách</label><select id="f-nguon">${opt(NGUON)}</select></div>
       <div><label>MKT phụ trách (kéo lead)</label><select id="f-mkt">${opt(MKT)}</select></div>
