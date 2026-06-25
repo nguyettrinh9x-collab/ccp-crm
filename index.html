@@ -1549,7 +1549,7 @@ function renderMarketing(){
     if(MKT_DETAIL_DATE) orows=orows.filter(r=>(r.ngay||'').slice(0,10)===MKT_DETAIL_DATE);
     if(!orows.length) return;
     const s=sumOf(orows);
-    html+=`<div id="mkt-owner-${oid}" class="card" style="padding:0;overflow-x:auto;margin-bottom:14px"><table class="mkt-tbl">
+    html+=`<div id="mkt-owner-${oid}" class="card" style="padding:6px;overflow-x:auto;margin-bottom:16px;background:#f3f7f3;border:1.5px solid #cde0d2;box-shadow:0 2px 8px rgba(47,124,106,.08)"><table class="mkt-tbl" style="border:1px solid #e0d2b4">
       <tr style="background:var(--teal)"><th colspan="12" style="text-align:center;font-size:17px;color:#fff;letter-spacing:.5px;font-weight:800">${mktAvatar(oid,30)?mktAvatar(oid,30)+' ':''}${(MKT[oid]||oid||'—').toUpperCase()} <button class="btn ghost" type="button" style="padding:3px 10px;font-size:15px;margin-left:8px" title="Sao chép ngày gần nhất sang hôm nay" onclick="copyAllMReport('${oid}')">📋</button> <button class="btn ghost" type="button" style="padding:3px 10px;font-size:13px" title="Thêm 1 dòng trống (hôm nay)" onclick="addMRow('${oid}')">➕ Thêm dòng</button></th></tr>
       <tr><th>Tên Page</th><th>Camp</th><th>Số tiền/Camp</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th><th>Ngày</th><th></th></tr>
       <tr class="mkt-tong"><td>TỔNG</td><td></td><td>${money(s.tien)}</td><td>${s.mes}</td><td>${s.cmt}</td><td>${(s.mes+s.cmt)?money(s.tien/(s.mes+s.cmt)):'—'}</td><td>${s.tt}</td><td>${pct(s.tt,s.mes)}</td><td>${s.chot}</td><td>${pct(s.chot,s.mes)}</td><td></td><td></td></tr>`;
