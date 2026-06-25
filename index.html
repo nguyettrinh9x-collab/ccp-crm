@@ -644,7 +644,8 @@ function calMonthHTML(key,base){
 }
 function renderDateFilterBar(key){
   const f=FILTERS[key];
-  const fieldLbl=f.field==='capnhat'?'Thời gian cập nhật':'Thời gian tạo';
+  const chotKey=(key==='team'||key==='report'); // các trang tính theo Ngày lên đơn (ngay_chot)
+  const fieldLbl=chotKey?'Ngày lên đơn':(f.field==='capnhat'?'Thời gian cập nhật':'Thời gian tạo');
   const sel=getSel(key);
   const base=f.calBase||monthStart(sel?new Date(sel.s):today);
   const next=new Date(Date.UTC(base.getUTCFullYear(),base.getUTCMonth()+1,1));
@@ -664,10 +665,10 @@ function renderDateFilterBar(key){
           <button class="btn ghost" style="padding:3px 12px" onclick="navCal('${key}',1)">›</button></div>
         <div style="display:flex;gap:16px">${calMonthHTML(key,base)}${calMonthHTML(key,next)}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
-          <div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12px">
+          ${chotKey?`<span style="font-size:12px;color:var(--muted)">📅 Tính theo <b>Ngày lên đơn</b> (đơn đã chốt)</span>`:`<div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12px">
             <div onclick="setField('${key}','tao')" style="padding:6px 12px;cursor:pointer;${f.field==='tao'?'background:var(--teal);color:#fff':''}">Thời gian tạo</div>
             <div onclick="setField('${key}','capnhat')" style="padding:6px 12px;cursor:pointer;${f.field==='capnhat'?'background:var(--teal);color:#fff':''}">Thời gian cập nhật</div>
-          </div>
+          </div>`}
           <div style="display:flex;gap:8px">
             <button class="btn ghost" style="padding:7px 16px" onclick="clearFilter('${key}')">Đặt lại</button>
             <button class="btn" style="padding:7px 18px" onclick="toggleFilter('${key}')">Lọc</button>
