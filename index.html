@@ -1459,12 +1459,13 @@ function renderReport(){
 let MKT_DETAIL_DATE='';
 function setMktDetailDate(v){ MKT_DETAIL_DATE=v; renderMarketing(); }
 function renderMarketing(){
-  const rg=getRange('mkt');
-  const ROWS=MREPORTS.filter(r=> (!rg.s||r.ngay>=rg.s) && (!rg.e||r.ngay<=rg.e));
+  const ROWS = MKT_DETAIL_DATE ? MREPORTS.filter(r=>(r.ngay||'').slice(0,10)===MKT_DETAIL_DATE) : MREPORTS.slice();
   const pct=(a,b)=> b? (Math.round(a/b*1000)/10)+'%' : '—';
   const money=n=> (Math.round(Number(n)||0)).toLocaleString('vi-VN')+' đ';
-
-  let html=renderDateFilterBar('mkt');
+  const allD=[...new Set(MREPORTS.map(r=>(r.ngay||'').slice(0,10)).filter(Boolean))].sort().reverse();
+  const dsel=`<select onchange="setMktDetailDate(this.value)" style="width:auto;font-weight:600;padding:6px 10px"><option value="">Tất cả ngày</option>${allD.map(d=>`<option value="${d}" ${MKT_DETAIL_DATE===d?'selected':''}>${d}</option>`).join('')}</select>`;
+  const delBtn=(ME.role==='admin')?`<button class="btn" type="button" style="background:#c25b56;padding:6px 12px;font-size:12px;margin-left:auto" onclick="deleteAllMReports()">🗑 Xoá tất cả${MKT_DETAIL_DATE?(' ('+MKT_DETAIL_DATE+')'):''}</button>`:'';
+  let html=`<div style="margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:13px;color:var(--muted);font-weight:600">📅 Lọc theo Ngày báo cáo:</span>${dsel}${delBtn}</div>`;
 
   // ----- Bảng tổng hợp theo từng MKT (check hàng ngày) -----
   const byMkt={};
@@ -1525,9 +1526,7 @@ function renderMarketing(){
     <p style="color:var(--muted);font-size:12px;margin-top:8px">CP/MES = Tiền ÷ (SL MES + CMT) · Tỷ lệ TT = MES TT ÷ SL MES · Tỷ lệ chốt = SĐ chốt ÷ SL MES.</p></div>`;
 
   // ----- Bảng chi tiết: gom theo MKT → theo NGÀY → Page -----
-  const allDates=[...new Set(ROWS.map(r=>(r.ngay||'').slice(0,10)).filter(Boolean))].sort().reverse();
-  const dateSel=`<select onchange="setMktDetailDate(this.value)" style="width:auto"><option value="">Tất cả ngày</option>${allDates.map(d=>`<option value="${d}" ${MKT_DETAIL_DATE===d?'selected':''}>${d}</option>`).join('')}</select>`;
-  html+=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:18px"><h2 class="sec" style="margin:0">📄 Chi tiết theo Page / Camp</h2><div style="display:flex;gap:6px;align-items:center"><span style="font-size:12px;color:var(--muted)">📅 Ngày báo cáo:</span>${dateSel}</div></div>`;
+  html+=`<h2 class="sec" style="margin-top:18px">📄 Chi tiết theo Page / Camp</h2>`;
   const ownerKeys=Object.keys(MKT).filter(id=>ROWS.some(r=>r.owner===id));
   const otherOwners=[...new Set(ROWS.filter(r=>!MKT[r.owner]).map(r=>r.owner))];
   const allOwners=[...ownerKeys,...otherOwners];
@@ -1605,6 +1604,16 @@ async function copyAllMReport(oid){
   await loadAll(); MKT_DETAIL_DATE=today; renderMarketing();
   setTimeout(()=>{ const el=document.getElementById('mkt-owner-'+oid); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); },120);
   if(window.toast) toast(`✅ Đã chép ${recs.length} dòng sang hôm nay — sửa số ngay bên dưới`); else alert('Đã sao chép, sửa số ngay bên dưới.');
+}
+async function deleteAllMReports(){
+  if(!(ME&&ME.role==='admin')){ alert('Chỉ Admin mới xoá được.'); return; }
+  const rows=MKT_DETAIL_DATE?MREPORTS.filter(r=>(r.ngay||'').slice(0,10)===MKT_DETAIL_DATE):MREPORTS.slice();
+  if(!rows.length){ alert('Không có báo cáo để xoá.'); return; }
+  const scope=MKT_DETAIL_DATE?('ngày '+MKT_DETAIL_DATE):'TẤT CẢ các ngày';
+  if(!confirm(`⚠️ Xoá ${rows.length} dòng báo cáo Marketing (${scope})? Không khôi phục lại được.`)) return;
+  if(!confirm('Bạn CHẮC CHẮN muốn xoá? Bấm OK lần nữa để xác nhận.')) return;
+  if(window.sb){ const ids=rows.map(r=>r.id); const { error }=await sb.from('mkt_reports').delete().in('id',ids); if(error){ alert('Lỗi xoá: '+error.message); return; } }
+  await loadAll(); renderMarketing(); alert(`✅ Đã xoá ${rows.length} dòng báo cáo (${scope}).`);
 }
 async function saveMField(id,field,val){
   const r=MREPORTS.find(x=>String(x.id)===String(id)); if(!r) return;
