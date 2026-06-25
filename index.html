@@ -1538,7 +1538,7 @@ function renderMarketing(){
     if(MKT_DETAIL_DATE) orows=orows.filter(r=>(r.ngay||'').slice(0,10)===MKT_DETAIL_DATE);
     if(!orows.length) return;
     const s=sumOf(orows);
-    html+=`<div class="card" style="padding:0;overflow-x:auto;margin-bottom:14px"><table>
+    html+=`<div id="mkt-owner-${oid}" class="card" style="padding:0;overflow-x:auto;margin-bottom:14px"><table>
       <tr style="background:#7ee36a"><th colspan="12" style="text-align:center;font-size:15px;color:#14361f">${(MKT[oid]||oid||'—').toUpperCase()} <button class="btn ghost" type="button" style="padding:3px 10px;font-size:12px;margin-left:8px" onclick="copyAllMReport('${oid}')">📋 Sao chép ngày gần nhất sang hôm nay</button></th></tr>
       <tr><th>Tên Page</th><th>Camp</th><th>Số tiền/Camp</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th><th>Ngày</th><th></th></tr>
       <tr style="background:#fffbe0;font-weight:700"><td>TỔNG</td><td></td><td>${money(s.tien)}</td><td>${s.mes}</td><td>${s.cmt}</td><td>${(s.mes+s.cmt)?money(s.tien/(s.mes+s.cmt)):'—'}</td><td>${s.tt}</td><td>${pct(s.tt,s.mes)}</td><td>${s.chot}</td><td>${pct(s.chot,s.mes)}</td><td></td><td></td></tr>`;
@@ -1602,7 +1602,9 @@ async function copyAllMReport(oid){
   let base=Date.now(); const recs=rows.map((r,i)=>({ id:base+i, owner:r.owner, ngay:today, ten_page:r.ten_page||'—', camp:r.camp||'—', tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0 }));
   const { error }=await sb.from('mkt_reports').insert(recs);
   if(error){ alert('Lỗi sao chép: '+error.message); return; }
-  await loadAll(); renderMarketing(); alert(`✅ Đã sao chép ${recs.length} dòng (ngày ${srcDate}) sang hôm nay. Bấm ✏️ để sửa lại số liệu.`);
+  await loadAll(); MKT_DETAIL_DATE=today; renderMarketing();
+  setTimeout(()=>{ const el=document.getElementById('mkt-owner-'+oid); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); },120);
+  if(window.toast) toast(`✅ Đã chép ${recs.length} dòng sang hôm nay — sửa số ngay bên dưới`); else alert('Đã sao chép, sửa số ngay bên dưới.');
 }
 async function saveMField(id,field,val){
   const r=MREPORTS.find(x=>String(x.id)===String(id)); if(!r) return;
