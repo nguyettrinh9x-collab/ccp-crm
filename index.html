@@ -53,7 +53,8 @@
   tr:last-child td{border-bottom:0}
   .mkt-tbl td,.mkt-tbl th{border-right:1px solid #eaeee9}
   .mkt-tbl td:last-child,.mkt-tbl th:last-child{border-right:0}
-  .mkt-tbl th{background:#eef3ee;color:var(--teal-dark)}
+  .mkt-tbl th{background:#eb9a3c;color:#1c1c1c;font-weight:800}
+  .mkt-tbl .mkt-tong td{background:#5fdd5f;color:#10210f;font-weight:800;font-size:14px}
   .mkt-tbl input{border:1px solid #d6ded8;border-radius:8px;padding:6px 8px;font-size:13px;color:#1e2b24;background:#fff}
   .mkt-tbl input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 2px rgba(58,124,106,.15)}
   .mkt-tbl input[type=number]{text-align:center;font-weight:600}
@@ -231,6 +232,7 @@ let DATA = [];
 /* Chi phí marketing theo nguồn + MKT (USD) - demo */
 let SPEND = [];  // chưa có chi phí marketing — nhập ở trang Báo cáo Marketing
 let MREPORTS = []; // báo cáo marketing theo page/camp: {id,owner,ngay,ten_page,camp,tien,sl_mes,so_cmt,mes_tt,sd_chot}
+let MTRASH = [];   // báo cáo marketing đã xoá (có thể khôi phục)
 
 /* ============ AUTH ============ */
 let ME = null;
@@ -370,7 +372,7 @@ function orderHistoryHTML(c){
     h+=`<div class="card" style="padding:0;background:var(--cream);margin-bottom:12px;overflow-x:auto"><table>
       <tr><th style="padding:7px 10px">Lần</th><th>Ngày mua</th><th>Sản phẩm</th><th>Số tiền</th><th></th></tr>`;
     let idx=1;
-    if(hasLan1(c)){ h+=`<tr><td style="padding:7px 10px"><b>Lần 1</b></td><td>${c.ngay_tao||'—'}</td><td>${c.sp||'—'}</td><td><b>$${(Number(c.dt)||0).toLocaleString('en-US')}</b></td><td style="color:var(--muted);font-size:11px">đơn đầu</td></tr>`; idx=2; }
+    if(hasLan1(c)){ h+=`<tr><td style="padding:7px 10px"><b>Lần 1</b></td><td>${(c.ngay_chot||c.ngay_tao||'—')}</td><td>${c.sp||'—'}</td><td><b>$${(Number(c.dt)||0).toLocaleString('en-US')}</b></td><td style="color:var(--muted);font-size:11px">đơn đầu · theo ngày lên đơn</td></tr>`; idx=2; }
     list.forEach(o=>{ h+=`<tr><td style="padding:7px 10px"><b>Lần ${idx}</b></td><td>${(''+(o.ngay||'')).slice(0,10)||'—'}</td><td>${o.san_pham||'—'}</td><td><b>$${(Number(o.so_tien)||0).toLocaleString('en-US')}</b></td>
       <td><span style="cursor:pointer;color:var(--over)" title="Xoá lần mua này" onclick="delOrder('${o.id}','${c.id}')">🗑️</span></td></tr>`; idx++; });
     h+=`</table></div>`;
@@ -1548,9 +1550,9 @@ function renderMarketing(){
     if(!orows.length) return;
     const s=sumOf(orows);
     html+=`<div id="mkt-owner-${oid}" class="card" style="padding:0;overflow-x:auto;margin-bottom:14px"><table class="mkt-tbl">
-      <tr style="background:var(--teal)"><th colspan="12" style="text-align:center;font-size:15px;color:#fff;letter-spacing:.5px">${mktAvatar(oid,30)?mktAvatar(oid,30)+' ':''}${(MKT[oid]||oid||'—').toUpperCase()} <button class="btn ghost" type="button" style="padding:3px 10px;font-size:15px;margin-left:8px" title="Sao chép ngày gần nhất sang hôm nay" onclick="copyAllMReport('${oid}')">📋</button> <button class="btn ghost" type="button" style="padding:3px 10px;font-size:13px" title="Thêm 1 dòng trống (hôm nay)" onclick="addMRow('${oid}')">➕ Thêm dòng</button></th></tr>
+      <tr style="background:var(--teal)"><th colspan="12" style="text-align:center;font-size:17px;color:#fff;letter-spacing:.5px;font-weight:800">${mktAvatar(oid,30)?mktAvatar(oid,30)+' ':''}${(MKT[oid]||oid||'—').toUpperCase()} <button class="btn ghost" type="button" style="padding:3px 10px;font-size:15px;margin-left:8px" title="Sao chép ngày gần nhất sang hôm nay" onclick="copyAllMReport('${oid}')">📋</button> <button class="btn ghost" type="button" style="padding:3px 10px;font-size:13px" title="Thêm 1 dòng trống (hôm nay)" onclick="addMRow('${oid}')">➕ Thêm dòng</button></th></tr>
       <tr><th>Tên Page</th><th>Camp</th><th>Số tiền/Camp</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th><th>Ngày</th><th></th></tr>
-      <tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td></td><td>${money(s.tien)}</td><td>${s.mes}</td><td>${s.cmt}</td><td>${(s.mes+s.cmt)?money(s.tien/(s.mes+s.cmt)):'—'}</td><td>${s.tt}</td><td>${pct(s.tt,s.mes)}</td><td>${s.chot}</td><td>${pct(s.chot,s.mes)}</td><td></td><td></td></tr>`;
+      <tr class="mkt-tong"><td>TỔNG</td><td></td><td>${money(s.tien)}</td><td>${s.mes}</td><td>${s.cmt}</td><td>${(s.mes+s.cmt)?money(s.tien/(s.mes+s.cmt)):'—'}</td><td>${s.tt}</td><td>${pct(s.tt,s.mes)}</td><td>${s.chot}</td><td>${pct(s.chot,s.mes)}</td><td></td><td></td></tr>`;
     const days=[...new Set(orows.map(r=>(r.ngay||'').slice(0,10)).filter(Boolean))].sort().reverse();
     days.forEach(day=>{
       const drows=orows.filter(r=>(r.ngay||'').slice(0,10)===day).sort((a,b)=>(a.ten_page||'').localeCompare(b.ten_page||''));
@@ -1580,6 +1582,12 @@ function renderMarketing(){
     html+=`</table></div>`;
   });
 
+  if(canDelM && MTRASH.length){
+    html+=`<div style="margin-top:24px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 class="sec" style="margin:0;color:var(--over)">🗑 Thùng rác Marketing (${MTRASH.length})</h2><button class="btn ghost" type="button" style="padding:5px 12px;font-size:12px" onclick="restoreAllMReports()">♻️ Khôi phục tất cả</button>${(ME&&(ME.role==='admin'||ME.role==='owner'))?`<button class="btn ghost" type="button" style="padding:5px 12px;font-size:12px;color:var(--over)" onclick="purgeMTrash()">Xoá vĩnh viễn</button>`:''}</div>
+      <div class="card" style="padding:0;overflow-x:auto;margin-top:10px"><table class="mkt-tbl"><tr><th>MKT</th><th>Tên Page</th><th>Camp</th><th>Số tiền</th><th>MES</th><th>Ngày</th><th></th></tr>
+      ${MTRASH.slice().sort((a,b)=>(b.ngay||'').localeCompare(a.ngay||'')).map(r=>`<tr><td><b>${MKT[r.owner]||r.owner||'—'}</b></td><td>${r.ten_page||'—'}</td><td>${r.camp||'—'}</td><td>${money(r.tien)}</td><td style="text-align:center">${r.sl_mes}</td><td>${r.ngay||'—'}</td><td><button class="btn ghost" type="button" style="padding:3px 10px;font-size:12px;color:var(--teal-dark)" onclick="restoreMReport('${r.id}')">♻️ Khôi phục</button></td></tr>`).join('')}
+      </table></div></div>`;
+  }
   html+=`<div style="text-align:right;margin:18px 0 6px"><button class="btn" type="button" style="padding:11px 28px;font-size:14px" onclick="saveAllMReports()">💾 Lưu tất cả</button></div>`;
   document.getElementById('v-marketing').innerHTML=html;
 }
@@ -1634,8 +1642,8 @@ async function deleteAllMReports(){
   const scope=(rg.s||rg.e)?('khoảng '+(rg.s||'…')+' → '+(rg.e||'…')):'TẤT CẢ các ngày';
   if(!confirm(`⚠️ Xoá ${rows.length} dòng báo cáo Marketing (${scope})? Không khôi phục lại được.`)) return;
   if(!confirm('Bạn CHẮC CHẮN muốn xoá? Bấm OK lần nữa để xác nhận.')) return;
-  if(window.sb){ const ids=rows.map(r=>r.id); const { error }=await sb.from('mkt_reports').delete().in('id',ids); if(error){ alert('Lỗi xoá: '+error.message); return; } }
-  const idset=new Set(rows.map(r=>String(r.id))); MREPORTS=MREPORTS.filter(r=>!idset.has(String(r.id))); renderMarketing(); alert(`✅ Đã xoá ${rows.length} dòng báo cáo (${scope}).`);
+  if(window.sb){ const ids=rows.map(r=>r.id); const { error }=await sb.from('mkt_reports').update({da_xoa:true}).in('id',ids); if(error){ alert('Lỗi xoá: '+error.message); return; } }
+  const idset=new Set(rows.map(r=>String(r.id))); MREPORTS.filter(r=>idset.has(String(r.id))).forEach(r=>{r.da_xoa=true; MTRASH.push(r);}); MREPORTS=MREPORTS.filter(r=>!idset.has(String(r.id))); renderMarketing(); alert(`✅ Đã xoá ${rows.length} dòng (${scope}). Khôi phục được ở Thùng rác Marketing.`);
 }
 async function saveMField(id,field,val){
   const r=MREPORTS.find(x=>String(x.id)===String(id)); if(!r) return;
@@ -1664,10 +1672,26 @@ async function saveMReport(e){
   await loadAll(); renderMarketing(); alert(wasEdit?'✅ Đã cập nhật báo cáo.':'✅ Đã lưu báo cáo "'+data.ten_page+'"');
 }
 async function deleteMReport(id){
-  if(!confirm('Xoá báo cáo này?')) return;
-  const { error }=await sb.from('mkt_reports').delete().eq('id', id);
-  if(error){ alert('Lỗi xoá: '+error.message); return; }
-  await loadAll(); renderMarketing();
+  if(!confirm('Xoá báo cáo này? (có thể khôi phục ở Thùng rác Marketing)')) return;
+  if(window.sb){ const { error }=await sb.from('mkt_reports').update({da_xoa:true}).eq('id', id); if(error){ alert('Lỗi xoá: '+error.message); return; } }
+  const idx=MREPORTS.findIndex(x=>String(x.id)===String(id)); if(idx>=0){ const r=MREPORTS.splice(idx,1)[0]; r.da_xoa=true; MTRASH.push(r); }
+  renderMarketing();
+}
+async function restoreMReport(id){
+  if(window.sb){ const { error }=await sb.from('mkt_reports').update({da_xoa:false}).eq('id', id); if(error){ alert('Lỗi khôi phục: '+error.message); return; } }
+  const idx=MTRASH.findIndex(x=>String(x.id)===String(id)); if(idx>=0){ const r=MTRASH.splice(idx,1)[0]; r.da_xoa=false; MREPORTS.push(r); }
+  renderMarketing(); if(window.toast) toast('♻️ Đã khôi phục');
+}
+async function restoreAllMReports(){
+  if(!MTRASH.length) return; if(!confirm(`Khôi phục tất cả ${MTRASH.length} báo cáo đã xoá?`)) return;
+  if(window.sb){ const ids=MTRASH.map(r=>r.id); const { error }=await sb.from('mkt_reports').update({da_xoa:false}).in('id',ids); if(error){ alert('Lỗi: '+error.message); return; } }
+  MTRASH.forEach(r=>{ r.da_xoa=false; MREPORTS.push(r); }); MTRASH=[]; renderMarketing(); if(window.toast) toast('♻️ Đã khôi phục tất cả');
+}
+async function purgeMTrash(){
+  if(!(ME&&(ME.role==='admin'||ME.role==='owner'))){ alert('Chỉ Admin xoá vĩnh viễn được.'); return; }
+  if(!MTRASH.length) return; if(!confirm(`Xoá VĨNH VIỄN ${MTRASH.length} báo cáo trong thùng rác? Không khôi phục được.`)) return;
+  if(window.sb){ const ids=MTRASH.map(r=>r.id); const { error }=await sb.from('mkt_reports').delete().in('id',ids); if(error){ alert('Lỗi: '+error.message); return; } }
+  MTRASH=[]; renderMarketing();
 }
 function saveSpend(e){
   e.preventDefault(); const g=id=>document.getElementById(id).value;
@@ -1921,10 +1945,11 @@ async function loadAll(){
   TARGETS = {};
   const { data:tg } = await sb.from('sale_targets').select('*');
   (tg||[]).forEach(t=>{ TARGETS[t.owner+'|'+t.thang]=Number(t.muc_tieu)||0; });
-  MREPORTS = [];
+  MREPORTS = []; MTRASH = [];
   const { data:mr } = await sb.from('mkt_reports').select('*');
-  MREPORTS = (mr||[]).map(r=>({id:r.id, owner:r.owner, ngay:(r.ngay||'').slice(0,10), ten_page:r.ten_page, camp:r.camp,
-    tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0}));
+  const _mall=(mr||[]).map(r=>({id:r.id, owner:r.owner, ngay:(r.ngay||'').slice(0,10), ten_page:r.ten_page, camp:r.camp,
+    tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0, da_xoa:!!r.da_xoa}));
+  MREPORTS=_mall.filter(r=>!r.da_xoa); MTRASH=_mall.filter(r=>r.da_xoa);
   return true;
 }
 /* ---- Việc cần làm / nhắc việc (Supabase) ---- */
