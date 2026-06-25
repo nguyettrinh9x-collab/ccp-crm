@@ -1546,11 +1546,13 @@ function renderMarketing(){
       const drows=orows.filter(r=>(r.ngay||'').slice(0,10)===day).sort((a,b)=>(a.ten_page||'').localeCompare(b.ten_page||''));
       const ds=sumOf(drows);
       html+=`<tr style="background:#eef6f0"><td colspan="12" style="font-weight:700;color:var(--teal-dark);font-size:13px">📅 ${day} &nbsp;·&nbsp; ${drows.length} camp &nbsp;·&nbsp; Tiền ${money(ds.tien)} &nbsp;·&nbsp; MES ${ds.mes} &nbsp;·&nbsp; TT ${ds.tt} (${pct(ds.tt,ds.mes)}) &nbsp;·&nbsp; Chốt ${ds.chot}</td></tr>`;
-      const ic='padding:3px;width:64px;text-align:center';
+      const ic='padding:3px;width:64px;text-align:center'; let lastPage=null;
       drows.forEach(r=>{
         const mes=+r.sl_mes||0, cmt=+r.so_cmt||0, tt=+r.mes_tt||0, chot=+r.sd_chot||0, tien=+r.tien||0;
         const pgv=(r.ten_page==='—')?'':(''+(r.ten_page||'')).replace(/"/g,'&quot;');
-        html+=`<tr id="mrow-${r.id}"><td><input value="${pgv}" placeholder="Tên page" onchange="saveMField('${r.id}','ten_page',this.value)" style="padding:3px;width:140px;font-weight:600"></td>
+        const showPage=(r.ten_page!==lastPage); lastPage=r.ten_page;
+        const pageCell=showPage?`<input value="${pgv}" placeholder="Tên page" onchange="saveMField('${r.id}','ten_page',this.value)" style="padding:3px;width:140px;font-weight:600">`:'<span style="color:var(--line)">↳</span>';
+        html+=`<tr id="mrow-${r.id}"><td>${pageCell}</td>
           <td><input value="${(''+(r.camp||'')).replace(/"/g,'&quot;')}" placeholder="Camp" onchange="saveMField('${r.id}','camp',this.value)" style="padding:3px;width:110px"></td>
           <td><input type="number" value="${tien}" onchange="saveMField('${r.id}','tien',this.value)" style="padding:3px;width:96px;text-align:right"></td>
           <td><input type="number" value="${mes}" onchange="saveMField('${r.id}','sl_mes',this.value)" style="${ic}"></td>
