@@ -1459,6 +1459,7 @@ function renderReport(){
 let MKT_DETAIL_DATE='';
 function setMktDetailDate(v){ MKT_DETAIL_DATE=v; renderMarketing(); }
 function renderMarketing(){
+  const rg = MKT_DETAIL_DATE ? {s:MKT_DETAIL_DATE, e:MKT_DETAIL_DATE} : {s:'', e:''};
   const ROWS = MKT_DETAIL_DATE ? MREPORTS.filter(r=>(r.ngay||'').slice(0,10)===MKT_DETAIL_DATE) : MREPORTS.slice();
   const pct=(a,b)=> b? (Math.round(a/b*1000)/10)+'%' : '—';
   const money=n=> (Math.round(Number(n)||0)).toLocaleString('vi-VN')+' đ';
