@@ -1473,7 +1473,8 @@ function renderMarketing(){
   const money=n=> (Math.round(Number(n)||0)).toLocaleString('vi-VN')+' đ';
   const canDelM=(ME&&(ME.role==='admin'||ME.role==='owner'||ME.role==='marketing'));
   let html=renderDateFilterBar('mkt');
-  if(canDelM) html+=`<div style="margin:-4px 0 12px;text-align:right"><button class="btn" type="button" style="background:#c25b56;padding:6px 12px;font-size:12px" onclick="deleteAllMReports()">🗑 Xoá tất cả (đang lọc)</button></div>`;
+  if(canDelM) html+=`<div style="margin:-4px 0 8px;text-align:right"><button class="btn" type="button" style="background:#c25b56;padding:6px 12px;font-size:12px" onclick="deleteAllMReports()">🗑 Xoá tất cả (đang lọc)</button></div>`;
+  if(canDelM) html+=`<div style="margin:0 0 14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="font-size:12px;color:var(--muted)">🖼 Ảnh Marketing:</span>${Object.entries(MKT).map(([id,nm])=>`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="pickImage('mkt_${id}',300)">${nm}${IMAGES['mkt_'+id]?' ✓':''}</button>`).join('')}</div>`;
 
   // ----- Bảng tổng hợp theo từng MKT (check hàng ngày) -----
   const byMkt={};
@@ -1547,7 +1548,7 @@ function renderMarketing(){
     if(!orows.length) return;
     const s=sumOf(orows);
     html+=`<div id="mkt-owner-${oid}" class="card" style="padding:0;overflow-x:auto;margin-bottom:14px"><table class="mkt-tbl">
-      <tr style="background:var(--teal)"><th colspan="12" style="text-align:center;font-size:15px;color:#fff;letter-spacing:.5px">${(MKT[oid]||oid||'—').toUpperCase()} <button class="btn ghost" type="button" style="padding:3px 10px;font-size:15px;margin-left:8px" title="Sao chép ngày gần nhất sang hôm nay" onclick="copyAllMReport('${oid}')">📋</button> <button class="btn ghost" type="button" style="padding:3px 10px;font-size:13px" title="Thêm 1 dòng trống (hôm nay)" onclick="addMRow('${oid}')">➕ Thêm dòng</button></th></tr>
+      <tr style="background:var(--teal)"><th colspan="12" style="text-align:center;font-size:15px;color:#fff;letter-spacing:.5px">${mktAvatar(oid,30)?mktAvatar(oid,30)+' ':''}${(MKT[oid]||oid||'—').toUpperCase()} <button class="btn ghost" type="button" style="padding:3px 10px;font-size:15px;margin-left:8px" title="Sao chép ngày gần nhất sang hôm nay" onclick="copyAllMReport('${oid}')">📋</button> <button class="btn ghost" type="button" style="padding:3px 10px;font-size:13px" title="Thêm 1 dòng trống (hôm nay)" onclick="addMRow('${oid}')">➕ Thêm dòng</button></th></tr>
       <tr><th>Tên Page</th><th>Camp</th><th>Số tiền/Camp</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th><th>Ngày</th><th></th></tr>
       <tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td></td><td>${money(s.tien)}</td><td>${s.mes}</td><td>${s.cmt}</td><td>${(s.mes+s.cmt)?money(s.tien/(s.mes+s.cmt)):'—'}</td><td>${s.tt}</td><td>${pct(s.tt,s.mes)}</td><td>${s.chot}</td><td>${pct(s.chot,s.mes)}</td><td></td><td></td></tr>`;
     const days=[...new Set(orows.map(r=>(r.ngay||'').slice(0,10)).filter(Boolean))].sort().reverse();
@@ -1561,7 +1562,7 @@ function renderMarketing(){
         const pgv=(r.ten_page==='—')?'':(''+(r.ten_page||'')).replace(/"/g,'&quot;');
         const showPage=(r.ten_page!==lastPage); lastPage=r.ten_page; if(showPage) grp++;
         const bg=(grp%2)?'#ffffff':'#f6f8f6';
-        const pageCell=showPage?`<input value="${pgv}" placeholder="Tên page" onchange="saveMField('${r.id}','ten_page',this.value)" style="padding:5px 6px;width:150px;font-weight:700;color:var(--teal-dark);border:1px solid var(--line);border-radius:7px">`:'<span style="color:#bcc7c0;padding-left:14px">↳</span>';
+        const pageCell=showPage?`<input value="${pgv}" placeholder="Tên page" onchange="saveMField('${r.id}','ten_page',this.value)" style="padding:6px 8px;width:160px;font-weight:800;color:#11302a;font-size:14px;border:1px solid #cdd8d1;border-radius:8px">`:'<span style="color:#aab6af;padding-left:16px;font-size:15px">↳</span>';
         html+=`<tr id="mrow-${r.id}" style="background:${bg}"><td style="border-top:1px solid #eef1ee">${pageCell}</td>
           <td><input value="${(''+(r.camp||'')).replace(/"/g,'&quot;')}" placeholder="Camp" onchange="saveMField('${r.id}','camp',this.value)" style="padding:3px;width:110px"></td>
           <td><input type="number" value="${tien}" onchange="saveMField('${r.id}','tien',this.value)" style="padding:3px;width:96px;text-align:right"></td>
@@ -1683,12 +1684,13 @@ function pickImage(key,maxW){
       const cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
       const data=cv.toDataURL('image/jpeg',0.82); IMAGES[key]=data;
       if(window.sb){ const { error }=await sb.from('app_images').upsert({key,data,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi lưu ảnh: '+error.message+'\\n(Có thể chưa tạo bảng app_images trên Supabase)'); return; } }
-      renderTeam(); alert('✅ Đã cập nhật ảnh.');
+      (key.indexOf('mkt_')===0?renderMarketing:renderTeam)(); alert('✅ Đã cập nhật ảnh.');
     }; img.src=r.result; }; r.readAsDataURL(f); };
   inp.click();
 }
-async function removeImage(key){ if(!confirm('Xoá ảnh này?')) return; delete IMAGES[key]; if(window.sb){ await sb.from('app_images').delete().eq('key',key); } renderTeam(); }
+async function removeImage(key){ if(!confirm('Xoá ảnh này?')) return; delete IMAGES[key]; if(window.sb){ await sb.from('app_images').delete().eq('key',key); } (key.indexOf('mkt_')===0?renderMarketing:renderTeam)(); }
 function saleAvatar(id,size){ const u=IMAGES['sale_'+id]; return u?`<img src="${u}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:2px solid #e0a458;vertical-align:middle">`:''; }
+function mktAvatar(id,size){ const u=IMAGES['mkt_'+id]; return u?`<img src="${u}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:2px solid #fff;vertical-align:middle">`:''; }
 function bestSaleHTML(){
   const today=D(0), ym=today.slice(0,7);
   const isAdminU=(ME&&ME.role==='admin');
