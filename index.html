@@ -51,6 +51,12 @@
   th,td{padding:10px 12px;text-align:left;font-size:13px;border-bottom:1px solid var(--line)}
   th{background:var(--cream);color:var(--teal-dark);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
   tr:last-child td{border-bottom:0}
+  .mkt-tbl td,.mkt-tbl th{border-right:1px solid #eaeee9}
+  .mkt-tbl td:last-child,.mkt-tbl th:last-child{border-right:0}
+  .mkt-tbl th{background:#eef3ee;color:var(--teal-dark)}
+  .mkt-tbl input{border:1px solid #d6ded8;border-radius:8px;padding:6px 8px;font-size:13px;color:#1e2b24;background:#fff}
+  .mkt-tbl input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 2px rgba(58,124,106,.15)}
+  .mkt-tbl input[type=number]{text-align:center;font-weight:600}
   .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
   .row-hot{box-shadow:inset 4px 0 0 var(--hot)}
   .row-warn{background:#fffbf0} .row-over{background:#fdeeee} .row-won{background:#eefaf3}
@@ -1458,6 +1464,8 @@ function renderReport(){
 
 let MKT_DETAIL_DATE='';
 function setMktDetailDate(v){ MKT_DETAIL_DATE=v; renderMarketing(); }
+let MKT_FORM_OPEN=false;
+function toggleMktForm(){ MKT_FORM_OPEN=!MKT_FORM_OPEN; renderMarketing(); }
 function renderMarketing(){
   const rg=getRange('mkt');
   const ROWS=MREPORTS.filter(r=> (!rg.s||r.ngay>=rg.s) && (!rg.e||r.ngay<=rg.e));
@@ -1509,8 +1517,9 @@ function renderMarketing(){
       </div>`;
   }
 
-  // ----- Form nhập báo cáo (2 bạn MKT) -----
-  html+=`<h2 class="sec">➕ Nhập báo cáo Marketing</h2><div class="card"><form onsubmit="saveMReport(event)">
+  // ----- Form nhập báo cáo (2 bạn MKT) — gập lại được -----
+  html+=`<div style="display:flex;align-items:center;gap:10px;margin-top:18px"><h2 class="sec" style="margin:0">➕ Nhập báo cáo Marketing</h2><button class="btn ghost" type="button" style="padding:5px 12px;font-size:12px" onclick="toggleMktForm()">${MKT_FORM_OPEN?'✕ Thu gọn':'Mở form nhập'}</button><span style="font-size:12px;color:var(--muted)">(hoặc nhập trực tiếp trên bảng dưới)</span></div>`;
+  if(MKT_FORM_OPEN) html+=`<div class="card" style="margin-top:10px"><form onsubmit="saveMReport(event)">
     <div class="form-grid">
       <div><label>📅 Ngày báo cáo <span style="font-weight:400;color:var(--muted)">(kết quả của ngày nào — VD báo cáo ngày 25 cho KQ ngày 24 thì chọn 24)</span></label><input id="m-ngay" type="date" value="${D(0)}"></div>
       <div><label>MKT phụ trách</label><select id="m-owner">${Object.entries(MKT).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
@@ -1537,10 +1546,10 @@ function renderMarketing(){
     if(MKT_DETAIL_DATE) orows=orows.filter(r=>(r.ngay||'').slice(0,10)===MKT_DETAIL_DATE);
     if(!orows.length) return;
     const s=sumOf(orows);
-    html+=`<div id="mkt-owner-${oid}" class="card" style="padding:0;overflow-x:auto;margin-bottom:14px"><table>
-      <tr style="background:#7ee36a"><th colspan="12" style="text-align:center;font-size:15px;color:#14361f">${(MKT[oid]||oid||'—').toUpperCase()} <button class="btn ghost" type="button" style="padding:3px 10px;font-size:15px;margin-left:8px" title="Sao chép ngày gần nhất sang hôm nay" onclick="copyAllMReport('${oid}')">📋</button> <button class="btn ghost" type="button" style="padding:3px 10px;font-size:13px" title="Thêm 1 dòng trống (hôm nay)" onclick="addMRow('${oid}')">➕ Thêm dòng</button></th></tr>
+    html+=`<div id="mkt-owner-${oid}" class="card" style="padding:0;overflow-x:auto;margin-bottom:14px"><table class="mkt-tbl">
+      <tr style="background:var(--teal)"><th colspan="12" style="text-align:center;font-size:15px;color:#fff;letter-spacing:.5px">${(MKT[oid]||oid||'—').toUpperCase()} <button class="btn ghost" type="button" style="padding:3px 10px;font-size:15px;margin-left:8px" title="Sao chép ngày gần nhất sang hôm nay" onclick="copyAllMReport('${oid}')">📋</button> <button class="btn ghost" type="button" style="padding:3px 10px;font-size:13px" title="Thêm 1 dòng trống (hôm nay)" onclick="addMRow('${oid}')">➕ Thêm dòng</button></th></tr>
       <tr><th>Tên Page</th><th>Camp</th><th>Số tiền/Camp</th><th>SL MES</th><th>Số CMT</th><th>CP/MES</th><th>MES TT</th><th>Tỷ lệ TT</th><th>SĐ chốt</th><th>Tỷ lệ chốt</th><th>Ngày</th><th></th></tr>
-      <tr style="background:#fffbe0;font-weight:700"><td>TỔNG</td><td></td><td>${money(s.tien)}</td><td>${s.mes}</td><td>${s.cmt}</td><td>${(s.mes+s.cmt)?money(s.tien/(s.mes+s.cmt)):'—'}</td><td>${s.tt}</td><td>${pct(s.tt,s.mes)}</td><td>${s.chot}</td><td>${pct(s.chot,s.mes)}</td><td></td><td></td></tr>`;
+      <tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td></td><td>${money(s.tien)}</td><td>${s.mes}</td><td>${s.cmt}</td><td>${(s.mes+s.cmt)?money(s.tien/(s.mes+s.cmt)):'—'}</td><td>${s.tt}</td><td>${pct(s.tt,s.mes)}</td><td>${s.chot}</td><td>${pct(s.chot,s.mes)}</td><td></td><td></td></tr>`;
     const days=[...new Set(orows.map(r=>(r.ngay||'').slice(0,10)).filter(Boolean))].sort().reverse();
     days.forEach(day=>{
       const drows=orows.filter(r=>(r.ngay||'').slice(0,10)===day).sort((a,b)=>(a.ten_page||'').localeCompare(b.ten_page||''));
