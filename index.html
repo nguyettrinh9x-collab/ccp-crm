@@ -1168,14 +1168,15 @@ function countryGroup(q){ q=(q||'').toUpperCase().trim().replace(/[.\s]/g,'');
   return 'Khác'; }
 function curSym(c){ const g=countryGroup(c&&c.quoc_gia); return g==='Euro'?'€':g==='Canada'?'CA$':'$'; }
 function fmtCur(c,n){ n=Number(n)||0; return curSym(c)+n.toLocaleString('en-US'); }
-function renderRevenue(rows){ const el=document.getElementById('list-revenue'); if(!el) return;
+function renderRevenue(allRows){ const el=document.getElementById('list-revenue'); if(!el) return;
+  const rows=allRows.filter(c=>isChot(c.tt)); // chỉ tính khách ĐÃ CHỐT (Chốt nóng + Chốt nguội)
   const rev={US:{n:0,s:0},Canada:{n:0,s:0},Euro:{n:0,s:0},'Khác':{n:0,s:0}};
   rows.forEach(c=>{ const g=countryGroup(c.quoc_gia); rev[g].n++; rev[g].s+=tongChiTieu(c); });
   const tot=rows.reduce((a,c)=>a+tongChiTieu(c),0);
   const cards=[['US','🇺🇸 US'],['Canada','🇨🇦 Canada'],['Euro','🇪🇺 Euro'],['Khác','🌍 Khác']]
     .filter(([k])=>rev[k].n>0||k!=='Khác')
     .map(([k,lbl])=>`<div class="rev-card"><div class="rl">${lbl}</div><div class="rv">$${rev[k].s.toLocaleString('en-US')}</div><div class="rn">${rev[k].n} khách</div></div>`).join('');
-  el.innerHTML=`<div class="rev-grid">${cards}<div class="rev-card" style="background:var(--cream)"><div class="rl">💰 Tổng cộng</div><div class="rv">$${tot.toLocaleString('en-US')}</div><div class="rn">${rows.length} khách</div></div></div>`;
+  el.innerHTML=`<div class="rev-grid">${cards}<div class="rev-card" style="background:var(--cream)"><div class="rl">💰 Tổng đã chốt</div><div class="rv">$${tot.toLocaleString('en-US')}</div><div class="rn">${rows.length} khách chốt</div></div></div>`;
 }
 function renderList(){
   const opt=(o,all)=>`<option value="">${all}</option>`+Object.entries(o).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
