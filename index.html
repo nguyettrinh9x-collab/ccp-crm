@@ -1509,7 +1509,7 @@ function renderMarketing(){
   // ----- Form nhập báo cáo (2 bạn MKT) -----
   html+=`<h2 class="sec">➕ Nhập báo cáo Marketing</h2><div class="card"><form onsubmit="saveMReport(event)">
     <div class="form-grid">
-      <div><label>Ngày</label><input id="m-ngay" type="date" value="${D(0)}"></div>
+      <div><label>📅 Ngày báo cáo <span style="font-weight:400;color:var(--muted)">(kết quả của ngày nào — VD báo cáo ngày 25 cho KQ ngày 24 thì chọn 24)</span></label><input id="m-ngay" type="date" value="${D(0)}"></div>
       <div><label>MKT phụ trách</label><select id="m-owner">${Object.entries(MKT).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div>
       <div><label>Tên Page</label><input id="m-page" placeholder="VD: AGO Women US"></div>
       <div><label>Camp</label><input id="m-camp" placeholder="Tên/ID campaign"></div>
