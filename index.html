@@ -1545,12 +1545,14 @@ function renderMarketing(){
       recRows+=`<tr><td>💬 Tương tác (MES TT ↔ Khách TT)</td>${cellR(b.tt||0,ttReal)}</tr>`;
       recRows+=`<tr><td>✅ Chốt (SĐ chốt ↔ Chốt thật)</td>${cellR(b.chot||0,chotReal2)}</tr>`;
     });
-    html+=`<h2 class="sec" style="margin-top:24px">🔎 Đối chiếu chi tiết phễu MKT (báo cáo vs sale note)</h2>
+    html+=`<h2 class="sec" style="margin-top:24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">🔎 Đối chiếu chi tiết phễu MKT (báo cáo vs sale note)<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;font-weight:600" onclick="var b=document.getElementById('box-pheu');var h=b.style.display==='none';b.style.display=h?'':'none';this.textContent=h?'▼ Thu gọn':'▶ Mở rộng'">▼ Thu gọn</button></h2>
+      <div id="box-pheu">
       <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">So từng tầng phễu: số <b>marketer tự báo cáo</b> vs <b>khách thực tế sale note</b>. Tô đỏ khi lệch ≥ 30% — tầng nào đỏ là chỗ cần kiểm tra (lead rơi / khai vống / sale chưa cập nhật trạng thái).</p>
       <div class="card" style="padding:0;overflow-x:auto"><table>
         <tr><th>Tầng phễu</th><th style="text-align:center">Báo cáo MKT</th><th style="text-align:center">Sale note</th><th style="text-align:center">Chênh</th><th style="text-align:center">% lệch</th></tr>
         ${recRows||'<tr><td colspan="5" class="empty">Chưa có dữ liệu trong kỳ.</td></tr>'}
-      </table></div>`;
+      </table></div>
+      </div>`;
   }
 
   // ----- TỶ LỆ MKT TƯƠNG TÁC THEO TỆP KHÁCH -----
@@ -1576,13 +1578,15 @@ function renderMarketing(){
     });
     const header=`<tr><th>MKT</th>${SK.map(k=>`<th style="text-align:center">${STATUS[k]}</th>`).join('')}<th style="text-align:center">TỔNG</th><th style="text-align:center">% TƯƠNG TÁC</th></tr>`;
     const totRow=GT.tong?`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${SK.map(k=>`<td style="text-align:center">${GT[k]||'—'}</td>`).join('')}<td style="text-align:center">${GT.tong}</td>${rateCell(GT.eng,GT.tong)}</tr>`:'';
-    html+=`<h2 class="sec" style="margin-top:24px">📈 Tỷ lệ Marketing tương tác theo tệp khách</h2>
+    html+=`<h2 class="sec" style="margin-top:24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">📈 Tỷ lệ Marketing tương tác theo tệp khách<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;font-weight:600" onclick="var b=document.getElementById('box-ttmkt');var h=b.style.display==='none';b.style.display=h?'':'none';this.textContent=h?'▼ Thu gọn':'▶ Mở rộng'">▼ Thu gọn</button></h2>
+      <div id="box-ttmkt">
       <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Mỗi MKT: tệp khách thực tế (sale note) chia theo trạng thái. <b>% Tương tác</b> = khách đã có phản hồi (KTT + Tương tác + Đang care + Hẹn + Chốt) ÷ tổng khách — cao là tệp chất lượng, thấp là cần xem lại nguồn/nội dung.</p>
       <div class="card" style="padding:0;overflow-x:auto"><table>
         ${header}
         ${rows||'<tr><td colspan="'+(SK.length+3)+'" class="empty">Chưa có dữ liệu trong kỳ.</td></tr>'}
         ${totRow}
-      </table></div>`;
+      </table></div>
+      </div>`;
   }
 
   // ----- Form nhập báo cáo (2 bạn MKT) — gập lại được -----
