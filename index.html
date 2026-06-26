@@ -1522,6 +1522,37 @@ function renderMarketing(){
       </div>`;
   }
 
+  // ----- ĐỐI CHIẾU CHI TIẾT PHỄU MKT (báo cáo vs sale note) -----
+  {
+    const odR=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10);
+    const custR=DATA.filter(c=>{const x=odR(c); return (!rg.s||x>=rg.s)&&(!rg.e||x<=rg.e);});
+    const ENG=['ktt','tuong_tac','dang_care','hen','da_chot','chot_nguoi'];
+    const lechPct=(a,b)=>{const m=Math.max(a,b,1); return Math.round(Math.abs(a-b)/m*100);};
+    const cellR=(rep,real)=>{
+      const d=rep-real; const lp=lechPct(rep,real); const red=lp>=30; const sign=d>0?'+':'';
+      return `<td style="text-align:center">${rep}</td><td style="text-align:center">${real}</td>`
+        +`<td style="text-align:center;${red?'color:var(--over);font-weight:800':''}">${sign}${d}</td>`
+        +`<td style="text-align:center;${red?'background:#fbeaea;color:var(--over);font-weight:800':'color:var(--muted)'}">${lp}%${red?' ⚠':''}</td>`;
+    };
+    let recRows='';
+    Object.entries(MKT).forEach(([id,name])=>{
+      const ks=custR.filter(c=>c.mkt===id);
+      const b=byMkt[id]||{mes:0,tt:0,chot:0};
+      const khach=ks.length, ttReal=ks.filter(c=>ENG.includes(c.tt)).length, chotReal2=ks.filter(c=>isChot(c.tt)).length;
+      if(!ks.length && !((b.mes||0)||(b.tt||0)||(b.chot||0))) return;
+      recRows+=`<tr style="background:#eef6f0"><td colspan="5" style="font-weight:800;color:var(--teal-dark)">${name}</td></tr>`;
+      recRows+=`<tr><td>📨 Lead (MES ↔ Khách)</td>${cellR(b.mes||0,khach)}</tr>`;
+      recRows+=`<tr><td>💬 Tương tác (MES TT ↔ Khách TT)</td>${cellR(b.tt||0,ttReal)}</tr>`;
+      recRows+=`<tr><td>✅ Chốt (SĐ chốt ↔ Chốt thật)</td>${cellR(b.chot||0,chotReal2)}</tr>`;
+    });
+    html+=`<h2 class="sec" style="margin-top:24px">🔎 Đối chiếu chi tiết phễu MKT (báo cáo vs sale note)</h2>
+      <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">So từng tầng phễu: số <b>marketer tự báo cáo</b> vs <b>khách thực tế sale note</b>. Tô đỏ khi lệch ≥ 30% — tầng nào đỏ là chỗ cần kiểm tra (lead rơi / khai vống / sale chưa cập nhật trạng thái).</p>
+      <div class="card" style="padding:0;overflow-x:auto"><table>
+        <tr><th>Tầng phễu</th><th style="text-align:center">Báo cáo MKT</th><th style="text-align:center">Sale note</th><th style="text-align:center">Chênh</th><th style="text-align:center">% lệch</th></tr>
+        ${recRows||'<tr><td colspan="5" class="empty">Chưa có dữ liệu trong kỳ.</td></tr>'}
+      </table></div>`;
+  }
+
   // ----- TỶ LỆ MKT TƯƠNG TÁC THEO TỆP KHÁCH -----
   {
     const odI=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10);
