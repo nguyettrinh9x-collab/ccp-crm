@@ -1522,6 +1522,38 @@ function renderMarketing(){
       </div>`;
   }
 
+  // ----- TỶ LỆ MKT TƯƠNG TÁC THEO TỆP KHÁCH -----
+  {
+    const odI=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10);
+    const custI=DATA.filter(c=>{const x=odI(c); return (!rg.s||x>=rg.s)&&(!rg.e||x<=rg.e);});
+    const SK=['kcnc','ktt','tuong_tac','web','khach_chan','da_chot','chot_nguoi','dang_care','hen'];
+    const ENGAGED=['ktt','tuong_tac','dang_care','hen','da_chot','chot_nguoi'];
+    const blank=()=>{const o={tong:0,eng:0}; SK.forEach(k=>o[k]=0); return o;};
+    const stat={}; let GT=blank();
+    custI.forEach(c=>{
+      const id=c.mkt||'—'; const s=stat[id]=stat[id]||blank(); const tt=c.tt||'kcnc';
+      if(s[tt]!==undefined) s[tt]++; if(GT[tt]!==undefined) GT[tt]++;
+      s.tong++; GT.tong++;
+      if(ENGAGED.includes(tt)){ s.eng++; GT.eng++; }
+    });
+    const cell=v=>`<td style="text-align:center">${v||'—'}</td>`;
+    const rateCell=(eng,tong)=>{const n=tong?Math.round(eng/tong*100):0; return `<td style="text-align:center;min-width:92px"><div style="font-weight:800;color:var(--teal-dark)">${pct(eng,tong)}</div><div style="height:6px;background:#e6ece8;border-radius:4px;overflow:hidden;margin-top:3px"><div style="height:100%;width:${n}%;background:var(--teal)"></div></div></td>`;};
+    let rows='';
+    Object.entries(MKT).forEach(([id,name])=>{
+      const s=stat[id]; if(!s||!s.tong) return;
+      rows+=`<tr><td><b>${name}</b></td>${SK.map(k=>cell(s[k])).join('')}<td style="text-align:center;font-weight:700">${s.tong}</td>${rateCell(s.eng,s.tong)}</tr>`;
+    });
+    const header=`<tr><th>MKT</th>${SK.map(k=>`<th style="text-align:center">${STATUS[k]}</th>`).join('')}<th style="text-align:center">TỔNG</th><th style="text-align:center">% TƯƠNG TÁC</th></tr>`;
+    const totRow=GT.tong?`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${SK.map(k=>`<td style="text-align:center">${GT[k]||'—'}</td>`).join('')}<td style="text-align:center">${GT.tong}</td>${rateCell(GT.eng,GT.tong)}</tr>`:'';
+    html+=`<h2 class="sec" style="margin-top:24px">📈 Tỷ lệ Marketing tương tác theo tệp khách</h2>
+      <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Mỗi MKT: tệp khách thực tế (sale note) chia theo trạng thái. <b>% Tương tác</b> = khách đã có phản hồi (KTT + Tương tác + Đang care + Hẹn + Chốt) ÷ tổng khách — cao là tệp chất lượng, thấp là cần xem lại nguồn/nội dung.</p>
+      <div class="card" style="padding:0;overflow-x:auto"><table>
+        ${header}
+        ${rows||'<tr><td colspan="'+(SK.length+3)+'" class="empty">Chưa có dữ liệu trong kỳ.</td></tr>'}
+        ${totRow}
+      </table></div>`;
+  }
+
   // ----- Form nhập báo cáo (2 bạn MKT) — gập lại được -----
   html+=`<div style="display:flex;align-items:center;gap:10px;margin-top:18px"><h2 class="sec" style="margin:0">➕ Nhập báo cáo Marketing</h2><button class="btn ghost" type="button" style="padding:5px 12px;font-size:12px" onclick="toggleMktForm()">${MKT_FORM_OPEN?'✕ Thu gọn':'Mở form nhập'}</button><span style="font-size:12px;color:var(--muted)">(hoặc nhập trực tiếp trên bảng dưới)</span></div>`;
   if(MKT_FORM_OPEN) html+=`<div class="card" style="margin-top:10px"><form onsubmit="saveMReport(event)">
@@ -1541,6 +1573,12 @@ function renderMarketing(){
 
   // ----- Bảng chi tiết: gom theo MKT → theo NGÀY → Page -----
   html+=`<h2 class="sec" style="margin-top:18px">📄 Chi tiết theo Page / Camp</h2>`;
+  const allDates=[...new Set(ROWS.map(r=>(r.ngay||'').slice(0,10)).filter(Boolean))].sort().reverse();
+  html+=`<div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+    <span style="font-size:12px;color:var(--muted);font-weight:600">🗓 Chọn ngày:</span>
+    <button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px;${!MKT_DETAIL_DATE?'background:var(--teal);color:#fff;':''}" onclick="setMktDetailDate('')">Tất cả ngày (${allDates.length})</button>
+    ${allDates.map(d=>`<button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px;${MKT_DETAIL_DATE===d?'background:var(--teal);color:#fff;':''}" onclick="setMktDetailDate('${d}')">${d}</button>`).join('')}
+  </div>`;
   const ownerKeys=Object.keys(MKT).filter(id=>ROWS.some(r=>r.owner===id));
   const otherOwners=[...new Set(ROWS.filter(r=>!MKT[r.owner]).map(r=>r.owner))];
   const allOwners=[...ownerKeys,...otherOwners];
