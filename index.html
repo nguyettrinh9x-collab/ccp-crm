@@ -593,7 +593,7 @@ function reRender(key){ ({dash:renderDash,list:renderList,report:renderReport,mk
 // Tính chỉ số 1 nhóm khách: số khách, thị trường, tỷ lệ tương tác/chốt, DT mới/chăm sóc/tổng
 function saleStats(sd){
   const total=sd.length;
-  const interacted=sd.filter(c=>['tuong_tac','dang_care','hen','da_chot','chot_nguoi'].includes(c.tt)).length;
+  const interacted=sd.filter(c=>['ktt','tuong_tac','dang_care','hen','da_chot','chot_nguoi'].includes(c.tt)).length;
   const won=sd.filter(c=>isChot(c.tt));
   const dtMoi=won.filter(c=>c.loai_don!=='upsell').reduce((s,c)=>s+(Number(c.dt)||0),0);
   const dtCu =won.filter(c=>c.loai_don==='upsell').reduce((s,c)=>s+(Number(c.dt)||0),0)
