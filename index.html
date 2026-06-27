@@ -567,7 +567,14 @@ function go(v){
 
 /* ============ ĐĂNG KÝ LỊCH LÀM ============ */
 let LL_YM=(function(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');})();
-const LL_STAFF=['Bảo','Tiên','Phúc','T.Tiên','Yến','Mai','Thám'];
+const LL_DEFAULT_STAFF=['Bảo','Tiên','Phúc','T.Tiên','Yến','Mai','Thám'];
+function llStaff(){ try{ const a=JSON.parse(IMAGES['lichlam_staff']||'null'); return (Array.isArray(a)&&a.length)?a:LL_DEFAULT_STAFF; }catch(e){ return LL_DEFAULT_STAFF; } }
+async function saveLLStaff(arr){ const data=JSON.stringify(arr); IMAGES['lichlam_staff']=data; if(window.sb){ const {error}=await sb.from('app_images').upsert({key:'lichlam_staff',data,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi lưu nhân viên: '+error.message); } } renderLichLam(); }
+async function llAddStaff(){ if(!isAdmin()){alert('Chỉ Admin');return;} const n=prompt('Tên nhân viên mới:'); if(n===null||!n.trim())return; const a=llStaff().slice(); a.push(n.trim()); await saveLLStaff(a); }
+async function llRenameStaff(i){ if(!isAdmin()){alert('Chỉ Admin');return;} const a=llStaff().slice(); const n=prompt('Sửa tên nhân viên:',a[i]); if(n===null)return; if(!n.trim()){alert('Tên không được trống');return;} a[i]=n.trim(); await saveLLStaff(a); }
+async function llRemoveStaff(i){ if(!isAdmin()){alert('Chỉ Admin');return;} const a=llStaff().slice(); if(!confirm('Xoá nhân viên "'+a[i]+'" khỏi lịch? (dữ liệu ca đã nhập của tên này sẽ không hiển thị nữa)'))return; a.splice(i,1); await saveLLStaff(a); }
+function llLocked(){ return IMAGES['lichlam_lock:'+LL_YM]==='1'; }
+async function toggleLLLock(){ if(!isAdmin()){alert('Chỉ Admin mới khoá/mở lịch');return;} const key='lichlam_lock:'+LL_YM; const v=llLocked()?'0':'1'; IMAGES[key]=v; if(window.sb){ const {error}=await sb.from('app_images').upsert({key,data:v,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi: '+error.message); } } renderLichLam(); }
 const LL_OPTS=['','S','T','Đ','S-T','T-Đ','S-Đ','S-T-Đ'];
 const LL_THU=['Chủ Nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
 const LL_CLR={'S-T':'background:#fde3dd;color:#a23b34','S-T-Đ':'background:#d9f0d9;color:#2f7d34','T-Đ':'background:#8c2f2a;color:#fff','S-Đ':'background:#f7e9a0;color:#7a5b00','S':'background:#eef0ee;color:#555','T':'background:#eef0ee;color:#555','Đ':'background:#eef0ee;color:#555'};
@@ -577,6 +584,7 @@ function llData(){ try{ return JSON.parse(IMAGES['lichlam:'+LL_YM]||'{}'); }catc
 function navLLMonth(d){ const [y,m]=LL_YM.split('-').map(Number); const dt=new Date(y,m-1+d,1); LL_YM=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0'); renderLichLam(); }
 function setLLYM(v){ if(v){ LL_YM=v; renderLichLam(); } }
 async function setLLCell(day,staff,val){
+  if(llLocked() && !isAdmin()){ alert('🔒 Lịch tháng này đã được Admin khoá. Liên hệ Admin để chỉnh.'); renderLichLam(); return; }
   const d=llData(); d[day]=d[day]||{}; if(val) d[day][staff]=val; else delete d[day][staff];
   const key='lichlam:'+LL_YM; const data=JSON.stringify(d); IMAGES[key]=data;
   if(window.sb){ const {error}=await sb.from('app_images').upsert({key,data,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi lưu lịch: '+error.message+'\\n(Kiểm tra bảng app_images trên Supabase)'); } }
@@ -585,26 +593,34 @@ async function setLLCell(day,staff,val){
 function renderLichLam(){
   const el=document.getElementById('v-lichlam'); if(!el) return;
   const [y,m]=LL_YM.split('-').map(Number); const dim=new Date(y,m,0).getDate(); const D2=llData();
+  const STAFF=llStaff(); const locked=llLocked(); const adm=isAdmin(); const ro=locked&&!adm;
   let h=`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
     <button class="btn ghost" type="button" onclick="navLLMonth(-1)">‹ Tháng trước</button>
     <input type="month" value="${LL_YM}" onchange="setLLYM(this.value)" style="padding:8px 12px;border:1px solid var(--line);border-radius:9px">
     <button class="btn ghost" type="button" onclick="navLLMonth(1)">Tháng sau ›</button>
     <span style="font-weight:800;font-size:16px;color:var(--teal-dark);margin-left:6px">📅 Lịch làm tháng ${m}/${y}</span>
+    ${locked?'<span style="background:#fdeeee;color:var(--over);font-weight:700;padding:4px 10px;border-radius:16px;font-size:12px">🔒 Đã khoá</span>':''}
+    ${adm?`<button class="btn ghost" type="button" onclick="toggleLLLock()" style="padding:6px 12px;font-size:13px">${locked?'🔓 Mở khoá lịch':'🔒 Khoá lịch tháng này'}</button>`:''}
     <span style="font-size:12px;color:var(--muted);margin-left:auto">1 ca = 0,5 công · S-T = 1 · S-T-Đ = 1,5</span>
   </div>`;
-  h+=`<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Ngày</th><th>Thứ</th>${LL_STAFF.map(s=>`<th>${s}</th>`).join('')}</tr>`;
+  if(adm) h+=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    <span style="font-size:12px;color:var(--muted);font-weight:600">👤 Nhân viên (bấm ✏️ để sửa tên):</span>
+    <button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="llAddStaff()">➕ Thêm nhân viên</button>
+  </div>`;
+  if(ro) h+=`<p style="color:var(--over);font-size:12px;margin:-4px 0 10px">🔒 Lịch tháng này đã khoá — chỉ Admin sửa được.</p>`;
+  h+=`<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Ngày</th><th>Thứ</th>${STAFF.map((s,i)=>`<th>${s}${adm?` <span style="cursor:pointer;font-size:11px" title="Sửa tên" onclick="llRenameStaff(${i})">✏️</span> <span style="cursor:pointer;font-size:11px;color:var(--over)" title="Xoá nhân viên" onclick="llRemoveStaff(${i})">✕</span>`:''}</th>`).join('')}</tr>`;
   for(let d=1;d<=dim;d++){
     const dt=new Date(y,m-1,d); const dow=dt.getDay(); const sun=dow===0;
     const ds=String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0');
     h+=`<tr${sun?' style="background:#eef7ff"':''}><td style="font-weight:700;white-space:nowrap">${ds}</td><td style="font-weight:600;${sun?'color:#1d6fb8':''}">${LL_THU[dow]}</td>`;
-    LL_STAFF.forEach(s=>{
+    STAFF.forEach(s=>{
       const cur=(D2[d]&&D2[d][s])||'';
-      h+=`<td><select onchange="setLLCell(${d},'${s.replace(/'/g,"\\'")}',this.value)" style="border:none;border-radius:14px;padding:4px 6px;font-size:12px;font-weight:700;cursor:pointer;${LL_CLR[cur]||'background:#f1f3f1;color:#888'}">${LL_OPTS.map(o=>`<option value="${o}" ${o===cur?'selected':''}>${o||'—'}</option>`).join('')}</select></td>`;
+      h+=`<td><select ${ro?'disabled':''} onchange="setLLCell(${d},'${s.replace(/'/g,"\\'")}',this.value)" style="border:none;border-radius:14px;padding:4px 6px;font-size:12px;font-weight:700;cursor:${ro?'not-allowed':'pointer'};${LL_CLR[cur]||'background:#f1f3f1;color:#888'}">${LL_OPTS.map(o=>`<option value="${o}" ${o===cur?'selected':''}>${o||'—'}</option>`).join('')}</select></td>`;
     });
     h+=`</tr>`;
   }
-  h+=`<tr style="background:var(--cream);font-weight:800"><td colspan="2" style="text-align:right">TỔNG CÔNG</td>${LL_STAFF.map(s=>{let t=0;for(let d=1;d<=dim;d++)t+=llCong((D2[d]&&D2[d][s])||'');return `<td style="text-align:center;color:var(--teal-dark)">${llFmt(t)}</td>`;}).join('')}</tr>`;
-  h+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:10px">Mỗi ô chọn ca làm — tự lưu, cả team đều thấy. Số công = số ca × 0,5 (S-Đ = 1 công).</p>`;
+  h+=`<tr style="background:var(--cream);font-weight:800"><td colspan="2" style="text-align:right">TỔNG CÔNG</td>${STAFF.map(s=>{let t=0;for(let d=1;d<=dim;d++)t+=llCong((D2[d]&&D2[d][s])||'');return `<td style="text-align:center;color:var(--teal-dark)">${llFmt(t)}</td>`;}).join('')}</tr>`;
+  h+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:10px">Mỗi ô chọn ca làm — tự lưu, cả team đều thấy. Số công = số ca × 0,5 (S-Đ = 1 công). Admin có thể sửa/thêm tên nhân viên và khoá lịch mỗi tháng.</p>`;
   el.innerHTML=h;
 }
 
