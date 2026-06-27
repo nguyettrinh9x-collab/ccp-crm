@@ -319,6 +319,8 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 function toggleSidebar(){ document.getElementById('app').classList.toggle('navopen'); }
+function hideGuide(){ try{localStorage.setItem('ccp_guide_hidden','1');}catch(e){} renderToday(); }
+function showGuide(){ try{localStorage.removeItem('ccp_guide_hidden');}catch(e){} renderToday(); }
 
 /* ============ HELPER ============ */
 function fullView(){ return true; } /* mọi vai trò (gồm Sale) đều xem được TẤT CẢ khách */
@@ -1403,7 +1405,17 @@ function renderToday(){
   const deOver=d.filter(c=>Number(c.no_goc)>0&&c.ngay_thu_no&&c.ngay_thu_no<D(0)&&followFilter(c));
   const deToday=d.filter(c=>Number(c.no_goc)>0&&c.ngay_thu_no===D(0)&&followFilter(c));
   const nOver=tOver.length+foOver.length+deOver.length, nToday=tToday.length+foToday.length+deToday.length, nUp=tUp.length;
-  let html=`<div class="grid kpi-grid">
+  let _gh=''; try{_gh=localStorage.getItem('ccp_guide_hidden')||'';}catch(e){}
+  const guide=_gh?'':`<div class="card" style="background:linear-gradient(135deg,#eafaf2,#f6f2e9);border:1px solid #bfe6d2;margin-bottom:16px;position:relative">
+    <button class="btn ghost" type="button" onclick="hideGuide()" style="position:absolute;top:10px;right:10px;padding:4px 12px;font-size:12px">✕ Đã hiểu, ẩn đi</button>
+    <div style="font-weight:800;font-size:15px;color:var(--teal-dark);margin-bottom:10px">👋 Bắt đầu nhanh — 4 bước</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--text)">
+      <div style="flex:1;min-width:170px">1️⃣ <b>Việc cần làm hôm nay</b> ở ngay dưới — làm lần lượt từ trên xuống.</div>
+      <div style="flex:1;min-width:170px">2️⃣ Có khách mới thì vào <b>Thêm khách</b> (menu bên trái).</div>
+      <div style="flex:1;min-width:170px">3️⃣ Bấm <b>tên khách</b> để cập nhật trạng thái / hẹn ngày follow.</div>
+      <div style="flex:1;min-width:170px">4️⃣ Làm xong tích ô <b>"Xong"</b> để báo hoàn thành.</div>
+    </div></div>`;
+  let html=guide+`<div class="grid kpi-grid">
     <div class="card kpi"><div class="lbl">Việc quá hạn</div><div class="val red">${tOver.length}</div></div>
     <div class="card kpi"><div class="lbl">Việc hôm nay</div><div class="val amber">${tToday.length}</div></div>
     <div class="card kpi"><div class="lbl">Follow quá hạn</div><div class="val red">${over.length}</div></div>
