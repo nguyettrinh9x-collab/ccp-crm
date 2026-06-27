@@ -687,6 +687,18 @@ function inDateRange(key,c){const rg=getRange(key);const f=FILTERS[key].field;co
 // Lọc theo NGÀY LÊN ĐƠN (ngay_chot) — dùng cho báo cáo doanh thu/chốt để khớp ngày lên đơn của khách
 function inChotRange(key,c){const rg=getRange(key);const x=(c.ngay_chot||c.ngay_tao||'').slice(0,10);return x>=rg.s&&x<=rg.e;}
 
+const TEAM_F={market:'',sale:'',mkt:''};
+function setTeamF(k,v){ TEAM_F[k]=v; renderTeam(); }
+function buildTeamFilterBar(){
+  const sel=(onCh,all,opts,cur)=>`<select onchange="${onCh}" style="padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px"><option value="">${all}</option>${opts.map(([k,v])=>`<option value="${k}" ${cur===k?'selected':''}>${v}</option>`).join('')}</select>`;
+  const reset=(TEAM_F.market||TEAM_F.sale||TEAM_F.mkt)?`<button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px" onclick="TEAM_F.market='';TEAM_F.sale='';TEAM_F.mkt='';renderTeam()">✕ Xoá lọc</button>`:'';
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+    <span style="font-size:12px;color:var(--muted);font-weight:600">🔎 Lọc:</span>
+    ${sel("setTeamF('market',this.value)",'Tất cả thị trường',[['US','🇺🇸 US'],['Canada','🇨🇦 Canada'],['Euro','🇪🇺 Euro'],['Khác','🌍 Khác']],TEAM_F.market)}
+    ${sel("setTeamF('sale',this.value)",'Tất cả sale',Object.entries(SALES),TEAM_F.sale)}
+    ${sel("setTeamF('mkt',this.value)",'Tất cả MKT',Object.entries(MKT),TEAM_F.mkt)}
+    ${reset}</div>`;
+}
 let DASH_STATUS_SALE='';
 function setDashStatusSale(v){ DASH_STATUS_SALE=v; renderDash(); }
 let DASH_STATUS_MKT='';
@@ -1823,11 +1835,14 @@ function bestSaleHTML(){
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:22px">${podium('Best Sale hôm nay',today,dayRank)}${podium('Best Sale tháng này',ym,monRank)}</div>`;
 }
 function renderTeam(){
-  let html=bestSaleHTML()+renderDateFilterBar('team')+`<div class="card" style="padding:0;overflow-x:auto"><table>
+  let html=bestSaleHTML()+renderDateFilterBar('team')+buildTeamFilterBar()+`<div class="card" style="padding:0;overflow-x:auto"><table>
     <tr><th>Nhân viên</th><th>Vai trò</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th></tr>`;
   let T={total:0,dtMoi:0,dtCu:0,no:0,dtVND:0};
   Object.entries(SALES).forEach(([id,name])=>{
-    const sd=DATA.filter(c=>c.owner===id && inChotRange('team',c));
+    if(TEAM_F.sale && id!==TEAM_F.sale) return;
+    let sd=DATA.filter(c=>c.owner===id && inChotRange('team',c));
+    if(TEAM_F.market) sd=sd.filter(c=>countryGroup(c.quoc_gia)===TEAM_F.market);
+    if(TEAM_F.mkt) sd=sd.filter(c=>c.mkt===TEAM_F.mkt);
     const x=saleStats(sd); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu; T.no+=x.no; T.dtVND+=x.dtVND;
     html+=`<tr><td><b>${name}</b></td><td>Sale</td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td>
       <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVND).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">$${x.no.toLocaleString('en-US')}</td></tr>`;
@@ -1841,7 +1856,10 @@ function renderTeam(){
     <tr><th>Marketing</th><th>Số khách</th><th>Thị trường</th><th>Đã chốt</th><th>Tỷ lệ chốt</th><th>DT tổng</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th></tr>`;
   let TM={total:0,won:0,dtTong:0,no:0,dtVND:0};
   Object.entries(MKT).forEach(([id,name])=>{
-    const sd=DATA.filter(c=>c.mkt===id && inChotRange('team',c));
+    if(TEAM_F.mkt && id!==TEAM_F.mkt) return;
+    let sd=DATA.filter(c=>c.mkt===id && inChotRange('team',c));
+    if(TEAM_F.market) sd=sd.filter(c=>countryGroup(c.quoc_gia)===TEAM_F.market);
+    if(TEAM_F.sale) sd=sd.filter(c=>c.owner===TEAM_F.sale);
     if(!sd.length) return;
     const x=saleStats(sd);
     TM.total+=x.total; TM.won+=x.won; TM.dtTong+=x.dtTong; TM.no+=x.no; TM.dtVND+=x.dtVND;
