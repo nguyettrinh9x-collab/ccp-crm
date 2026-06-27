@@ -115,6 +115,7 @@
       <a data-v="report">Báo cáo</a>
       <a data-v="marketing">Marketing</a>
       <a data-v="team">Sale team</a>
+      <a data-v="lichlam">Đăng ký lịch làm</a>
       <a data-v="perms">Tài khoản</a>
       <a data-v="settings">Cài đặt</a>
       <a data-v="trash">Thùng rác</a>
@@ -148,6 +149,8 @@
     <div class="view" id="v-marketing"></div>
     <!-- TEAM -->
     <div class="view" id="v-team"></div>
+    <!-- LICH LAM -->
+    <div class="view" id="v-lichlam"></div>
     <!-- SETTINGS -->
     <div class="view" id="v-settings"></div>
     <!-- PERMS -->
@@ -290,7 +293,7 @@ function applyMenu(){
   const allowed=PERMS[ME.uname]||[];
   document.querySelectorAll('#nav a').forEach(a=>{
     let v=a.dataset.v; if(v==='list_chot'||v==='list_chua'||v==='list_all') v='list';
-    a.style.display=allowed.includes(v)?'flex':'none';
+    a.style.display=(v==='lichlam'||allowed.includes(v))?'flex':'none';
   });
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
@@ -528,7 +531,7 @@ function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)==
 /* ============ NAV ============ */
 const TITLES={dashboard:'Tổng quan',care:'Chăm sóc khách',add:'Thêm khách',list:'Khách hàng',
   list_all:'Tất cả khách',list_chot:'Khách hàng đã chốt',list_chua:'Khách hàng chưa chốt',
-  today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác'};
+  today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',lichlam:'Đăng ký lịch làm',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác'};
 let LIST_MODE='all'; let LIST_ROWS=[];
 function exportList(){
   const rows=LIST_ROWS||[];
@@ -559,10 +562,54 @@ function go(v){
   if(view==='list') renderList();
   else if(view==='care') renderCare();
   else if(view==='today') renderToday();
+  else if(view==='lichlam') renderLichLam();
+}
+
+/* ============ ĐĂNG KÝ LỊCH LÀM ============ */
+let LL_YM=(function(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');})();
+const LL_STAFF=['Bảo','Tiên','Phúc','T.Tiên','Yến','Mai','Thám'];
+const LL_OPTS=['','S','T','Đ','S-T','T-Đ','S-Đ','S-T-Đ'];
+const LL_THU=['Chủ Nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+const LL_CLR={'S-T':'background:#fde3dd;color:#a23b34','S-T-Đ':'background:#d9f0d9;color:#2f7d34','T-Đ':'background:#8c2f2a;color:#fff','S-Đ':'background:#f7e9a0;color:#7a5b00','S':'background:#eef0ee;color:#555','T':'background:#eef0ee;color:#555','Đ':'background:#eef0ee;color:#555'};
+function llCong(code){ if(!code) return 0; return code.split(/[-:]/).filter(Boolean).length*0.5; }
+function llFmt(n){ return Number.isInteger(n)?n:n.toFixed(1).replace('.',','); }
+function llData(){ try{ return JSON.parse(IMAGES['lichlam:'+LL_YM]||'{}'); }catch(e){ return {}; } }
+function navLLMonth(d){ const [y,m]=LL_YM.split('-').map(Number); const dt=new Date(y,m-1+d,1); LL_YM=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0'); renderLichLam(); }
+function setLLYM(v){ if(v){ LL_YM=v; renderLichLam(); } }
+async function setLLCell(day,staff,val){
+  const d=llData(); d[day]=d[day]||{}; if(val) d[day][staff]=val; else delete d[day][staff];
+  const key='lichlam:'+LL_YM; const data=JSON.stringify(d); IMAGES[key]=data;
+  if(window.sb){ const {error}=await sb.from('app_images').upsert({key,data,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi lưu lịch: '+error.message+'\\n(Kiểm tra bảng app_images trên Supabase)'); } }
+  renderLichLam();
+}
+function renderLichLam(){
+  const el=document.getElementById('v-lichlam'); if(!el) return;
+  const [y,m]=LL_YM.split('-').map(Number); const dim=new Date(y,m,0).getDate(); const D2=llData();
+  let h=`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+    <button class="btn ghost" type="button" onclick="navLLMonth(-1)">‹ Tháng trước</button>
+    <input type="month" value="${LL_YM}" onchange="setLLYM(this.value)" style="padding:8px 12px;border:1px solid var(--line);border-radius:9px">
+    <button class="btn ghost" type="button" onclick="navLLMonth(1)">Tháng sau ›</button>
+    <span style="font-weight:800;font-size:16px;color:var(--teal-dark);margin-left:6px">📅 Lịch làm tháng ${m}/${y}</span>
+    <span style="font-size:12px;color:var(--muted);margin-left:auto">1 ca = 0,5 công · S-T = 1 · S-T-Đ = 1,5</span>
+  </div>`;
+  h+=`<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Ngày</th><th>Thứ</th>${LL_STAFF.map(s=>`<th>${s}</th>`).join('')}</tr>`;
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(y,m-1,d); const dow=dt.getDay(); const sun=dow===0;
+    const ds=String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0');
+    h+=`<tr${sun?' style="background:#eef7ff"':''}><td style="font-weight:700;white-space:nowrap">${ds}</td><td style="font-weight:600;${sun?'color:#1d6fb8':''}">${LL_THU[dow]}</td>`;
+    LL_STAFF.forEach(s=>{
+      const cur=(D2[d]&&D2[d][s])||'';
+      h+=`<td><select onchange="setLLCell(${d},'${s.replace(/'/g,"\\'")}',this.value)" style="border:none;border-radius:14px;padding:4px 6px;font-size:12px;font-weight:700;cursor:pointer;${LL_CLR[cur]||'background:#f1f3f1;color:#888'}">${LL_OPTS.map(o=>`<option value="${o}" ${o===cur?'selected':''}>${o||'—'}</option>`).join('')}</select></td>`;
+    });
+    h+=`</tr>`;
+  }
+  h+=`<tr style="background:var(--cream);font-weight:800"><td colspan="2" style="text-align:right">TỔNG CÔNG</td>${LL_STAFF.map(s=>{let t=0;for(let d=1;d<=dim;d++)t+=llCong((D2[d]&&D2[d][s])||'');return `<td style="text-align:center;color:var(--teal-dark)">${llFmt(t)}</td>`;}).join('')}</tr>`;
+  h+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:10px">Mỗi ô chọn ca làm — tự lưu, cả team đều thấy. Số công = số ca × 0,5 (S-Đ = 1 công).</p>`;
+  el.innerHTML=h;
 }
 
 /* ============ RENDER ============ */
-function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTeam();renderSettings();renderPerms();renderTrash(); }
+function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTeam();renderLichLam();renderSettings();renderPerms();renderTrash(); }
 
 function renderAlert(){
   const due=myData().filter(c=>flag(c)==='warn').length;
@@ -1298,6 +1345,8 @@ function renderToday(){
     .filter(t=> !TASK_FROM || (t.han && t.han>=TASK_FROM))
     .filter(t=> !TASK_TO || (t.han && t.han<=TASK_TO));
   const tOver=mt.filter(t=>taskBucket(t)==='over'), tToday=mt.filter(t=>taskBucket(t)==='today'), tUp=mt.filter(t=>taskBucket(t)==='upcoming');
+  const _shownTasks=(!TASK_BUCKET?tOver.concat(tToday,tUp):TASK_BUCKET==='over'?tOver:TASK_BUCKET==='today'?tToday:tUp);
+  window.TODAY_TASK_IDS=_shownTasks.map(t=>t.id);
   const followFilter=c=> (!_q || (c.ten||'').toLowerCase().includes(_q)) && (!TASK_SALE || c.owner===TASK_SALE);
   const foOver=over.filter(followFilter), foToday=due.filter(followFilter);
   const deOver=d.filter(c=>Number(c.no_goc)>0&&c.ngay_thu_no&&c.ngay_thu_no<D(0)&&followFilter(c));
@@ -1312,7 +1361,10 @@ function renderToday(){
   const chip=(key,label,n)=>`<button class="btn ${TASK_BUCKET===key?'':'ghost'}" type="button" onclick="setTaskBucket('${key}')" style="padding:6px 14px;font-size:13px">${label} (${n})</button>`;
   html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 8px">
     ${chip('','Tất cả',nOver+nToday+nUp)}${chip('over','🔴 Quá hạn',nOver)}${chip('today','🟡 Hôm nay',nToday)}${chip('upcoming','🟢 Sắp tới',nUp)}
-    <button class="btn ghost" type="button" onclick="toggleTaskPanel()" style="padding:6px 14px;font-size:13px;margin-left:auto">${TASK_PANEL_OPEN?'✕ Đóng':'➕ Thêm việc / Bộ lọc'}${((TASK_Q||TASK_SALE||TASK_FROM||TASK_TO)&&!TASK_PANEL_OPEN)?' 🔵':''}</button>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    ${isAdmin()?`<button class="btn" type="button" onclick="markAllTasksDone()" title="Chỉ Admin — tích Xong cho tất cả việc đang hiển thị" style="padding:6px 14px;font-size:13px;background:var(--won);border-color:var(--won);color:#fff">✓ Tích tất cả Xong</button>`:''}
+    <button class="btn ghost" type="button" onclick="toggleTaskPanel()" style="padding:6px 14px;font-size:13px">${TASK_PANEL_OPEN?'✕ Đóng':'➕ Thêm việc / Bộ lọc'}${((TASK_Q||TASK_SALE||TASK_FROM||TASK_TO)&&!TASK_PANEL_OPEN)?' 🔵':''}</button>
+    </div>
   </div>`;
   if(TASK_PANEL_OPEN) html+=`<div class="card" style="margin:0 0 16px">
     <h2 class="sec" style="margin-top:0">Thêm việc cần làm</h2>
@@ -2084,6 +2136,15 @@ async function toggleTask(id){
   if(error){ alert('Lỗi: '+error.message); return; } await loadAll(); renderAll();
 }
 async function reactivateTask(id){ if(!confirm('Kích hoạt lại việc này để nhắc sale làm tiếp?'))return; await toggleTask(id); }
+async function markAllTasksDone(){
+  if(!isAdmin()){ alert('Chỉ Admin mới dùng được chức năng này.'); return; }
+  const ids=(window.TODAY_TASK_IDS||[]).slice();
+  if(!ids.length){ alert('Không có việc nào đang hiển thị để tích.'); return; }
+  if(!confirm('Đánh dấu XONG cho '+ids.length+' việc đang hiển thị?')) return;
+  const { error }=await sb.from('tasks').update({xong:true}).in('id', ids);
+  if(error){ alert('Lỗi: '+error.message); return; }
+  await loadAll(); renderAll();
+}
 async function editTask(id){
   const t=TASKS.find(x=>String(x.id)===String(id)); if(!t)return;
   const nd=prompt('Nội dung việc:', t.noi_dung||''); if(nd===null)return;
