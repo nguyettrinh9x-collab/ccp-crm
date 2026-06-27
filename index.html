@@ -86,6 +86,25 @@
   .bar{height:9px;background:var(--cream);border-radius:6px;overflow:hidden}
   .bar>div{height:100%;background:var(--teal)}
   .empty{color:var(--muted);text-align:center;padding:24px}
+  /* ---------- MOBILE / RESPONSIVE ---------- */
+  #navtoggle{display:none;position:fixed;top:10px;left:10px;z-index:210;background:var(--teal-dark);color:#fff;border:0;border-radius:10px;width:44px;height:44px;font-size:20px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  #navmask{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190}
+  @media (max-width:820px){
+    #navtoggle{display:flex;align-items:center;justify-content:center}
+    .sidebar{transform:translateX(-100%);transition:transform .25s ease;z-index:200;width:250px;box-shadow:4px 0 24px rgba(0,0,0,.25)}
+    #app.navopen .sidebar{transform:translateX(0)}
+    #app.navopen #navmask{display:block}
+    .main{margin-left:0;padding:64px 14px 24px}
+    .topbar{flex-wrap:wrap;gap:8px}
+    .topbar h1{font-size:19px}
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    form .form-grid{grid-template-columns:1fr}
+    .full{grid-column:1/2}
+    th,td{padding:8px 9px;font-size:12.5px}
+    .btn{padding:10px 18px;font-size:14px}
+    .filters select,.filters input{max-width:none;flex:1 1 140px}
+    .login-card{width:90vw;max-width:360px;padding:28px 22px}
+  }
 </style>
 </head>
 <body>
@@ -102,6 +121,8 @@
 
 <!-- ============ APP ============ -->
 <div id="app">
+  <button id="navtoggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+  <div id="navmask" onclick="toggleSidebar()"></div>
   <div class="sidebar">
     <div class="logo">CCP CRM</div>
     <nav class="nav" id="nav">
@@ -188,13 +209,13 @@ function addSpPick(){ const p=document.getElementById('f-sppick'); const q=docum
 const ALL_MODULES = [
   ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
   ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
-  ['marketing','BC Marketing'],['team','Sale team'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
+  ['marketing','BC Marketing'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
 ];
 // Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
 const DEFAULT_PERMS = {
-  admin:['dashboard','care','add','list','today','report','marketing','team','settings','perms','trash'],
-  sale: ['dashboard','care','add','list','today'],
-  marketing:['dashboard','care','list','marketing'],
+  admin:['dashboard','care','add','list','today','report','marketing','team','lichlam','settings','perms','trash'],
+  sale: ['dashboard','care','add','list','today','lichlam'],
+  marketing:['dashboard','care','list','marketing','lichlam'],
 };
 // Quyền hiện tại của từng tài khoản — Admin/Chủ chỉnh trên trang Tài khoản & Phân quyền
 let PERMS = {
@@ -293,10 +314,11 @@ function applyMenu(){
   const allowed=PERMS[ME.uname]||[];
   document.querySelectorAll('#nav a').forEach(a=>{
     let v=a.dataset.v; if(v==='list_chot'||v==='list_chua'||v==='list_all') v='list';
-    a.style.display=(v==='lichlam'||allowed.includes(v))?'flex':'none';
+    a.style.display=allowed.includes(v)?'flex':'none';
   });
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
+function toggleSidebar(){ document.getElementById('app').classList.toggle('navopen'); }
 
 /* ============ HELPER ============ */
 function fullView(){ return true; } /* mọi vai trò (gồm Sale) đều xem được TẤT CẢ khách */
@@ -556,6 +578,7 @@ function go(v){
   else if(v==='list_all'){view='list';LIST_MODE='all';}
   else if(v==='list'){LIST_MODE='all';}
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.v===v));
+  document.getElementById('app').classList.remove('navopen');
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
   document.getElementById('v-'+view).classList.add('active');
   document.getElementById('title').textContent=TITLES[v]||TITLES[view];
