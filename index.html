@@ -657,7 +657,8 @@ function renderLichLam(){
     });
     h+=`</tr>`;
   }
-  h+=`<tr style="background:var(--cream);font-weight:800"><td colspan="2" style="text-align:right">TỔNG CÔNG</td>${STAFF.map(s=>{let t=0;for(let d=1;d<=dim;d++)t+=llCong((D2[d]&&D2[d][s])||'');return `<td style="text-align:center;color:var(--teal-dark)">${llFmt(t)}</td>`;}).join('')}</tr>`;
+  const FS='position:sticky;bottom:0;z-index:5;background:var(--cream);box-shadow:0 -2px 4px rgba(0,0,0,.06)';
+  h+=`<tr style="font-weight:800"><td colspan="2" style="text-align:right;${FS};left:0;z-index:6">TỔNG CÔNG</td>${STAFF.map(s=>{let t=0;for(let d=1;d<=dim;d++)t+=llCong((D2[d]&&D2[d][s])||'');return `<td style="text-align:center;color:var(--teal-dark);${FS}">${llFmt(t)}</td>`;}).join('')}</tr>`;
   h+=`</tbody></table></div><p style="color:var(--muted);font-size:12px;margin-top:10px">Mỗi ô chọn ca làm — tự lưu, cả team đều thấy. Số công = số ca × 0,5 (S-Đ = 1 công). Admin có thể sửa/thêm tên nhân viên và khoá/mở từng tuần — tuần đã khoá thì chỉ Admin sửa.</p>`;
   el.innerHTML=h;
 }
