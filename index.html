@@ -636,7 +636,8 @@ function renderLichLam(){
     <span style="font-size:12px;color:var(--muted);font-weight:600">👤 Nhân viên (bấm ✏️ để sửa tên):</span>
     <button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="llAddStaff()">➕ Thêm nhân viên</button>
   </div>`;
-  h+=`<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Ngày</th><th>Thứ</th>${STAFF.map((s,i)=>`<th>${s}${adm?` <span style="cursor:pointer;font-size:11px" title="Sửa tên" onclick="llRenameStaff(${i})">✏️</span> <span style="cursor:pointer;font-size:11px;color:var(--over)" title="Xoá nhân viên" onclick="llRemoveStaff(${i})">✕</span>`:''}</th>`).join('')}</tr>`;
+  const HS='position:sticky;top:0;z-index:6;background:#ffe9a8;box-shadow:0 2px 4px rgba(0,0,0,.06)';
+  h+=`<div class="card" style="padding:0;overflow:auto;max-height:74vh"><table><thead><tr><th style="${HS};left:0;z-index:7">Ngày</th><th style="${HS}">Thứ</th>${STAFF.map((s,i)=>`<th style="${HS}">${s}${adm?` <span style="cursor:pointer;font-size:11px" title="Sửa tên" onclick="llRenameStaff(${i})">✏️</span> <span style="cursor:pointer;font-size:11px;color:var(--over)" title="Xoá nhân viên" onclick="llRemoveStaff(${i})">✕</span>`:''}</th>`).join('')}</tr></thead><tbody>`;
   let curWeek='';
   for(let d=1;d<=dim;d++){
     const dt=new Date(y,m-1,d); const dow=dt.getDay(); const sun=dow===0;
@@ -649,7 +650,7 @@ function renderLichLam(){
       </td></tr>`;
     }
     const ds=String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0');
-    h+=`<tr${sun?' style="background:#eef7ff"':''}><td style="font-weight:700;white-space:nowrap">${ds}</td><td style="font-weight:600;${sun?'color:#1d6fb8':''}">${LL_THU[dow]}</td>`;
+    h+=`<tr${sun?' style="background:#eef7ff"':''}><td style="font-weight:700;white-space:nowrap;position:sticky;left:0;z-index:1;background:${sun?'#eef7ff':'#fff'}">${ds}</td><td style="font-weight:600;${sun?'color:#1d6fb8':''}">${LL_THU[dow]}</td>`;
     STAFF.forEach(s=>{
       const cur=(D2[d]&&D2[d][s])||'';
       h+=`<td><select ${ro?'disabled':''} onchange="setLLCell(${d},'${s.replace(/'/g,"\\'")}',this.value)" style="border:none;border-radius:14px;padding:4px 6px;font-size:12px;font-weight:700;cursor:${ro?'not-allowed':'pointer'};${LL_CLR[cur]||'background:#f1f3f1;color:#888'}">${LL_OPTS.map(o=>`<option value="${o}" ${o===cur?'selected':''}>${o||'—'}</option>`).join('')}</select></td>`;
@@ -657,7 +658,7 @@ function renderLichLam(){
     h+=`</tr>`;
   }
   h+=`<tr style="background:var(--cream);font-weight:800"><td colspan="2" style="text-align:right">TỔNG CÔNG</td>${STAFF.map(s=>{let t=0;for(let d=1;d<=dim;d++)t+=llCong((D2[d]&&D2[d][s])||'');return `<td style="text-align:center;color:var(--teal-dark)">${llFmt(t)}</td>`;}).join('')}</tr>`;
-  h+=`</table></div><p style="color:var(--muted);font-size:12px;margin-top:10px">Mỗi ô chọn ca làm — tự lưu, cả team đều thấy. Số công = số ca × 0,5 (S-Đ = 1 công). Admin có thể sửa/thêm tên nhân viên và khoá/mở từng tuần — tuần đã khoá thì chỉ Admin sửa.</p>`;
+  h+=`</tbody></table></div><p style="color:var(--muted);font-size:12px;margin-top:10px">Mỗi ô chọn ca làm — tự lưu, cả team đều thấy. Số công = số ca × 0,5 (S-Đ = 1 công). Admin có thể sửa/thêm tên nhân viên và khoá/mở từng tuần — tuần đã khoá thì chỉ Admin sửa.</p>`;
   el.innerHTML=h;
 }
 
