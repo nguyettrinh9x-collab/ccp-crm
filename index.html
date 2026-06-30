@@ -1225,20 +1225,22 @@ function renderAdd(){
       <div class="full"><button class="btn" type="submit">💾 Lưu khách hàng</button></div>
     </div></form></div><div id="addlist-wrap">${addListHTML()}</div>`;
 }
+function _normName(s){ return (''+(s||'')).trim().toLowerCase().replace(/\s+/g,' '); }
 function checkDupAdd(){
   var w=document.getElementById('dup-warn'); if(!w) return;
   var tenEl=document.getElementById('f-ten'), phEl=document.getElementById('f-phone'), emEl=document.getElementById('f-email');
-  var ten=((tenEl&&tenEl.value)||'').trim().toLowerCase();
+  var ten=_normName(tenEl&&tenEl.value);
   var ph=((phEl&&phEl.value)||'').replace(/\D/g,'');
   var em=((emEl&&emEl.value)||'').trim().toLowerCase();
   if(ten.length<2 && ph.length<8 && !em){ w.style.display='none'; w.innerHTML=''; return; }
   var m=(DATA||[]).filter(function(c){ if(c.da_xoa) return false;
-    var cn=(''+(c.ten||'')).trim().toLowerCase(), cp=(''+(c.phone||'')).replace(/\D/g,''), ce=(''+(c.email||'')).trim().toLowerCase();
-    return (ten.length>=2&&cn===ten) || (ph.length>=8&&cp===ph) || (em&&ce===em); });
+    var cn=_normName(c.ten), cp=(''+(c.phone||'')).replace(/\D/g,''), ce=(''+(c.email||'')).trim().toLowerCase();
+    var nameHit = ten.length>=2 && (cn===ten || (ten.length>=4 && (cn.indexOf(ten)>=0 || ten.indexOf(cn)>=0)));
+    return nameHit || (ph.length>=8&&cp===ph) || (em&&ce===em); });
   if(!m.length){ w.style.display='none'; w.innerHTML=''; return; }
-  var lines=m.slice(0,6).map(function(c){
-    var cn=(''+(c.ten||'')).trim().toLowerCase(), cp=(''+(c.phone||'')).replace(/\D/g,'');
-    var by=(cn===ten)?'trùng TÊN':((ph.length>=8&&cp===ph)?'trùng SĐT':'trùng email');
+  var lines=m.slice(0,8).map(function(c){
+    var cn=_normName(c.ten), cp=(''+(c.phone||'')).replace(/\D/g,'');
+    var by=(cn===ten||(ten.length>=4&&(cn.indexOf(ten)>=0||ten.indexOf(cn)>=0)))?'trùng TÊN':((ph.length>=8&&cp===ph)?'trùng SĐT':'trùng email');
     return '• '+esc(c.ten)+(c.phone?' ('+esc(c.phone)+')':'')+' — '+by+' · Sale <b>'+esc(SALES[c.owner]||'?')+'</b> · '+esc(STATUS[c.tt]||c.tt)+' · đã mua '+soLanMua(c)+' lần';
   });
   w.style.display='block';
