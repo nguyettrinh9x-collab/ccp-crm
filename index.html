@@ -1162,7 +1162,7 @@ function addListHTML(){
   arr.slice(0,300).forEach((c,i)=>{ t+=`<tr class="${rowClass(c)}"><td>${i+1}</td>
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten}</b><br><span style="color:var(--muted);font-size:11px">${c.phone||''}</span></td>
     <td>${SALES[c.owner]||'—'}</td><td>${MKT[c.mkt]||'—'}</td><td>${c.quoc_gia||'—'}</td><td>${NGUON[c.nguon]||c.nguon||'—'}</td><td>${mucPill(c.muc)}</td><td>${ttPill(c.tt)}</td><td style="white-space:nowrap">${odl(c)||'—'}</td>
-    <td><button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--teal-dark)" onclick="quickAddTask('${c.id}')">➕ Việc</button></td></tr>`; });
+    <td style="white-space:nowrap"><button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--teal-dark)" onclick="quickAddTask('${c.id}')">➕ Việc</button>${canDelete(c)?` <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--over)" onclick="deleteCustomer('${c.id}')" title="Xoá khách (đưa vào thùng rác)">🗑️ Xoá</button>`:''}</td></tr>`; });
   return t+`</table></div>`;
 }
 async function quickAddTask(id){
@@ -1226,21 +1226,23 @@ function renderAdd(){
     </div></form></div><div id="addlist-wrap">${addListHTML()}</div>`;
 }
 function checkDupAdd(){
-  const w=document.getElementById('dup-warn'); if(!w) return;
-  const ten=((document.getElementById('f-ten')||{}).value||'').trim().toLowerCase();
-  const ph=((document.getElementById('f-phone')||{}).value||'').replace(/\D/g,'');
-  const em=((document.getElementById('f-email')||{}).value||'').trim().toLowerCase();
+  var w=document.getElementById('dup-warn'); if(!w) return;
+  var tenEl=document.getElementById('f-ten'), phEl=document.getElementById('f-phone'), emEl=document.getElementById('f-email');
+  var ten=((tenEl&&tenEl.value)||'').trim().toLowerCase();
+  var ph=((phEl&&phEl.value)||'').replace(/\D/g,'');
+  var em=((emEl&&emEl.value)||'').trim().toLowerCase();
   if(ten.length<2 && ph.length<8 && !em){ w.style.display='none'; w.innerHTML=''; return; }
-  const m=DATA.filter(c=>!c.da_xoa && (
-    (ten.length>=2 && (''+(c.ten||'')).trim().toLowerCase()===ten) ||
-    (ph.length>=8 && (''+(c.phone||'')).replace(/\D/g,'')===ph) ||
-    (em && (''+(c.email||'')).trim().toLowerCase()===em) ));
+  var m=(DATA||[]).filter(function(c){ if(c.da_xoa) return false;
+    var cn=(''+(c.ten||'')).trim().toLowerCase(), cp=(''+(c.phone||'')).replace(/\D/g,''), ce=(''+(c.email||'')).trim().toLowerCase();
+    return (ten.length>=2&&cn===ten) || (ph.length>=8&&cp===ph) || (em&&ce===em); });
   if(!m.length){ w.style.display='none'; w.innerHTML=''; return; }
+  var lines=m.slice(0,6).map(function(c){
+    var cn=(''+(c.ten||'')).trim().toLowerCase(), cp=(''+(c.phone||'')).replace(/\D/g,'');
+    var by=(cn===ten)?'trùng TÊN':((ph.length>=8&&cp===ph)?'trùng SĐT':'trùng email');
+    return '• '+esc(c.ten)+(c.phone?' ('+esc(c.phone)+')':'')+' — '+by+' · Sale <b>'+esc(SALES[c.owner]||'?')+'</b> · '+esc(STATUS[c.tt]||c.tt)+' · đã mua '+soLanMua(c)+' lần';
+  });
   w.style.display='block';
-  w.innerHTML='⚠️ <b>Có thể TRÙNG khách ('+m.length+'):</b> '+m.slice(0,5).map(c=>{
-    const by=(''+(c.ten||'')).trim().toLowerCase()===ten?'trùng tên':((''+(c.phone||'')).replace(/\\D/g,'')===ph?'trùng SĐT':'trùng email');
-    return esc(c.ten)+' ('+by+' · Sale '+(SALES[c.owner]||'?')+' · '+(STATUS[c.tt]||c.tt)+' · đã mua '+soLanMua(c)+' lần)';
-  }).join(' ; ')+'. <b>Kiểm tra kỹ trước khi lưu</b> — nếu cùng người, nên mở khách cũ thêm lần mua thay vì tạo mới.';
+  w.innerHTML='⚠️ <b>CẢNH BÁO TRÙNG KHÁCH ('+m.length+')</b> — đã có trong hệ thống, kiểm tra trước khi lưu:<br>'+lines.join('<br>');
 }
 function saveCustomer(e){
   e.preventDefault();
@@ -1447,11 +1449,12 @@ function renderList(){
 const TASK_LOAI={cham_chot:'Chăm khách đã chốt',cham_chua:'Chăm khách chưa chốt',gui_tt:'Gửi thêm thông tin',nhac:'Nhắc nhở'};
 function taskCustName(t){ const c=DATA.find(x=>String(x.id)===String(t.customer_id)); return c?c.ten:''; }
 function myTasks(){ const closed=new Set(DATA.filter(c=>isChot(c.tt)).map(c=>String(c.id)));
-  const all=TASKS.filter(t=>!t.xong).filter(t=> !(t.loai==='cham_chua' && t.customer_id!=null && closed.has(String(t.customer_id))));
-  return all; /* công khai: mọi sale đều thấy việc của nhau để nhắc nhau */ }
+  let all=TASKS.filter(t=>!t.xong).filter(t=> !(t.loai==='cham_chua' && t.customer_id!=null && closed.has(String(t.customer_id))));
+  if(ME.role==='sale') all=all.filter(t=>t.owner===ME.id); /* Sale chỉ thấy việc của mình */
+  return all; }
 function taskBucket(t){ const h=t.han||''; if(!h) return 'upcoming'; if(h<D(0))return 'over'; if(h===D(0))return 'today'; return 'upcoming'; }
 function renderToday(){
-  const d=myData();
+  const d = (ME.role==='sale') ? DATA.filter(c=>c.owner===ME.id) : myData(); /* Việc cần làm: Sale chỉ thấy khách của mình */
   const due=d.filter(c=>flag(c)==='warn');
   const over=d.filter(c=>flag(c)==='over');
   const _q=(TASK_Q||'').toLowerCase();
