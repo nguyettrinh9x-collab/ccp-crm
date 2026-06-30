@@ -1235,13 +1235,13 @@ function checkDupAdd(){
   if(ten.length<2 && ph.length<8 && !em){ w.style.display='none'; w.innerHTML=''; return; }
   var m=(DATA||[]).filter(function(c){ if(c.da_xoa) return false;
     var cn=_normName(c.ten), cp=(''+(c.phone||'')).replace(/\D/g,''), ce=(''+(c.email||'')).trim().toLowerCase();
-    var nameHit = ten.length>=2 && (cn===ten || (ten.length>=4 && (cn.indexOf(ten)>=0 || ten.indexOf(cn)>=0)));
+    var nameHit = ten.length>=2 && (cn===ten || (ten.length>=5 && cn.length>=5 && (cn.indexOf(ten)>=0 || ten.indexOf(cn)>=0)));
     return nameHit || (ph.length>=8&&cp===ph) || (em&&ce===em); });
   if(!m.length){ w.style.display='none'; w.innerHTML=''; return; }
   var E=function(s){ return (''+(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   var lines=m.slice(0,8).map(function(c){
     var cn=_normName(c.ten), cp=(''+(c.phone||'')).replace(/\D/g,'');
-    var by=(cn===ten||(ten.length>=4&&(cn.indexOf(ten)>=0||ten.indexOf(cn)>=0)))?'trùng TÊN':((ph.length>=8&&cp===ph)?'trùng SĐT':'trùng email');
+    var by=(cn===ten||(ten.length>=5&&cn.length>=5&&(cn.indexOf(ten)>=0||ten.indexOf(cn)>=0)))?'trùng TÊN':((ph.length>=8&&cp===ph)?'trùng SĐT':'trùng email');
     var sl=(typeof SALES!=='undefined'&&SALES[c.owner])?SALES[c.owner]:'?';
     var st=(typeof STATUS!=='undefined'&&STATUS[c.tt])?STATUS[c.tt]:(c.tt||'');
     var n=(typeof soLanMua==='function')?soLanMua(c):'';
