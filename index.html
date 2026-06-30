@@ -271,11 +271,13 @@ let TARGETS = {}; // mục tiêu DT theo tháng: { 'owner|YYYY-MM': muc_tieu }
 let REPORT_MONTH = (new Date()).toISOString().slice(0,7); // tháng đang xem ở Báo cáo
 let TASK_Q = '';  // bộ lọc tên khách ở trang Việc cần làm
 function setTaskQ(v){ TASK_Q=v; renderToday(); const el=document.getElementById('tk-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
-let TASK_SALE='', TASK_FROM='', TASK_TO='';
+let TASK_SALE='', TASK_FROM='', TASK_TO='', TASK_TT='';
 function setTaskSale(v){ TASK_SALE=v; renderToday(); }
+function setTaskTt(v){ TASK_TT=v; renderToday(); }
 function setTaskFrom(v){ TASK_FROM=v; renderToday(); }
 function setTaskTo(v){ TASK_TO=v; renderToday(); }
-function clearTaskFilters(){ TASK_Q=''; TASK_SALE=''; TASK_FROM=''; TASK_TO=''; renderToday(); }
+function clearTaskFilters(){ TASK_Q=''; TASK_SALE=''; TASK_FROM=''; TASK_TO=''; TASK_TT=''; renderToday(); }
+function taskCusTt(t){ const c=DATA.find(x=>String(x.id)===String(t.customer_id)); return c?c.tt:''; }
 let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='';
 function setDoneQ(v){ DONE_Q=v; renderToday(); const el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 function setDoneSale(v){ DONE_SALE=v; renderToday(); }
@@ -1639,12 +1641,13 @@ function renderToday(){
   const _q=(TASK_Q||'').toLowerCase();
   const mt=myTasks().filter(t=> !_q || (taskCustName(t)||'').toLowerCase().includes(_q) || (t.noi_dung||'').toLowerCase().includes(_q))
     .filter(t=> !TASK_SALE || t.owner===TASK_SALE)
+    .filter(t=> !TASK_TT || taskCusTt(t)===TASK_TT)
     .filter(t=> !TASK_FROM || (t.han && t.han>=TASK_FROM))
     .filter(t=> !TASK_TO || (t.han && t.han<=TASK_TO));
   const tOver=mt.filter(t=>taskBucket(t)==='over'), tToday=mt.filter(t=>taskBucket(t)==='today'), tUp=mt.filter(t=>taskBucket(t)==='upcoming');
   const _shownTasks=(!TASK_BUCKET?tOver.concat(tToday,tUp):TASK_BUCKET==='over'?tOver:TASK_BUCKET==='today'?tToday:tUp);
   window.TODAY_TASK_IDS=_shownTasks.map(t=>t.id);
-  const followFilter=c=> (!_q || (c.ten||'').toLowerCase().includes(_q)) && (!TASK_SALE || c.owner===TASK_SALE);
+  const followFilter=c=> (!_q || (c.ten||'').toLowerCase().includes(_q)) && (!TASK_SALE || c.owner===TASK_SALE) && (!TASK_TT || c.tt===TASK_TT);
   const foOver=over.filter(followFilter), foToday=due.filter(followFilter);
   const deOver=d.filter(c=>Number(c.no_goc)>0&&c.ngay_thu_no&&c.ngay_thu_no<D(0)&&followFilter(c));
   const deToday=d.filter(c=>Number(c.no_goc)>0&&c.ngay_thu_no===D(0)&&followFilter(c));
@@ -1670,7 +1673,7 @@ function renderToday(){
     ${chip('','Tất cả',nOver+nToday+nUp)}${chip('over','🔴 Quá hạn',nOver)}${chip('today','🟡 Hôm nay',nToday)}${chip('upcoming','🟢 Sắp tới',nUp)}
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     ${isAdmin()?`<button class="btn" type="button" onclick="markAllTasksDone()" title="Chỉ Admin — tích Xong cho tất cả việc đang hiển thị" style="padding:6px 14px;font-size:13px;background:var(--won);border-color:var(--won);color:#fff">✓ Tích tất cả Xong</button>`:''}
-    <button class="btn ghost" type="button" onclick="toggleTaskPanel()" style="padding:6px 14px;font-size:13px">${TASK_PANEL_OPEN?'✕ Đóng':'➕ Thêm việc / Bộ lọc'}${((TASK_Q||TASK_SALE||TASK_FROM||TASK_TO)&&!TASK_PANEL_OPEN)?' 🔵':''}</button>
+    <button class="btn ghost" type="button" onclick="toggleTaskPanel()" style="padding:6px 14px;font-size:13px">${TASK_PANEL_OPEN?'✕ Đóng':'➕ Thêm việc / Bộ lọc'}${((TASK_Q||TASK_SALE||TASK_TT||TASK_FROM||TASK_TO)&&!TASK_PANEL_OPEN)?' 🔵':''}</button>
     </div>
   </div>`;
   if(TASK_PANEL_OPEN) html+=`<div class="card" style="margin:0 0 16px">
@@ -1686,11 +1689,12 @@ function renderToday(){
     <div class="filters" style="margin-top:10px">
       <input id="tk-q" class="search" value="${(TASK_Q||'').replace(/"/g,'&quot;')}" oninput="setTaskQ(this.value)" placeholder="🔎 Lọc theo tên khách hoặc nội dung..." style="max-width:320px">
       <select onchange="setTaskSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${TASK_SALE===k?'selected':''}>${v}</option>`).join('')}</select>
+      <select onchange="setTaskTt(this.value)" style="width:auto" title="Lọc theo trạng thái khách"><option value="">Tất cả trạng thái</option>${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${TASK_TT===k?'selected':''}>${v}</option>`).join('')}</select>
       <span style="font-size:12px;color:var(--muted)">Đến hạn:</span>
       <input type="date" value="${TASK_FROM}" onchange="setTaskFrom(this.value)" title="Từ ngày" style="width:auto">
       <span style="color:var(--muted)">→</span>
       <input type="date" value="${TASK_TO}" onchange="setTaskTo(this.value)" title="Đến ngày" style="width:auto">
-      ${(TASK_Q||TASK_SALE||TASK_FROM||TASK_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearTaskFilters()">Xoá lọc</button>`:''}
+      ${(TASK_Q||TASK_SALE||TASK_TT||TASK_FROM||TASK_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearTaskFilters()">Xoá lọc</button>`:''}
     </div></div>`;
   const taskRow=t=>{ const cn=taskCustName(t); const tc=DATA.find(x=>String(x.id)===String(t.customer_id));
     const khachCell = tc ? `<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten} ✏️</b>` : (cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">— Không gắn khách —</span>');
