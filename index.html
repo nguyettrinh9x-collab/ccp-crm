@@ -2497,9 +2497,23 @@ function importExcel(){
       if(isChot(rec.tt))rec.loai_don='moi'; recs.push(rec);
     });
     if(!recs.length){ alert('Không tìm thấy dòng hợp lệ trong file.'); return; }
-    const { error }=await sb.from('customers').insert(recs);
+    // ===== CẢNH BÁO TRÙNG: phát hiện khách trùng SĐT/email (so với khách đã có & trong file) =====
+    const dig=s=>(''+(s||'')).replace(/\D/g,'');
+    const existPh=new Set(DATA.filter(c=>!c.da_xoa).map(c=>dig(c.phone)).filter(p=>p.length>=8));
+    const existEm=new Set(DATA.filter(c=>!c.da_xoa&&c.email).map(c=>(''+c.email).trim().toLowerCase()));
+    const seenPh=new Set(), seenEm=new Set(); const ok=[], dup=[];
+    recs.forEach(rc=>{ const ph=dig(rc.phone), em=(''+(rc.email||'')).trim().toLowerCase();
+      const isDup=(ph.length>=8&&(existPh.has(ph)||seenPh.has(ph))) || (em&&(existEm.has(em)||seenEm.has(em)));
+      if(isDup){ dup.push(rc); } else { ok.push(rc); if(ph.length>=8)seenPh.add(ph); if(em)seenEm.add(em); } });
+    if(dup.length){
+      const names=dup.slice(0,15).map(d=>'• '+d.ten+(d.phone?' ('+d.phone+')':'')).join('\n');
+      const go2=confirm('⚠️ Có '+dup.length+' khách TRÙNG SĐT/email (với khách đã có hoặc trùng trong file):\n'+names+(dup.length>15?'\n…':'')+'\n\nOK = chỉ nhập '+ok.length+' khách KHÔNG trùng (bỏ qua trùng để sale tự kiểm tra/sửa)\nCancel = HỦY nhập toàn bộ');
+      if(!go2){ return; }
+    }
+    if(!ok.length){ alert('Tất cả dòng đều trùng — không có khách mới để nhập. Sale kiểm tra lại file.'); return; }
+    const { error }=await sb.from('customers').insert(ok);
     if(error){ alert('Nhập lỗi: '+error.message); return; }
-    alert('✅ Đã nhập '+recs.length+' khách hàng.'); document.getElementById('xls-file').value=''; await loadAll(); renderAll(); go('list');
+    alert('✅ Đã nhập '+ok.length+' khách.'+(dup.length?(' ⚠️ Bỏ qua '+dup.length+' khách TRÙNG — sale kiểm tra/sửa lại.'):'')); document.getElementById('xls-file').value=''; await loadAll(); renderAll(); go('list');
   }catch(err){ alert('Lỗi đọc file: '+err.message); } };
   rd.readAsArrayBuffer(f);
 }
