@@ -2351,6 +2351,28 @@ async function saveCustomer(e){
     sp:(g('f-sp')||'').trim()||'—', muc:g('f-muc'), tt:g('f-tt'), follow:g('f-follow')||null, ghi:g('f-ghi'),
     dt:Number(g('f-dt'))||0, ngay_chot:g('f-ngaychot')||D(0), ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
   if(isChot(rec.tt)) rec.loai_don='moi';
+  // ===== ĐỒNG BỘ KHÁCH TRÙNG: cùng SĐT/email -> cộng lần mua vào khách cũ thay vì tạo bản ghi trùng =====
+  const _dig=s=>(''+(s||'')).replace(/\D/g,'');
+  const _ph=_dig(rec.phone), _em=(''+(rec.email||'')).trim().toLowerCase();
+  const dup = (_ph.length>=8||_em) ? DATA.find(c=>!c.da_xoa && ((_ph.length>=8 && _dig(c.phone)===_ph) || (_em && (''+(c.email||'')).trim().toLowerCase()===_em))) : null;
+  if(dup){
+    const nLan=soLanMua(dup);
+    const ok=confirm(`⚠️ Khách "${dup.ten}" đã có trong hệ thống (đã mua ${nLan} lần · trạng thái: ${STATUS[dup.tt]||dup.tt} · Sale: ${SALES[dup.owner]||'—'}).\n\n• OK = THÊM LẦN MUA MỚI vào khách này (đồng bộ số lần mua)\n• Cancel = Vẫn tạo khách MỚI riêng`);
+    if(ok){
+      if(rec.dt>0){
+        const {error:eo}=await sb.from('orders').insert({customer_id:dup.id, lan:nLan+1, ngay:rec.ngay_chot, san_pham:rec.sp, so_tien:rec.dt});
+        if(eo){ alert('Lỗi thêm lần mua: '+eo.message); return; }
+      }
+      const upd={khach_cu:true, ngay_capnhat:D(0)};
+      if(isChot(rec.tt) && !isChot(dup.tt)) upd.tt=rec.tt;
+      if(rec.follow) upd.follow=rec.follow;
+      if((''+(rec.ghi||'')).trim()) upd.ghi=((dup.ghi?dup.ghi+'\n':'')+rec.ghi);
+      await sb.from('customers').update(upd).eq('id',dup.id);
+      e.target.reset(); await loadAll(); renderAll(); go('list');
+      alert(`✅ Đã đồng bộ vào khách "${dup.ten}" — giờ có ${rec.dt>0?nLan+1:nLan} lần mua. Không tạo bản ghi trùng.`);
+      return;
+    }
+  }
   const { data:ins, error } = await sb.from('customers').insert(rec).select('id').single();
   if(error){ alert('Lưu lỗi: '+error.message); return; }
   /* Tự tạo việc chăm sóc cho Sale phụ trách khách mới để tối ưu thời gian */
