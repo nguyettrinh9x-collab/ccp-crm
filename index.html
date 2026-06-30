@@ -399,9 +399,9 @@ function orderHistoryHTML(c){
     h+=`<div class="card" style="padding:0;background:var(--cream);margin-bottom:12px;overflow-x:auto"><table>
       <tr><th style="padding:7px 10px">Lần</th><th>Ngày mua</th><th>Sản phẩm</th><th>Số tiền</th><th></th></tr>`;
     let idx=1;
-    if(hasLan1(c)){ h+=`<tr><td style="padding:7px 10px"><b>Lần 1</b></td><td>${(c.ngay_chot||c.ngay_tao||'—')}</td><td>${c.sp||'—'}</td><td><b>$${(Number(c.dt)||0).toLocaleString('en-US')}</b></td><td style="color:var(--muted);font-size:11px">đơn đầu · theo ngày lên đơn</td></tr>`; idx=2; }
+    if(hasLan1(c)){ h+=`<tr><td style="padding:7px 10px"><b>Lần 1</b></td><td>${(c.ngay_chot||c.ngay_tao||'—')}</td><td>${c.sp||'—'}</td><td><b>$${(Number(c.dt)||0).toLocaleString('en-US')}</b></td><td style="white-space:nowrap"><span style="color:var(--muted);font-size:11px">đơn đầu</span> <span style="cursor:pointer;color:var(--teal-dark)" title="Sửa đơn đầu (ngày/SP/doanh thu)" onclick="editLan1('${c.id}')">✏️</span></td></tr>`; idx=2; }
     list.forEach(o=>{ h+=`<tr><td style="padding:7px 10px"><b>Lần ${idx}</b></td><td>${(''+(o.ngay||'')).slice(0,10)||'—'}</td><td>${o.san_pham||'—'}</td><td><b>$${(Number(o.so_tien)||0).toLocaleString('en-US')}</b></td>
-      <td><span style="cursor:pointer;color:var(--over)" title="Xoá lần mua này" onclick="delOrder('${o.id}','${c.id}')">🗑️</span></td></tr>`; idx++; });
+      <td style="white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" title="Sửa lần mua" onclick="editOrder('${o.id}','${c.id}')">✏️</span> <span style="cursor:pointer;color:var(--over)" title="Xoá lần mua này" onclick="delOrder('${o.id}','${c.id}')">🗑️</span></td></tr>`; idx++; });
     h+=`</table></div>`;
   }
   h+=`<div style="background:var(--cream);border:1px dashed var(--line);border-radius:10px;padding:12px">
@@ -1542,7 +1542,15 @@ function renderToday(){
 }
 
 /* ====== MỤC TIÊU DOANH THU THEO THÁNG ====== */
-function monthDT(owner,ym){ return DATA.filter(c=>c.owner===owner && isChot(c.tt) && ((c.ngay_chot||c.ngay_capnhat||c.ngay_tao||'')+'').slice(0,7)===ym).reduce((s,c)=>s+tongChiTieu(c),0); }
+function monthDT(owner,ym){
+  const inM=ds=>(''+(ds||'')).slice(0,7)===ym;
+  let s=0;
+  DATA.filter(c=>c.owner===owner).forEach(c=>{
+    if(isChot(c.tt) && inM(c.ngay_chot||c.ngay_tao)) s+=Number(c.dt)||0;   // chốt mới (đơn đầu trong tháng)
+    ordersOf(c).forEach(o=>{ if(inM(o.ngay)) s+=Number(o.so_tien)||0; });   // chăm sóc (đơn phụ trong tháng)
+  });
+  return s;
+}
 function setReportMonth(v){ if(v) REPORT_MONTH=v; renderReport(); }
 async function saveTarget(owner){
   const el=document.getElementById('tg-'+owner); if(!el) return;
@@ -2272,6 +2280,26 @@ async function delOrder(oid, cid){
   if(!confirm('Xoá lần mua này?')) return;
   const { error }=await sb.from('orders').delete().eq('id', oid);
   if(error){ alert('Lỗi: '+error.message); return; }
+  await loadAll(); editCustomer(cid); renderAll();
+}
+async function editOrder(oid, cid){
+  const o=(ORDERS[String(cid)]||[]).find(x=>String(x.id)===String(oid)); if(!o){ alert('Không tìm thấy lần mua.'); return; }
+  const ng=prompt('Ngày mua (YYYY-MM-DD):', (''+(o.ngay||'')).slice(0,10)); if(ng===null) return;
+  const sp=prompt('Sản phẩm:', o.san_pham||''); if(sp===null) return;
+  const ti=prompt('Số tiền ($):', o.so_tien||0); if(ti===null) return;
+  const upd={ ngay:(ng||'').slice(0,10)||null, san_pham:(sp||'').trim(), so_tien:Number(ti)||0 };
+  const { error }=await sb.from('orders').update(upd).eq('id', oid);
+  if(error){ alert('Lỗi sửa: '+error.message); return; }
+  await loadAll(); editCustomer(cid); renderAll();
+}
+async function editLan1(cid){
+  const c=DATA.find(x=>String(x.id)===String(cid)); if(!c){ return; }
+  const ng=prompt('Ngày lên đơn (YYYY-MM-DD):', c.ngay_chot||''); if(ng===null) return;
+  const sp=prompt('Sản phẩm (đơn đầu):', c.sp||''); if(sp===null) return;
+  const ti=prompt('Doanh thu đơn đầu ($):', c.dt||0); if(ti===null) return;
+  const upd={ ngay_chot:(ng||'').slice(0,10)||null, sp:(sp||'').trim()||'—', dt:Number(ti)||0, ngay_capnhat:D(0) };
+  const { error }=await sb.from('customers').update(upd).eq('id', cid);
+  if(error){ alert('Lỗi sửa: '+error.message); return; }
   await loadAll(); editCustomer(cid); renderAll();
 }
 async function afterLogin(){
