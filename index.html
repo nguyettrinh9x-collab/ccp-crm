@@ -282,6 +282,10 @@ function setTaskFrom(v){ TASK_FROM=v; renderToday(); }
 function setTaskTo(v){ TASK_TO=v; renderToday(); }
 function clearTaskFilters(){ TASK_Q=''; TASK_SALE=''; TASK_FROM=''; TASK_TO=''; TASK_TT=''; renderToday(); }
 function taskCusTt(t){ const c=DATA.find(x=>String(x.id)===String(t.customer_id)); return c?c.tt:''; }
+let TODAY_PAGE={over:1,today:1,upcoming:1};
+function setTodayPageOver(n){ TODAY_PAGE.over=n; renderToday(); }
+function setTodayPageToday(n){ TODAY_PAGE.today=n; renderToday(); }
+function setTodayPageUpcoming(n){ TODAY_PAGE.upcoming=n; renderToday(); }
 let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='';
 function setDoneQ(v){ DONE_Q=v; renderToday(); const el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 function setDoneSale(v){ DONE_SALE=v; renderToday(); }
@@ -1690,6 +1694,8 @@ function renderToday(){
   const tOver=mt.filter(t=>taskBucket(t)==='over'), tToday=mt.filter(t=>taskBucket(t)==='today'), tUp=mt.filter(t=>taskBucket(t)==='upcoming');
   const _shownTasks=(!TASK_BUCKET?tOver.concat(tToday,tUp):TASK_BUCKET==='over'?tOver:TASK_BUCKET==='today'?tToday:tUp);
   window.TODAY_TASK_IDS=_shownTasks.map(t=>t.id);
+  const _tsig=[TASK_Q,TASK_SALE,TASK_TT,TASK_FROM,TASK_TO,TASK_BUCKET].join('|');
+  if(window.__todaySig!==_tsig){ window.__todaySig=_tsig; TODAY_PAGE={over:1,today:1,upcoming:1}; }
   const followFilter=c=> (!_q || (c.ten||'').toLowerCase().includes(_q)) && (!TASK_SALE || c.owner===TASK_SALE) && (!TASK_TT || c.tt===TASK_TT);
   const foOver=over.filter(followFilter), foToday=due.filter(followFilter);
   const deOver=d.filter(c=>Number(c.no_goc)>0&&c.ngay_thu_no&&c.ngay_thu_no<D(0)&&followFilter(c));
@@ -1756,11 +1762,14 @@ function renderToday(){
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="Mở chăm sóc" onclick="openCarePanel('${c.id}')">${c.ten} 🩺</b></td>
     <td>Còn nợ <b style="color:var(--over)">${fmtCur(c,c.no_goc)}</b></td><td>${c.ngay_thu_no||'—'}</td>${fullView()?`<td>${SALES[c.owner]||'—'}</td>`:''}
     <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="openCarePanel('${c.id}')">Mở</span></td></tr>`;
-  const bucketTable=(title,rowsHtml,count,color)=> count? `<h2 class="sec" style="color:${color}">${title} (${count})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Khách</th><th>Nội dung / Trạng thái</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${rowsHtml}</table></div>`:'';
+  const bucketTable=(title,rowsArr,color,key,pageFn)=>{ const count=rowsArr.length; if(!count) return '';
+    const pg=Math.min(Math.max(1,TODAY_PAGE[key]||1),Math.max(1,Math.ceil(count/LIST_PAGE_SIZE)));
+    const slice=rowsArr.slice((pg-1)*LIST_PAGE_SIZE, pg*LIST_PAGE_SIZE).join('');
+    return `<h2 class="sec" style="color:${color}">${title} (${count})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Khách</th><th>Nội dung / Trạng thái</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${slice}</table>${pagerHTML(count,pg,LIST_PAGE_SIZE,pageFn)}</div>`; };
   const showB=k=> !TASK_BUCKET || TASK_BUCKET===k;
-  if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn', tOver.map(taskRow).join('')+foOver.map(followRow).join('')+deOver.map(debtRow).join(''), nOver, 'var(--over)');
-  if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay', tToday.map(taskRow).join('')+foToday.map(followRow).join('')+deToday.map(debtRow).join(''), nToday, '#b07d00');
-  if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới', tUp.map(taskRow).join(''), nUp, 'var(--teal-dark)');
+  if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn', tOver.map(taskRow).concat(foOver.map(followRow),deOver.map(debtRow)), 'var(--over)','over','setTodayPageOver');
+  if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay', tToday.map(taskRow).concat(foToday.map(followRow),deToday.map(debtRow)), '#b07d00','today','setTodayPageToday');
+  if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới', tUp.map(taskRow), 'var(--teal-dark)','upcoming','setTodayPageUpcoming');
   if(!(nOver+nToday+nUp)) html+=`<div class="card empty">Không có việc hay follow nào đến hạn. 🎉</div>`;
   /* ===== Thống kê việc theo Sale + kích hoạt lại (chỉ quản lý/admin) ===== */
   if(isAdmin()){
