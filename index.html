@@ -272,6 +272,13 @@ function setTaskSale(v){ TASK_SALE=v; renderToday(); }
 function setTaskFrom(v){ TASK_FROM=v; renderToday(); }
 function setTaskTo(v){ TASK_TO=v; renderToday(); }
 function clearTaskFilters(){ TASK_Q=''; TASK_SALE=''; TASK_FROM=''; TASK_TO=''; renderToday(); }
+let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='';
+function setDoneQ(v){ DONE_Q=v; renderToday(); const el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
+function setDoneSale(v){ DONE_SALE=v; renderToday(); }
+function setDoneFrom(v){ DONE_FROM=v; renderToday(); }
+function setDoneTo(v){ DONE_TO=v; renderToday(); }
+function clearDoneFilters(){ DONE_Q=''; DONE_SALE=''; DONE_FROM=''; DONE_TO=''; renderToday(); }
+async function followDone(id){ const c=findC(id); if(!c) return; const { error }=await sb.from('customers').update({ follow:D(3), ngay_capnhat:D(0) }).eq('id', id); if(error){ alert(error.message); return; } await loadAll(); renderToday(); }
 let TASK_BUCKET='', TASK_PANEL_OPEN=false, CARE_TODAY_OPEN=false; // lọc nhanh nhóm việc + thu gọn form & bảng chăm
 function setTaskBucket(v){ TASK_BUCKET=v; renderToday(); }
 function toggleTaskPanel(){ TASK_PANEL_OPEN=!TASK_PANEL_OPEN; renderToday(); }
@@ -1179,13 +1186,14 @@ function renderAdd(){
     </div>
     <div class="card"><form onsubmit="saveCustomer(event)">
     <div class="form-grid">
-      <div><label>Tên khách hàng *</label><input id="f-ten" required></div>
+      <div class="full"><div id="dup-warn" style="display:none;background:#fdeeee;border:1px solid var(--over);color:#9a2b2b;border-radius:8px;padding:8px 12px;font-size:13px"></div></div>
+      <div><label>Tên khách hàng *</label><input id="f-ten" required oninput="checkDupAdd()"></div>
       <div><label>Ngày lên đơn <span style="font-weight:400;color:var(--muted)">(mọi khách)</span></label><input id="f-ngaychot" type="date" value="${D(0)}"></div>
-      <div><label>Số điện thoại / WhatsApp</label><input id="f-phone">
+      <div><label>Số điện thoại / WhatsApp</label><input id="f-phone" oninput="checkDupAdd()">
         <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-top:6px;color:var(--text)">
           <input type="checkbox" id="f-wa" style="width:auto"> 💬 Số này đã kết nối WhatsApp</label></div>
       <div><label>Quốc gia</label><select id="f-qg"><option value="US">🇺🇸 US</option><option value="CAD">🇨🇦 CAD (Canada)</option><option value="EU">🇪🇺 EU (Euro)</option></select></div>
-      <div><label>Email (nếu có)</label><input id="f-email" type="email"></div>
+      <div><label>Email (nếu có)</label><input id="f-email" type="email" oninput="checkDupAdd()"></div>
       <div><label>Nguồn khách</label><select id="f-nguon">${opt(NGUON)}</select></div>
       <div><label>MKT phụ trách (kéo lead)</label><select id="f-mkt">${opt(MKT)}</select></div>
       <div><label>Sale chăm khách</label><select id="f-owner">${opt(SALES)}</select></div>
@@ -1216,6 +1224,23 @@ function renderAdd(){
       <div class="full"><label>Ghi chú tư vấn</label><textarea id="f-ghi" rows="3"></textarea></div>
       <div class="full"><button class="btn" type="submit">💾 Lưu khách hàng</button></div>
     </div></form></div><div id="addlist-wrap">${addListHTML()}</div>`;
+}
+function checkDupAdd(){
+  const w=document.getElementById('dup-warn'); if(!w) return;
+  const ten=((document.getElementById('f-ten')||{}).value||'').trim().toLowerCase();
+  const ph=((document.getElementById('f-phone')||{}).value||'').replace(/\D/g,'');
+  const em=((document.getElementById('f-email')||{}).value||'').trim().toLowerCase();
+  if(ten.length<2 && ph.length<8 && !em){ w.style.display='none'; w.innerHTML=''; return; }
+  const m=DATA.filter(c=>!c.da_xoa && (
+    (ten.length>=2 && (''+(c.ten||'')).trim().toLowerCase()===ten) ||
+    (ph.length>=8 && (''+(c.phone||'')).replace(/\D/g,'')===ph) ||
+    (em && (''+(c.email||'')).trim().toLowerCase()===em) ));
+  if(!m.length){ w.style.display='none'; w.innerHTML=''; return; }
+  w.style.display='block';
+  w.innerHTML='⚠️ <b>Có thể TRÙNG khách ('+m.length+'):</b> '+m.slice(0,5).map(c=>{
+    const by=(''+(c.ten||'')).trim().toLowerCase()===ten?'trùng tên':((''+(c.phone||'')).replace(/\\D/g,'')===ph?'trùng SĐT':'trùng email');
+    return esc(c.ten)+' ('+by+' · Sale '+(SALES[c.owner]||'?')+' · '+(STATUS[c.tt]||c.tt)+' · đã mua '+soLanMua(c)+' lần)';
+  }).join(' ; ')+'. <b>Kiểm tra kỹ trước khi lưu</b> — nếu cùng người, nên mở khách cũ thêm lần mua thay vì tạo mới.';
 }
 function saveCustomer(e){
   e.preventDefault();
@@ -1492,7 +1517,7 @@ function renderToday(){
     <td>${khachCell}</td>
     <td>${t.noi_dung||''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
     <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
-  const followRow=c=>`<tr style="background:#fff8f0"><td style="width:36px;text-align:center" title="Nhắc follow">📞</td>
+  const followRow=c=>`<tr style="background:#fff8f0"><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đã follow hôm nay → hẹn lại +3 ngày" onchange="followDone('${c.id}')"></td>
     <td><span class="pill" style="background:#fde9d9;color:#b06a00">Follow</span></td>
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten} ✏️</b></td>
     <td>${ttPill(c.tt)} <span style="color:var(--muted);font-size:11px">${c.phone||''}</span></td><td>${c.follow||'—'}</td>${fullView()?`<td>${SALES[c.owner]||'—'}</td>`:''}
@@ -1510,18 +1535,25 @@ function renderToday(){
   if(!(nOver+nToday+nUp)) html+=`<div class="card empty">Không có việc hay follow nào đến hạn. 🎉</div>`;
   /* ===== Thống kê việc theo Sale + kích hoạt lại (chỉ quản lý/admin) ===== */
   if(isAdmin()){
-    const done=TASKS.filter(t=>t.xong);
+    const doneAll=TASKS.filter(t=>t.xong);
+    let done=doneAll.slice();
+    const _dq=(DONE_Q||'').toLowerCase();
+    if(_dq) done=done.filter(t=>(((taskCustName(t)||'')+' '+(t.noi_dung||''))).toLowerCase().includes(_dq));
+    if(DONE_SALE) done=done.filter(t=>t.owner===DONE_SALE);
+    if(DONE_FROM) done=done.filter(t=>t.han && t.han>=DONE_FROM);
+    if(DONE_TO) done=done.filter(t=>t.han && t.han<=DONE_TO);
     const stat={};
     TASKS.forEach(t=>{ const o=t.owner||'—'; const s=stat[o]||(stat[o]={tong:0,xong:0,chua:0,qhan:0});
       s.tong++; if(t.xong) s.xong++; else { s.chua++; if((t.han||'')&&t.han<D(0)) s.qhan++; } });
     const srow=Object.entries(stat).sort((a,b)=>b[1].chua-a[1].chua).map(([o,s])=>`<tr><td><b>${SALES[o]||o}</b></td><td style="text-align:center">${s.tong}</td><td style="text-align:center;color:var(--won);font-weight:700">${s.xong}</td><td style="text-align:center;color:#b07d00;font-weight:700">${s.chua}</td><td style="text-align:center;color:var(--over);font-weight:700">${s.qhan}</td><td style="text-align:center">${s.tong?Math.round(s.xong/s.tong*100):0}%</td></tr>`).join('');
     html+=`<h2 class="sec" style="margin-top:24px">📊 Thống kê việc theo Sale (quản lý)</h2>
       <div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Sale</th><th style="text-align:center">Tổng việc</th><th style="text-align:center">Đã xong</th><th style="text-align:center">Chưa xong</th><th style="text-align:center">Quá hạn</th><th style="text-align:center">% hoàn thành</th></tr>${srow||'<tr><td colspan="6" class="empty">Chưa có việc.</td></tr>'}</table></div>`;
-    if(done.length){
+    if(doneAll.length){
       const drow=t=>{ const cn=taskCustName(t); const tc=DATA.find(x=>String(x.id)===String(t.customer_id));
         const khachCell=tc?`<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten}</b>`:(cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">—</span>');
         return `<tr style="background:#eefaf3"><td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td><td>${khachCell}</td><td>${t.noi_dung||''}</td><td>${t.han||'—'}</td><td>${SALES[t.owner]||'—'}</td><td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark);font-weight:700" onclick="reactivateTask('${t.id}')">🔄 Kích hoạt lại</span></td></tr>`; };
-      html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length})</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Bấm <b>Kích hoạt lại</b> để đưa việc về danh sách chưa làm — nhắc sale làm tiếp.</p><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Loại</th><th>Khách</th><th>Nội dung</th><th>Đến hạn</th><th>Sale</th><th></th></tr>${done.map(drow).join('')}</table></div>`;
+      const dFil=`<div class="filters" style="margin:8px 0 10px"><input id="dn-q" class="search" value="${(DONE_Q||'').replace(/"/g,'&quot;')}" oninput="setDoneQ(this.value)" placeholder="🔎 Lọc tên khách / nội dung..." style="max-width:300px"><select onchange="setDoneSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${DONE_SALE===k?'selected':''}>${v}</option>`).join('')}</select><span style="font-size:12px;color:var(--muted)">Đến hạn:</span><input type="date" value="${DONE_FROM}" onchange="setDoneFrom(this.value)" title="Từ ngày" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" value="${DONE_TO}" onchange="setDoneTo(this.value)" title="Đến ngày" style="width:auto">${(DONE_Q||DONE_SALE||DONE_FROM||DONE_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearDoneFilters()">Xoá lọc</button>`:''}</div>`;
+      html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length}${done.length!==doneAll.length?' / '+doneAll.length:''})</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Bấm <b>Kích hoạt lại</b> để đưa việc về danh sách chưa làm — nhắc sale làm tiếp.</p>${dFil}<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Loại</th><th>Khách</th><th>Nội dung</th><th>Đến hạn</th><th>Sale</th><th></th></tr>${done.map(drow).join('')||'<tr><td colspan="6" class="empty">Không có việc khớp bộ lọc.</td></tr>'}</table></div>`;
     }
   }
   /* Nhắc follow đã được gộp vào nhóm "Quá hạn" / "Hôm nay" ở bảng việc phía trên */
