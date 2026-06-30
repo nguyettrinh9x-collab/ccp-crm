@@ -779,7 +779,7 @@ async function pancakeAdd(cid){
   const nguon = r.platform==='whatsapp' ? 'whatsapp' : (r.platform==='facebook' ? 'facebook' : 'pancake');
   const rec={ ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
     ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
-    ngay_tao:D(0), ngay_capnhat:D(0) };
+    follow:D(1), ngay_tao:D(0), ngay_capnhat:D(0) };
   const { data:ins, error }=await sb.from('customers').insert(rec).select('id').single();
   if(error){ alert('Lỗi thêm khách: '+error.message); return; }
   await sb.from('pancake_leads').update({status:'added'}).eq('conv_id',cid);
@@ -795,7 +795,7 @@ function pkLeadToRec(r){
   const nguon = r.platform==='whatsapp' ? 'whatsapp' : (r.platform==='facebook' ? 'facebook' : 'pancake');
   return { ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
     ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
-    ngay_tao:D(0), ngay_capnhat:D(0) };
+    follow:D(1), ngay_tao:D(0), ngay_capnhat:D(0) };
 }
 async function pancakeBulkIgnore(){
   if(!window.sb) return;
@@ -2708,6 +2708,7 @@ async function saveCustomer(e){
     dt:Number(g('f-dt'))||0, ngay_chot:g('f-ngaychot')||D(0), ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
   if(isChot(rec.tt)) rec.loai_don='moi';
   if(rec.tt==='kcnc'||rec.tt==='khach_chan') rec.follow=null; /* KCNC/Khách chặn: bỏ follow, khỏi nhắc */
+  else if(!isChot(rec.tt) && (!rec.follow || rec.follow<=D(0))) rec.follow=D(1); /* Khách mới: việc/follow đầu để sang NGÀY MAI (trừ khi sale note ngày tương lai) */
   // ===== ĐỒNG BỘ KHÁCH TRÙNG: cùng SĐT/email -> cộng lần mua vào khách cũ thay vì tạo bản ghi trùng =====
   const _dig=s=>(''+(s||'')).replace(/\D/g,'');
   const _ph=_dig(rec.phone), _em=(''+(rec.email||'')).trim().toLowerCase();
@@ -2735,7 +2736,7 @@ async function saveCustomer(e){
   /* Tự tạo việc chăm sóc cho Sale phụ trách khách mới để tối ưu thời gian */
   if(ins && ins.id){
     await sb.from('tasks').insert({ owner:rec.owner, customer_id:ins.id, loai:'cham_chua',
-      noi_dung:'Chăm sóc khách mới: '+rec.ten, han:D(0), xong:false });
+      noi_dung:'Chăm sóc khách mới: '+rec.ten, han:(rec.follow||D(1)), xong:false });
   }
   e.target.reset(); await loadAll(); renderAll(); go('add');
   alert('✅ Đã lưu khách "'+rec.ten+'". Khách đã hiện ở danh sách bên dưới — có thể thêm khách tiếp ngay.');
