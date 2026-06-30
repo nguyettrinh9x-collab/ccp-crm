@@ -1364,8 +1364,13 @@ function renderList(){
     <table><tr><th>Khách</th><th class="c-qg">Quốc gia</th><th class="c-nguon">Nguồn</th><th class="c-benh">Bệnh lý</th><th class="c-sp">SP</th><th class="c-muc">Mức</th><th class="c-tt">Trạng thái</th><th class="c-follow">Follow</th>${fullView()?'<th class="c-mkt">MKT</th><th class="c-sale">Sale</th>':''}<th class="c-ghi">Ghi chú / Việc</th><th class="c-dt">DT</th><th class="c-tiengoc">Tiền gốc</th><th class="c-nogoc">Nợ gốc</th><th class="c-thuno">Ngày thu nợ</th></tr>`;
   if(!rows.length) t+=`<tr><td colspan="15" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
   const noteCell=c=>{
-    const g=(''+(c.ghi||'')).trim();
-    return g? `<div style="font-size:11px;white-space:pre-wrap;max-width:240px">${g.replace(/</g,'&lt;')}</div>` : '<span style="color:var(--line)">—</span>';
+    const esc2=s=>(''+s).replace(/</g,'&lt;');
+    const parts=[];
+    const g=(''+(c.ghi||'')).trim(); if(g) parts.push(esc2(g));
+    const ck=(''+(c.cham_kq||'')).trim(); if(ck) parts.push('🩺 '+esc2(ck));
+    const ph=(''+(c.phan_hoi||'')).trim(); if(ph) parts.push('💬 '+esc2(ph));
+    const sd=(''+(c.su_dung||'')).trim(); if(sd) parts.push('💊 '+esc2(sd));
+    return parts.length? `<div style="font-size:11px;white-space:pre-wrap;max-width:240px;line-height:1.5">${parts.join('<br>')}</div>` : '<span style="color:var(--line)">—</span>';
   };
   rows.forEach(c=>{
     const f=flag(c); const fd= !c.follow?'—':
