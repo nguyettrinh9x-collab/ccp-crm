@@ -1238,10 +1238,14 @@ function checkDupAdd(){
     var nameHit = ten.length>=2 && (cn===ten || (ten.length>=4 && (cn.indexOf(ten)>=0 || ten.indexOf(cn)>=0)));
     return nameHit || (ph.length>=8&&cp===ph) || (em&&ce===em); });
   if(!m.length){ w.style.display='none'; w.innerHTML=''; return; }
+  var E=function(s){ return (''+(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   var lines=m.slice(0,8).map(function(c){
     var cn=_normName(c.ten), cp=(''+(c.phone||'')).replace(/\D/g,'');
     var by=(cn===ten||(ten.length>=4&&(cn.indexOf(ten)>=0||ten.indexOf(cn)>=0)))?'trùng TÊN':((ph.length>=8&&cp===ph)?'trùng SĐT':'trùng email');
-    return '• '+esc(c.ten)+(c.phone?' ('+esc(c.phone)+')':'')+' — '+by+' · Sale <b>'+esc(SALES[c.owner]||'?')+'</b> · '+esc(STATUS[c.tt]||c.tt)+' · đã mua '+soLanMua(c)+' lần';
+    var sl=(typeof SALES!=='undefined'&&SALES[c.owner])?SALES[c.owner]:'?';
+    var st=(typeof STATUS!=='undefined'&&STATUS[c.tt])?STATUS[c.tt]:(c.tt||'');
+    var n=(typeof soLanMua==='function')?soLanMua(c):'';
+    return '• '+E(c.ten)+(c.phone?' ('+E(c.phone)+')':'')+' — '+by+' · Sale <b>'+E(sl)+'</b> · '+E(st)+(n!==''?' · đã mua '+n+' lần':'');
   });
   w.style.display='block';
   w.innerHTML='⚠️ <b>CẢNH BÁO TRÙNG KHÁCH ('+m.length+')</b> — đã có trong hệ thống, kiểm tra trước khi lưu:<br>'+lines.join('<br>');
