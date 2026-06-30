@@ -286,11 +286,11 @@ function setCareTodayTo(v){ CARE_TODAY_TO=v; renderToday(); }
 function clearCareTodayDate(){ CARE_TODAY_FROM=''; CARE_TODAY_TO=''; renderToday(); }
 // Bộ lọc khoảng ngày dùng chung cho nhiều trang (mỗi trang 1 state)
 const FILTERS = {
-  dash:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'thang_nay' },
+  dash:  { start:null, end:null, field:'lendon', open:false, calBase:null, def:'thang_nay' },
   list:  { start:null, end:null, field:'lendon', open:false, calBase:null, def:'all' },
-  report:{ start:null, end:null, field:'tao', open:false, calBase:null, def:'all' },
-  mkt:   { start:null, end:null, field:'tao', open:false, calBase:null, def:'all' },
-  team:  { start:null, end:null, field:'tao', open:false, calBase:null, def:'all' },
+  report:{ start:null, end:null, field:'lendon', open:false, calBase:null, def:'all' },
+  mkt:   { start:null, end:null, field:'lendon', open:false, calBase:null, def:'all' },
+  team:  { start:null, end:null, field:'lendon', open:false, calBase:null, def:'all' },
 };
 function login(){
   const u=document.getElementById('u').value.trim().toLowerCase();
