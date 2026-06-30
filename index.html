@@ -724,7 +724,7 @@ async function pancakeAdd(cid){
   const r=(PLEADS||[]).find(x=>x.conv_id===cid); if(!r) return;
   if(r.in_crm && !confirm('Khách này CÓ THỂ đã có trong CRM (trùng SĐT/tên). Vẫn thêm mới?')) return;
   const saleName=(r.sale||'').split('/')[0].trim();
-  const owner=revFind(SALES, saleName) || null;
+  const owner=revFind(SALES, saleName) || (ME&&ME.id) || Object.keys(SALES)[0] || null;
   const nguon = r.platform==='whatsapp' ? 'whatsapp' : (r.platform==='facebook' ? 'facebook' : 'pancake');
   const rec={ ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
     ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
@@ -740,7 +740,7 @@ async function pancakeAdd(cid){
 }
 function pkLeadToRec(r){
   const saleName=(r.sale||'').split('/')[0].trim();
-  const owner=revFind(SALES, saleName) || null;
+  const owner=revFind(SALES, saleName) || (ME&&ME.id) || Object.keys(SALES)[0] || null;
   const nguon = r.platform==='whatsapp' ? 'whatsapp' : (r.platform==='facebook' ? 'facebook' : 'pancake');
   return { ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
     ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
