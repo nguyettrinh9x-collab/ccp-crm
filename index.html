@@ -688,7 +688,7 @@ function renderPancake(){
        `<td style="font-size:12px">${pkPlatLabel(r.platform)}</td>`+
        `<td style="font-size:12px">${ngay||'—'}</td>`+
        `<td>${dup}</td>`+
-       `<td style="white-space:nowrap"><button class="btn" type="button" onclick="pancakeAdd('${r.conv_id}')" style="padding:4px 10px">➕ Thêm CRM</button> <button class="btn ghost" type="button" onclick="pancakeIgnore('${r.conv_id}')" style="padding:4px 10px">✖ Bỏ</button></td></tr>`;
+       `<td style="white-space:nowrap"><button class="btn" type="button" onclick="pancakeAdd('${r.conv_id}')" style="padding:4px 10px">➕ Thêm &amp; điền</button> <button class="btn ghost" type="button" onclick="pancakeIgnore('${r.conv_id}')" style="padding:4px 10px">✖ Bỏ</button></td></tr>`;
     if(open){
       h+=`<tr><td></td><td colspan="8" style="background:var(--cream)"><div style="padding:8px 4px;font-size:13px;line-height:1.7">`+
          `<div><b>🩺 Tình trạng đã tư vấn (ghi chú sale trên Pancake):</b> ${r.note?escapeHtml(r.note):'<span style="color:var(--muted)">(sale chưa ghi chú)</span>'}</div>`+
@@ -729,12 +729,14 @@ async function pancakeAdd(cid){
   const rec={ ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
     ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
     ngay_tao:D(0), ngay_capnhat:D(0) };
-  const { error }=await sb.from('customers').insert(rec);
+  const { data:ins, error }=await sb.from('customers').insert(rec).select('id').single();
   if(error){ alert('Lỗi thêm khách: '+error.message); return; }
   await sb.from('pancake_leads').update({status:'added'}).eq('conv_id',cid);
   PLEADS=PLEADS.filter(x=>x.conv_id!==cid);
-  toast('✓ Đã thêm "'+(r.ten||'')+'" vào CRM');
+  await loadAll();
+  toast('✓ Đã thêm "'+(r.ten||'')+'" — mở form điền thông tin');
   renderPancake();
+  if(ins&&ins.id) editCustomer(ins.id);
 }
 function pkLeadToRec(r){
   const saleName=(r.sale||'').split('/')[0].trim();
