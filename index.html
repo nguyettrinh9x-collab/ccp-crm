@@ -132,6 +132,7 @@
       <a data-v="list_chot">Khách đã chốt</a>
       <a data-v="list_chua">Khách chưa chốt</a>
       <a data-v="add">Thêm khách</a>
+      <a data-v="pancake">📥 Khách mới (Pancake)</a>
       <a data-v="dashboard">Tổng quan</a>
       <a data-v="report">Báo cáo</a>
       <a data-v="marketing">Marketing</a>
@@ -160,6 +161,8 @@
     <div class="view" id="v-care"></div>
     <!-- ADD -->
     <div class="view" id="v-add"></div>
+    <!-- PANCAKE NEW LEADS -->
+    <div class="view" id="v-pancake"></div>
     <!-- LIST -->
     <div class="view" id="v-list"></div>
     <!-- TODAY -->
@@ -263,6 +266,7 @@ let ME = null;
 let TRASH = [];  // khách đã xoá (chỉ admin xem & khôi phục)
 let ORDERS = {};  // lịch sử mua hàng theo khách: { customer_id: [ {id,ngay,san_pham,so_tien} ] }
 let TASKS = [];   // việc cần làm / nhắc việc
+let PLEADS = [];  // khách mới từ Pancake chờ duyệt (bảng pancake_leads, status='new')
 let TARGETS = {}; // mục tiêu DT theo tháng: { 'owner|YYYY-MM': muc_tieu }
 let REPORT_MONTH = (new Date()).toISOString().slice(0,7); // tháng đang xem ở Báo cáo
 let TASK_Q = '';  // bộ lọc tên khách ở trang Việc cần làm
@@ -317,10 +321,12 @@ function login(){
   go(allowed.includes('dashboard')?'dashboard':(allowed[0]||'dashboard')); renderAll();
 }
 // Hiện/ẩn menu theo quyền được cấp cho người đang đăng nhập
+function canPancake(){ return !!(ME && (ME.role==='owner'||ME.role==='admin'||/nguy/i.test(ME.name||'')||/nguy/i.test(ME.uname||''))); }
 function applyMenu(){
   const allowed=PERMS[ME.uname]||[];
   document.querySelectorAll('#nav a').forEach(a=>{
     let v=a.dataset.v; if(v==='list_chot'||v==='list_chua'||v==='list_all') v='list';
+    if(v==='pancake'){ a.style.display=canPancake()?'flex':'none'; return; }
     a.style.display=allowed.includes(v)?'flex':'none';
   });
 }
@@ -562,7 +568,7 @@ function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)==
 /* ============ NAV ============ */
 const TITLES={dashboard:'Tổng quan',care:'Chăm sóc khách',add:'Thêm khách',list:'Khách hàng',
   list_all:'Tất cả khách',list_chot:'Khách hàng đã chốt',list_chua:'Khách hàng chưa chốt',
-  today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',lichlam:'Đăng ký lịch làm',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác'};
+  today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',lichlam:'Đăng ký lịch làm',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác',pancake:'Khách mới từ Pancake'};
 let LIST_MODE='all'; let LIST_ROWS=[];
 function exportList(){
   const rows=LIST_ROWS||[];
@@ -595,6 +601,171 @@ function go(v){
   else if(view==='care') renderCare();
   else if(view==='today') renderToday();
   else if(view==='lichlam') renderLichLam();
+  else if(view==='pancake') renderPancake();
+}
+
+/* ============ KHÁCH MỚI TỪ PANCAKE (chỉ Nguyệt/Admin) ============ */
+let PK_BUSY=false, PK_FROM='', PK_TO='', PK_DAYS=1, PK_DUP='', PK_EXPAND=new Set(), PK_Q='', PK_PHONE='', PK_SALE='';
+function setPkFrom(v){ PK_FROM=v; renderPancake(); }
+function setPkTo(v){ PK_TO=v; renderPancake(); }
+function setPkDays(v){ PK_DAYS=Number(v)||1; }
+function setPkDup(v){ PK_DUP=v; renderPancake(); }
+function setPkQ(v){ PK_Q=v; renderPancake(); const e=document.getElementById('pk-q'); if(e){e.focus();try{e.setSelectionRange(v.length,v.length);}catch(_){}}}
+function setPkPhone(v){ PK_PHONE=v; renderPancake(); const e=document.getElementById('pk-phone'); if(e){e.focus();try{e.setSelectionRange(v.length,v.length);}catch(_){}}}
+function setPkSale(v){ PK_SALE=v; renderPancake(); }
+function clearPkDate(){ PK_FROM=''; PK_TO=''; PK_Q=''; PK_PHONE=''; PK_SALE=''; PK_DUP=''; renderPancake(); }
+function pkFilteredRows(){
+  let rows=(PLEADS||[]).slice();
+  if(PK_FROM) rows=rows.filter(r=>(''+(r.conv_inserted_at||'')).slice(0,10) >= PK_FROM);
+  if(PK_TO)   rows=rows.filter(r=>(''+(r.conv_inserted_at||'')).slice(0,10) <= PK_TO);
+  if(PK_Q){ const q=PK_Q.toLowerCase(); rows=rows.filter(r=>(''+(r.ten||'')).toLowerCase().includes(q)); }
+  if(PK_PHONE){ const q=PK_PHONE.replace(/\D/g,''); if(q) rows=rows.filter(r=>(''+(r.phone||'')).replace(/\D/g,'').includes(q)); }
+  if(PK_SALE) rows=rows.filter(r=>(''+(r.sale||''))===PK_SALE);
+  rows.forEach(r=>{ r._crm=pkFindCrm(r); });
+  if(PK_DUP==='dup') rows=rows.filter(r=>r._crm);
+  else if(PK_DUP==='new') rows=rows.filter(r=>!r._crm);
+  return rows;
+}
+function pkToggle(cid){ if(PK_EXPAND.has(cid))PK_EXPAND.delete(cid); else PK_EXPAND.add(cid); renderPancake(); }
+function pkPlatLabel(p){ return ({facebook:'Facebook',whatsapp:'WhatsApp',instagram_official:'Instagram',personal_zalo:'Zalo'})[p]||p||'—'; }
+function _pkNormName(s){ return (''+(s||'')).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+function _pkNormPhone(s){ const d=(''+(s||'')).replace(/\D/g,''); return d.length>=9?d.slice(-9):''; }
+function pkFindCrm(r){ /* tìm khách CRM trùng với lead (theo SĐT rồi tên) */
+  const ph=_pkNormPhone(r.phone); const nn=_pkNormName(r.ten);
+  let m=null;
+  if(ph) m=(DATA||[]).find(c=>_pkNormPhone(c.phone)===ph);
+  if(!m && nn && nn.length>=4) m=(DATA||[]).find(c=>_pkNormName(c.ten)===nn);
+  return m||null;
+}
+function renderPancake(){
+  const el=document.getElementById('v-pancake'); if(!el) return;
+  if(!canPancake()){ el.innerHTML='<div class="card empty">Chỉ chị Nguyệt / Admin xem được mục này.</div>'; return; }
+  const rows=pkFilteredRows();
+  const totalAll=(PLEADS||[]).length, dupN=(PLEADS||[]).filter(r=>pkFindCrm(r)).length;
+  const saleOpts=Array.from(new Set((PLEADS||[]).map(r=>r.sale).filter(Boolean))).sort();
+  let h='<div class="card" style="margin-bottom:12px">';
+  h+='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
+  h+=`<div style="font-weight:800;font-size:16px">📥 Khách mới từ Pancake <span style="color:var(--muted);font-weight:600">(${rows.length}/${totalAll} chờ duyệt · ${dupN} trùng CRM)</span></div>`;
+  h+='<div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
+  h+=`<label style="font-size:12px;color:var(--muted)">Tải về:</label><select onchange="setPkDays(this.value)" style="width:auto;padding:6px"><option value="1">Hôm qua→nay</option><option value="3">3 ngày</option><option value="7">7 ngày</option><option value="30">30 ngày</option></select>`;
+  h+=`<button class="btn" type="button" onclick="pancakeReload()" ${PK_BUSY?'disabled':''}>${PK_BUSY?'⏳ Đang tải…':'🔄 Tải khách mới'}</button>`;
+  h+='</div></div>';
+  // hàng bộ lọc
+  h+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px">';
+  h+=`<input id="pk-q" value="${escapeHtml(PK_Q)}" oninput="setPkQ(this.value)" placeholder="🔎 Tên khách" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px">`;
+  h+=`<input id="pk-phone" value="${escapeHtml(PK_PHONE)}" oninput="setPkPhone(this.value)" placeholder="📞 SĐT" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;width:130px">`;
+  h+=`<select onchange="setPkSale(this.value)" style="width:auto;padding:6px;border:1px solid var(--line);border-radius:8px"><option value="">Tất cả sale</option>${saleOpts.map(s=>`<option value="${escapeHtml(s)}" ${PK_SALE===s?'selected':''}>${escapeHtml(s)}</option>`).join('')}</select>`;
+  h+=`<select onchange="setPkDup(this.value)" style="width:auto;padding:6px;border:1px solid var(--line);border-radius:8px"><option value="" ${PK_DUP===''?'selected':''}>Tất cả</option><option value="new" ${PK_DUP==='new'?'selected':''}>Chỉ khách mới</option><option value="dup" ${PK_DUP==='dup'?'selected':''}>Chỉ trùng CRM</option></select>`;
+  h+='</div>';
+  h+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">';
+  h+=`<span style="font-size:12px;color:var(--muted);font-weight:700">📅 Ngày:</span>`;
+  h+=`<input type="date" value="${PK_FROM}" onchange="setPkFrom(this.value)" style="padding:6px;border:1px solid var(--line);border-radius:8px">`;
+  h+=`<span style="color:var(--muted)">→</span>`;
+  h+=`<input type="date" value="${PK_TO}" onchange="setPkTo(this.value)" style="padding:6px;border:1px solid var(--line);border-radius:8px">`;
+  if(PK_FROM||PK_TO||PK_DUP||PK_Q||PK_PHONE||PK_SALE) h+=`<button class="btn ghost" type="button" onclick="clearPkDate()" style="padding:5px 10px">Xoá lọc</button>`;
+  h+='</div>';
+  // thao tác hàng loạt trên danh sách đang lọc
+  if(rows.length){ h+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">';
+    h+=`<span style="font-size:12px;color:var(--muted);font-weight:700">Hàng loạt (${rows.length} đang lọc):</span>`;
+    h+=`<button class="btn" type="button" onclick="pancakeBulkAdd()" ${PK_BUSY?'disabled':''} style="padding:5px 12px">➕ Thêm tất cả vào CRM</button>`;
+    h+=`<button class="btn ghost" type="button" onclick="pancakeBulkIgnore()" ${PK_BUSY?'disabled':''} style="padding:5px 12px;color:#b3261e;border-color:#f0b4ad">🗑 Bỏ tất cả</button>`;
+    h+='</div>';
+  }
+  h+='<div style="color:var(--muted);font-size:12px;margin-top:8px">Khách mới đổ về đây để chị duyệt — bấm <b>Thêm CRM</b> để chuyển thành khách chính thức, hoặc <b>Bỏ</b>. Bấm <b>🔎</b> xem chi tiết + ghi chú tư vấn. (Chỉ chị thấy mục này.)</div></div>';
+  if(!rows.length){ h+='<div class="card empty">Không có khách phù hợp bộ lọc.</div>'; el.innerHTML=h; return; }
+  h+='<div class="card" style="padding:0;overflow-x:auto"><table><tr><th></th><th>Tên khách</th><th>SĐT</th><th>Sale (tag)</th><th>Page</th><th>Kênh</th><th>Ngày</th><th>Trùng CRM?</th><th>Hành động</th></tr>';
+  rows.forEach(r=>{
+    const open=PK_EXPAND.has(r.conv_id);
+    let dup;
+    if(r._crm){ const sl=SALES[r._crm.owner]||MKT[r._crm.owner]||'?'; dup=`<span class="badge" style="background:#ffe7b3;color:#8a5b00">⚠ Trùng</span><div style="font-size:11px;color:var(--muted);margin-top:2px">${escapeHtml(r._crm.ten||'')} · ${escapeHtml(sl)}</div>`; }
+    else dup='<span class="badge" style="background:#d8f3e3;color:#0a7a44">✓ Mới</span>';
+    const ngay=(''+(r.conv_inserted_at||'')).slice(0,10);
+    h+=`<tr><td style="text-align:center"><button class="btn ghost" type="button" onclick="pkToggle('${r.conv_id}')" style="padding:2px 8px">${open?'▲':'🔎'}</button></td>`+
+       `<td><b>${escapeHtml(r.ten||'')}</b></td>`+
+       `<td>${escapeHtml(r.phone||'')||'<span style="color:var(--muted)">—</span>'}</td>`+
+       `<td>${escapeHtml(r.sale||'')||'<span style="color:var(--muted)">—</span>'}</td>`+
+       `<td style="font-size:12px">${escapeHtml(r.page_name||'')}</td>`+
+       `<td style="font-size:12px">${pkPlatLabel(r.platform)}</td>`+
+       `<td style="font-size:12px">${ngay||'—'}</td>`+
+       `<td>${dup}</td>`+
+       `<td style="white-space:nowrap"><button class="btn" type="button" onclick="pancakeAdd('${r.conv_id}')" style="padding:4px 10px">➕ Thêm CRM</button> <button class="btn ghost" type="button" onclick="pancakeIgnore('${r.conv_id}')" style="padding:4px 10px">✖ Bỏ</button></td></tr>`;
+    if(open){
+      h+=`<tr><td></td><td colspan="8" style="background:var(--cream)"><div style="padding:8px 4px;font-size:13px;line-height:1.7">`+
+         `<div><b>🩺 Tình trạng đã tư vấn (ghi chú sale trên Pancake):</b> ${r.note?escapeHtml(r.note):'<span style="color:var(--muted)">(sale chưa ghi chú)</span>'}</div>`+
+         `<div><b>💬 Tin nhắn gần nhất:</b> ${escapeHtml(r.snippet||'(không có)')}</div>`+
+         `<div><b>🏷 Tag Pancake:</b> ${escapeHtml(r.tags||'(không có)')}</div>`+
+         `<div><b>📄 Page:</b> ${escapeHtml(r.page_name||'')} · <b>Kênh:</b> ${pkPlatLabel(r.platform)} · <b>Ngày vào:</b> ${ngay||'—'}</div>`+
+         (r._crm?`<div style="color:#8a5b00"><b>⚠ Đã có trong CRM:</b> ${escapeHtml(r._crm.ten||'')} · SĐT ${escapeHtml(r._crm.phone||'')} · sale ${escapeHtml(SALES[r._crm.owner]||MKT[r._crm.owner]||'?')} · trạng thái ${escapeHtml(STATUS[r._crm.tt]||r._crm.tt||'')}</div>`:`<div style="color:#0a7a44"><b>✓ Chưa có trong CRM</b> — nên thêm mới.</div>`)+
+         `</div></td></tr>`;
+    }
+  });
+  h+='</table></div>';
+  el.innerHTML=h;
+}
+function escapeHtml(s){ return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+async function pancakeReload(){
+  if(!window.sb){ alert('Chưa kết nối Supabase'); return; }
+  PK_BUSY=true; renderPancake();
+  try{
+    const { data, error } = await sb.functions.invoke('pancake-sync',{ body:{ mode:'import_new', days:PK_DAYS||1 } });
+    if(error){ alert('Lỗi tải: '+error.message); }
+    else { toast('✓ Đã tải '+(data&&data.inserted_new!=null?data.inserted_new:'')+' khách mới'); }
+  }catch(e){ alert('Lỗi: '+e.message); }
+  PK_BUSY=false; await loadAll(); renderPancake();
+}
+async function pancakeIgnore(cid){
+  if(!window.sb) return;
+  const { error }=await sb.from('pancake_leads').update({status:'ignored'}).eq('conv_id',cid);
+  if(error){ alert('Lỗi: '+error.message); return; }
+  PLEADS=PLEADS.filter(x=>x.conv_id!==cid); renderPancake();
+}
+async function pancakeAdd(cid){
+  if(!window.sb) return;
+  const r=(PLEADS||[]).find(x=>x.conv_id===cid); if(!r) return;
+  if(r.in_crm && !confirm('Khách này CÓ THỂ đã có trong CRM (trùng SĐT/tên). Vẫn thêm mới?')) return;
+  const saleName=(r.sale||'').split('/')[0].trim();
+  const owner=revFind(SALES, saleName) || null;
+  const nguon = r.platform==='whatsapp' ? 'whatsapp' : (r.platform==='facebook' ? 'facebook' : 'pancake');
+  const rec={ ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
+    ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
+    ngay_tao:D(0), ngay_capnhat:D(0) };
+  const { error }=await sb.from('customers').insert(rec);
+  if(error){ alert('Lỗi thêm khách: '+error.message); return; }
+  await sb.from('pancake_leads').update({status:'added'}).eq('conv_id',cid);
+  PLEADS=PLEADS.filter(x=>x.conv_id!==cid);
+  toast('✓ Đã thêm "'+(r.ten||'')+'" vào CRM');
+  renderPancake();
+}
+function pkLeadToRec(r){
+  const saleName=(r.sale||'').split('/')[0].trim();
+  const owner=revFind(SALES, saleName) || null;
+  const nguon = r.platform==='whatsapp' ? 'whatsapp' : (r.platform==='facebook' ? 'facebook' : 'pancake');
+  return { ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
+    ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
+    ngay_tao:D(0), ngay_capnhat:D(0) };
+}
+async function pancakeBulkIgnore(){
+  if(!window.sb) return;
+  const rows=pkFilteredRows(); if(!rows.length){ alert('Không có khách nào đang lọc.'); return; }
+  if(!confirm('Bỏ qua TẤT CẢ '+rows.length+' khách đang lọc? (xoá khỏi danh sách chờ duyệt)')) return;
+  PK_BUSY=true; renderPancake();
+  const ids=rows.map(r=>r.conv_id);
+  for(let i=0;i<ids.length;i+=200){ const chunk=ids.slice(i,i+200); const {error}=await sb.from('pancake_leads').update({status:'ignored'}).in('conv_id',chunk); if(error){ alert('Lỗi: '+error.message); break; } }
+  PLEADS=PLEADS.filter(x=>!ids.includes(x.conv_id));
+  PK_BUSY=false; toast('✓ Đã bỏ '+ids.length+' khách'); renderPancake();
+}
+async function pancakeBulkAdd(){
+  if(!window.sb) return;
+  const rows=pkFilteredRows(); if(!rows.length){ alert('Không có khách nào đang lọc.'); return; }
+  const dup=rows.filter(r=>r._crm).length;
+  if(!confirm('Thêm TẤT CẢ '+rows.length+' khách đang lọc vào CRM?'+(dup?('\\n⚠ Trong đó '+dup+' khách CÓ THỂ đã có trong CRM (sẽ tạo thêm bản ghi mới).'):''))) return;
+  PK_BUSY=true; renderPancake();
+  const recs=rows.map(pkLeadToRec); const ids=rows.map(r=>r.conv_id);
+  let ok=0;
+  for(let i=0;i<recs.length;i+=100){ const chunk=recs.slice(i,i+100); const {error}=await sb.from('customers').insert(chunk); if(error){ alert('Lỗi thêm khách: '+error.message); break; } ok+=chunk.length; }
+  for(let i=0;i<ids.length;i+=200){ const chunk=ids.slice(i,i+200); await sb.from('pancake_leads').update({status:'added'}).in('conv_id',chunk); }
+  PLEADS=PLEADS.filter(x=>!ids.includes(x.conv_id));
+  PK_BUSY=false; await loadAll(); toast('✓ Đã thêm '+ok+' khách vào CRM'); renderPancake();
 }
 
 /* ============ ĐĂNG KÝ LỊCH LÀM ============ */
@@ -675,7 +846,7 @@ function renderLichLam(){
 }
 
 /* ============ RENDER ============ */
-function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTeam();renderLichLam();renderSettings();renderPerms();renderTrash(); }
+function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTeam();renderLichLam();renderSettings();renderPerms();renderTrash();renderPancake(); }
 
 function renderAlert(){
   const due=myData().filter(c=>flag(c)==='warn').length;
@@ -2267,6 +2438,8 @@ async function loadAll(){
   const _mall=(mr||[]).map(r=>({id:r.id, owner:r.owner, ngay:(r.ngay||'').slice(0,10), ten_page:r.ten_page, camp:r.camp,
     tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0, da_xoa:!!r.da_xoa}));
   MREPORTS=_mall.filter(r=>!r.da_xoa); MTRASH=_mall.filter(r=>r.da_xoa);
+  PLEADS=[];
+  try{ const { data:pl } = await sb.from('pancake_leads').select('*').eq('status','new').order('conv_inserted_at',{ascending:false}); PLEADS=pl||[]; }catch(e){ PLEADS=[]; }
   return true;
 }
 /* ---- Việc cần làm / nhắc việc (Supabase) ---- */
