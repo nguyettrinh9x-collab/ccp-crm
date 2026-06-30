@@ -80,6 +80,10 @@
   .btn{padding:12px 26px;border:0;border-radius:10px;background:var(--teal);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
   .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--text)}
   .view{display:none} .view.active{display:block}
+  .hscroll-top{overflow-x:auto;overflow-y:hidden;height:16px;position:sticky;top:0;z-index:6;background:var(--cream,#f6f2e9);border-radius:8px 8px 0 0}
+  .hscroll-top::-webkit-scrollbar{height:12px}
+  .hscroll-top::-webkit-scrollbar-thumb{background:#9bb3a8;border-radius:6px}
+  .hscroll-top::-webkit-scrollbar-track{background:#e7eee9}
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:12px}
   .legend span{display:flex;align-items:center;gap:6px}
   .sw{width:14px;height:14px;border-radius:4px;display:inline-block}
@@ -456,7 +460,7 @@ function editCustomer(id){
       <div><label>MKT phụ trách</label><select id="e-mkt"><option value="">—</option>${opt(MKT,c.mkt)}</select></div>
       <div><label>Sale chăm khách</label><select id="e-owner">${opt(SALES,c.owner)}</select></div>
       <div><label>Mức độ khách</label><select id="e-muc"><option value="nong" ${c.muc==='nong'?'selected':''}>🔥 Nóng</option><option value="am" ${c.muc==='am'?'selected':''}>☀️ Ấm</option><option value="lanh" ${c.muc==='lanh'?'selected':''}>❄️ Lạnh</option></select></div>
-      <div><label>Trạng thái</label><select id="e-tt">${opt(STATUS,c.tt)}</select></div>
+      <div><label>Trạng thái</label><select id="e-tt" onchange="if(this.value==='kcnc'||this.value==='khach_chan'){var f=document.getElementById('e-follow');if(f)f.value='';}">${opt(STATUS,c.tt)}</select></div>
       <div><label>Ngày follow tiếp theo</label><input id="e-follow" type="date" value="${c.follow||''}"></div>
       <div class="full"><label>Bệnh lý / nhu cầu</label><input id="e-benh" value="${esc(c.benh_list||BENH[c.benh]||'')}" placeholder="Sale tự ghi: VD PCOS, tắc vòi trứng..."></div>
       <div><label>Doanh thu (USD)</label><input id="e-dt" type="number" value="${Number(c.dt)||0}"></div>
@@ -1256,8 +1260,18 @@ function custTitle(c){
     'SP: '+(c.sp||'—'), 'Trạng thái: '+(STATUS[c.tt]||c.tt||'—'), 'DT: $'+tongChiTieu(c),
     c.dia_chi?('Địa chỉ: '+c.dia_chi):'', c.ghi?('Ghi chú: '+c.ghi):''].filter(Boolean).join('\n').replace(/"/g,'&quot;');
 }
+function syncHScroll(topId,bodyId){
+  const top=document.getElementById(topId), body=document.getElementById(bodyId); if(!top||!body)return;
+  const tbl=body.querySelector('table'); if(!tbl)return;
+  const setW=()=>{ if(top.firstElementChild) top.firstElementChild.style.width=tbl.scrollWidth+'px'; };
+  setW(); setTimeout(setW,150);
+  let lock=false;
+  top.onscroll=()=>{ if(lock)return; lock=true; body.scrollLeft=top.scrollLeft; lock=false; };
+  body.onscroll=()=>{ if(lock)return; lock=true; top.scrollLeft=body.scrollLeft; lock=false; };
+}
 function careTableHTML(arr){
-  let t=`<div class="card" style="padding:0;overflow-x:auto"><table>
+  let t=`<div class="hscroll-top" id="care-htop"><div style="height:1px"></div></div>
+    <div class="card hscroll-body" id="care-hbody" style="padding:0;overflow-x:auto"><table style="min-width:1180px">
     <tr><th>STT</th><th>Khách</th><th>Ngày chốt</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Tình trạng dùng SP / Phản hồi</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th><th>💰 Tiền gốc</th><th>💸 Nợ gốc</th><th>📅 Ngày thu nợ</th></tr>`;
   if(!arr.length) t+=`<tr><td colspan="13" class="empty">Chưa có khách đã chốt.</td></tr>`;
   arr.forEach((c,i)=>{ const ph=c.phan_hoi||'';
@@ -1302,10 +1316,11 @@ function renderCare(){
     <div id="care-table"></div>`;
   }
   document.getElementById('care-table').innerHTML=careTableHTML(careRows());
+  syncHScroll('care-htop','care-hbody');
 }
 function toast(msg,ok){ let t=document.getElementById('cpp-toast'); if(!t){t=document.createElement('div'); t.id='cpp-toast'; t.style.cssText='position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:10px;font-size:14px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:99999;opacity:0;transition:opacity .25s;color:#fff'; document.body.appendChild(t);} t.style.background=ok===false?'#e23d3d':'#2f9e6e'; t.textContent=msg; t.style.opacity='1'; clearTimeout(window.__toastT); window.__toastT=setTimeout(()=>{t.style.opacity='0';},1600); }
 function syncTwins(id,col,val){ const s=(val==null?'':String(val)); document.querySelectorAll('[data-k="'+id+'|'+col+'"]').forEach(el=>{ if(el!==document.activeElement && el.value!==s) el.value=s; }); }
-async function saveCol(id,col,val){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=val; syncTwins(id,col,val); if(!window.sb){toast('✓ Đã lưu');return;} try{ const {error}=await sb.from('customers').update({[col]:val}).eq('id',id); if(error){toast('⚠ Lỗi lưu, thử lại',false);} else {toast('✓ Đã lưu');} }catch(e){toast('⚠ Lỗi lưu, thử lại',false);} }
+async function saveCol(id,col,val){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=val; syncTwins(id,col,val); const patch={[col]:val}; if(col==='tt'&&(val==='kcnc'||val==='khach_chan')){ patch.follow=null; if(c)c.follow=''; } if(!window.sb){toast('✓ Đã lưu');return;} try{ const {error}=await sb.from('customers').update(patch).eq('id',id); if(error){toast('⚠ Lỗi lưu, thử lại',false);} else {toast(patch.follow===null?'✓ Đã lưu (bỏ follow vì KCNC/Khách chặn)':'✓ Đã lưu');} }catch(e){toast('⚠ Lỗi lưu, thử lại',false);} }
 let __saveTimers={};
 function debSave(col,id,v){ const k=col+'|'+id; clearTimeout(__saveTimers[k]); if(v!==undefined){const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=v;} __saveTimers[k]=setTimeout(()=>{ saveCol(id,col,v); },700); }
 async function savePhanHoi(id,v){ await saveCol(id,'phan_hoi',v); }
@@ -2615,6 +2630,7 @@ async function saveCustomer(e){
     sp:(g('f-sp')||'').trim()||'—', muc:g('f-muc'), tt:g('f-tt'), follow:g('f-follow')||null, ghi:g('f-ghi'),
     dt:Number(g('f-dt'))||0, ngay_chot:g('f-ngaychot')||D(0), ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
   if(isChot(rec.tt)) rec.loai_don='moi';
+  if(rec.tt==='kcnc'||rec.tt==='khach_chan') rec.follow=null; /* KCNC/Khách chặn: bỏ follow, khỏi nhắc */
   // ===== ĐỒNG BỘ KHÁCH TRÙNG: cùng SĐT/email -> cộng lần mua vào khách cũ thay vì tạo bản ghi trùng =====
   const _dig=s=>(''+(s||'')).replace(/\D/g,'');
   const _ph=_dig(rec.phone), _em=(''+(rec.email||'')).trim().toLowerCase();
@@ -2669,6 +2685,7 @@ async function saveEdit(e,id){ e.preventDefault();
   const upd=collectEdit();
   const c=DATA.find(x=>String(x.id)===String(id));
   if(upd.tt==='da_chot') upd.loai_don=(c&&c.khach_cu)?'upsell':'moi';
+  if(upd.tt==='kcnc'||upd.tt==='khach_chan') upd.follow=null; /* KCNC/Khách chặn: bỏ follow, khỏi nhắc */
   const { error }=await sb.from('customers').update(upd).eq('id', id);
   if(error){ alert('Lưu lỗi: '+error.message); return; }
   closeEdit(); alert('✅ Đã lưu thay đổi'); await loadAll(); renderAll();
