@@ -1801,9 +1801,14 @@ function renderToday(){
   if(showB('today')){ tToday.forEach(t=>_selKeys.push('t:'+t.id)); foToday.forEach(c=>_selKeys.push('f:'+c.id)); deToday.forEach(c=>_selKeys.push('d:'+c.id)); }
   if(showB('upcoming')){ tUp.forEach(t=>_selKeys.push('t:'+t.id)); }
   window.TODAY_SEL_KEYS=_selKeys;
-  if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn', tOver.map(taskRow).concat(foOver.map(followRow),deOver.map(debtRow)), 'var(--over)','over','setTodayPageOver');
-  if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay', tToday.map(taskRow).concat(foToday.map(followRow),deToday.map(debtRow)), '#b07d00','today','setTodayPageToday');
-  if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới', tUp.map(taskRow), 'var(--teal-dark)','upcoming','setTodayPageUpcoming');
+  // Sắp xếp mỗi nhóm theo NGÀY (follow/hạn/thu nợ) tăng dần — quá hạn lâu nhất lên đầu
+  const mkSorted=items=>items.sort((a,b)=>{const x=a.d||'9999-99-99',y=b.d||'9999-99-99';return x<y?-1:x>y?1:0;}).map(i=>i.html);
+  const overItems=[].concat(tOver.map(t=>({d:t.han||'',html:taskRow(t)})),foOver.map(c=>({d:c.follow||'',html:followRow(c)})),deOver.map(c=>({d:c.ngay_thu_no||'',html:debtRow(c)})));
+  const todayItems=[].concat(tToday.map(t=>({d:t.han||'',html:taskRow(t)})),foToday.map(c=>({d:c.follow||'',html:followRow(c)})),deToday.map(c=>({d:c.ngay_thu_no||'',html:debtRow(c)})));
+  const upItems=tUp.map(t=>({d:t.han||'',html:taskRow(t)}));
+  if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn (sắp theo ngày)', mkSorted(overItems), 'var(--over)','over','setTodayPageOver');
+  if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay', mkSorted(todayItems), '#b07d00','today','setTodayPageToday');
+  if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới (sắp theo ngày)', mkSorted(upItems), 'var(--teal-dark)','upcoming','setTodayPageUpcoming');
   if(!(nOver+nToday+nUp)) html+=`<div class="card empty">Không có việc hay follow nào đến hạn. 🎉</div>`;
   /* ===== Thống kê việc theo Sale + kích hoạt lại (chỉ quản lý/admin) ===== */
   if(isAdmin()){
