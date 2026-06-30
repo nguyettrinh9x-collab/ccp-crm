@@ -1302,10 +1302,19 @@ const RATE_VN={US:23500,Canada:16000,Euro:24500}; // tỷ giá quy đổi sang V
 function rateVN(c){ const g=countryGroup(c&&c.quoc_gia); return RATE_VN[g]||23500; } // Khác: tạm dùng tỷ giá USD
 function fmtCur(c,n){ n=Number(n)||0; return curSym(c)+n.toLocaleString('en-US'); }
 function renderRevenue(allRows){ const el=document.getElementById('list-revenue'); if(!el) return;
-  const rows=allRows.filter(c=>isChot(c.tt)); // chỉ tính khách ĐÃ CHỐT (Chốt nóng + Chốt nguội)
+  const rg=getRange('list'); const field=FILTERS.list.field;
+  const inR=ds=>{ ds=(''+(ds||'')).slice(0,10); return ds>=rg.s && ds<=rg.e; };
   const rev={US:{n:0,s:0},Canada:{n:0,s:0},Euro:{n:0,s:0},'Khác':{n:0,s:0}};
-  rows.forEach(c=>{ const g=countryGroup(c.quoc_gia); rev[g].n++; rev[g].s+=tongChiTieu(c); });
-  const tot=rows.reduce((a,c)=>a+tongChiTieu(c),0);
+  const seen={US:new Set(),Canada:new Set(),Euro:new Set(),'Khác':new Set()};
+  let tot=0; const custSet=new Set();
+  allRows.filter(c=>isChot(c.tt)).forEach(c=>{ const g=countryGroup(c.quoc_gia); let amt=0;
+    if(field==='lendon'){
+      if(inR(c.ngay_chot||c.ngay_tao)) amt+=Number(c.dt)||0;
+      ordersOf(c).forEach(o=>{ if(inR(o.ngay)) amt+=Number(o.so_tien)||0; });
+    } else { amt=tongChiTieu(c); }
+    if(amt>0){ rev[g].s+=amt; if(!seen[g].has(c.id)){seen[g].add(c.id); rev[g].n++;} tot+=amt; custSet.add(c.id); }
+  });
+  const rows={length:custSet.size};
   const noRows=allRows.filter(c=>Number(c.no_goc)>0);
   const totNo=noRows.reduce((a,c)=>a+(Number(c.no_goc)||0),0);
   const cards=[['US','🇺🇸 US'],['Canada','🇨🇦 Canada'],['Euro','🇪🇺 Euro'],['Khác','🌍 Khác']]
@@ -1352,8 +1361,15 @@ function renderList(){
   const fChotSel=document.getElementById('fl-chot')?.value||'';
   const fChot=(LIST_MODE==='chot')?'chot':(LIST_MODE==='chua')?'chua':fChotSel;
   const _flc=document.getElementById('fl-chot'); if(_flc) _flc.style.display=(LIST_MODE==='all')?'':'none';
+  const _lrg=getRange('list');
+  const inListDate=c=>{
+    if(inDateRange('list',c)) return true;
+    // Khách chăm sóc: có đơn mua lại (đơn phụ) trong kỳ -> vẫn hiện (khi lọc theo Ngày lên đơn)
+    if(FILTERS.list.field==='lendon' && isChot(c.tt)) return ordersOf(c).some(o=>{const d=(''+(o.ngay||'')).slice(0,10); return d>=_lrg.s && d<=_lrg.e;});
+    return false;
+  };
   let rows=myData().filter(c=>{
-    if(!inDateRange('list',c)) return false;
+    if(!inListDate(c)) return false;
     if(fSale && c.owner!==fSale) return false;
     if(fMkt && c.mkt!==fMkt) return false;
     if(fChot==='chot' && !isChot(c.tt)) return false;
