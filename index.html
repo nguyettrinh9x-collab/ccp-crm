@@ -289,7 +289,8 @@ function setTodayPageUpcoming(n){ TODAY_PAGE.upcoming=n; renderToday(); }
 let TASK_SEL=new Set();
 function toggleTaskSel(id,on){ if(on)TASK_SEL.add(id); else TASK_SEL.delete(id); renderTaskBulkBar(); }
 function clearTaskSel(){ TASK_SEL.clear(); renderToday(); }
-function selectAllShownTasks(){ (window.TODAY_TASK_IDS||[]).forEach(id=>TASK_SEL.add(id)); renderToday(); }
+function selectAllShownTasks(){ (window.TODAY_SEL_KEYS||[]).forEach(k=>TASK_SEL.add(k)); renderToday(); }
+function _splitSel(){ const tasks=[],custs=[]; TASK_SEL.forEach(k=>{ if(k.startsWith('t:'))tasks.push(k.slice(2)); else custs.push(k.slice(2)); }); return {tasks,custs}; }
 function renderTaskBulkBar(){
   const el=document.getElementById('task-bulk'); if(!el) return;
   const n=TASK_SEL.size;
@@ -304,8 +305,14 @@ function renderTaskBulkBar(){
     <button class="btn ghost" type="button" onclick="clearTaskSel()" style="padding:6px 12px;margin-left:auto">✕ Bỏ chọn</button>
   </div>`;
 }
-async function bulkTaskDone(){ const ids=[...TASK_SEL]; if(!ids.length)return; if(!confirm('Đánh dấu XONG '+ids.length+' việc đã chọn?'))return; const {error}=await sb.from('tasks').update({xong:true}).in('id',ids); if(error){alert('Lỗi: '+error.message);return;} TASK_SEL.clear(); await loadAll(); renderAll(); }
-async function bulkTaskAssign(){ const sel=document.getElementById('task-bulk-sale'); const owner=sel?sel.value:''; if(!owner){alert('Chọn sale để giao việc.');return;} const ids=[...TASK_SEL]; if(!ids.length)return; if(!confirm('Giao '+ids.length+' việc cho '+(SALES[owner]||owner)+'?'))return; const {error}=await sb.from('tasks').update({owner}).in('id',ids); if(error){alert('Lỗi: '+error.message);return;} TASK_SEL.clear(); await loadAll(); renderAll(); }
+async function bulkTaskDone(){ const {tasks,custs}=_splitSel(); const n=tasks.length+custs.length; if(!n)return; if(!confirm('Xử lý XONG '+n+' mục đã chọn? (việc → xong · follow → hẹn lại +3 ngày)'))return;
+  if(tasks.length){ const {error}=await sb.from('tasks').update({xong:true}).in('id',tasks); if(error){alert('Lỗi việc: '+error.message);return;} }
+  if(custs.length){ const {error}=await sb.from('customers').update({follow:D(3), ngay_capnhat:D(0)}).in('id',custs); if(error){alert('Lỗi follow: '+error.message);return;} }
+  TASK_SEL.clear(); await loadAll(); renderAll(); }
+async function bulkTaskAssign(){ const sel=document.getElementById('task-bulk-sale'); const owner=sel?sel.value:''; if(!owner){alert('Chọn sale để giao.');return;} const {tasks,custs}=_splitSel(); const n=tasks.length+custs.length; if(!n)return; if(!confirm('Giao '+n+' mục đã chọn cho '+(SALES[owner]||owner)+'?'))return;
+  if(tasks.length){ const {error}=await sb.from('tasks').update({owner}).in('id',tasks); if(error){alert('Lỗi việc: '+error.message);return;} }
+  if(custs.length){ const {error}=await sb.from('customers').update({owner, ngay_capnhat:D(0)}).in('id',custs); if(error){alert('Lỗi khách: '+error.message);return;} }
+  TASK_SEL.clear(); await loadAll(); renderAll(); }
 let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='';
 function setDoneQ(v){ DONE_Q=v; renderToday(); const el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 function setDoneSale(v){ DONE_SALE=v; renderToday(); }
@@ -1769,17 +1776,17 @@ function renderToday(){
     </div></div>`;
   const taskRow=t=>{ const cn=taskCustName(t); const tc=DATA.find(x=>String(x.id)===String(t.customer_id));
     const khachCell = tc ? `<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten} ✏️</b>` : (cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">— Không gắn khách —</span>');
-    return `<tr><td style="width:36px;text-align:center"><input type="checkbox" class="task-sel" style="width:auto;transform:scale(1.3)" title="Chọn để thao tác hàng loạt" ${TASK_SEL.has(t.id)?'checked':''} onchange="toggleTaskSel('${t.id}',this.checked)"></td>
+    return `<tr><td style="width:36px;text-align:center"><input type="checkbox" class="task-sel" style="width:auto;transform:scale(1.3)" title="Chọn để thao tác hàng loạt" ${TASK_SEL.has('t:'+t.id)?'checked':''} onchange="toggleTaskSel('t:${t.id}',this.checked)"></td>
     <td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td>
     <td>${khachCell}</td>
     <td>${t.noi_dung||''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
     <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--won);font-weight:700" onclick="toggleTask('${t.id}')">✓ Xong</span> · <span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
-  const followRow=c=>`<tr style="background:#fff8f0"><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đã follow hôm nay → hẹn lại +3 ngày" onchange="followDone('${c.id}')"></td>
+  const followRow=c=>`<tr style="background:#fff8f0"><td style="width:36px;text-align:center"><input type="checkbox" class="task-sel" style="width:auto;transform:scale(1.3)" title="Chọn để thao tác hàng loạt" ${TASK_SEL.has('f:'+c.id)?'checked':''} onchange="toggleTaskSel('f:${c.id}',this.checked)"></td>
     <td><span class="pill" style="background:#fde9d9;color:#b06a00">Follow</span></td>
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten} ✏️</b></td>
     <td>${ttPill(c.tt)} <span style="color:var(--muted);font-size:11px">${c.phone||''}</span></td><td>${c.follow||'—'}</td>${fullView()?`<td>${SALES[c.owner]||'—'}</td>`:''}
-    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer('${c.id}')">Mở khách</span></td></tr>`;
-  const debtRow=c=>`<tr style="background:#fdf3f3"><td style="width:36px;text-align:center" title="Thu hồi nợ">💰</td>
+    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--won);font-weight:700" title="Đã follow → hẹn lại +3 ngày" onclick="followDone('${c.id}')">✓ Đã follow</span> · <span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer('${c.id}')">Mở khách</span></td></tr>`;
+  const debtRow=c=>`<tr style="background:#fdf3f3"><td style="width:36px;text-align:center"><input type="checkbox" class="task-sel" style="width:auto;transform:scale(1.3)" title="Chọn để thao tác hàng loạt" ${TASK_SEL.has('d:'+c.id)?'checked':''} onchange="toggleTaskSel('d:${c.id}',this.checked)"></td>
     <td><span class="pill" style="background:#f7dada;color:#a83a3a">Thu nợ</span></td>
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="Mở chăm sóc" onclick="openCarePanel('${c.id}')">${c.ten} 🩺</b></td>
     <td>Còn nợ <b style="color:var(--over)">${fmtCur(c,c.no_goc)}</b></td><td>${c.ngay_thu_no||'—'}</td>${fullView()?`<td>${SALES[c.owner]||'—'}</td>`:''}
@@ -1789,6 +1796,11 @@ function renderToday(){
     const slice=rowsArr.slice((pg-1)*LIST_PAGE_SIZE, pg*LIST_PAGE_SIZE).join('');
     return `<h2 class="sec" style="color:${color}">${title} (${count})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th title="Tích chọn để thao tác hàng loạt">Chọn</th><th>Loại</th><th>Khách</th><th>Nội dung / Trạng thái</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${slice}</table>${pagerHTML(count,pg,LIST_PAGE_SIZE,pageFn)}</div>`; };
   const showB=k=> !TASK_BUCKET || TASK_BUCKET===k;
+  const _selKeys=[];
+  if(showB('over')){ tOver.forEach(t=>_selKeys.push('t:'+t.id)); foOver.forEach(c=>_selKeys.push('f:'+c.id)); deOver.forEach(c=>_selKeys.push('d:'+c.id)); }
+  if(showB('today')){ tToday.forEach(t=>_selKeys.push('t:'+t.id)); foToday.forEach(c=>_selKeys.push('f:'+c.id)); deToday.forEach(c=>_selKeys.push('d:'+c.id)); }
+  if(showB('upcoming')){ tUp.forEach(t=>_selKeys.push('t:'+t.id)); }
+  window.TODAY_SEL_KEYS=_selKeys;
   if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn', tOver.map(taskRow).concat(foOver.map(followRow),deOver.map(debtRow)), 'var(--over)','over','setTodayPageOver');
   if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay', tToday.map(taskRow).concat(foToday.map(followRow),deToday.map(debtRow)), '#b07d00','today','setTodayPageToday');
   if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới', tUp.map(taskRow), 'var(--teal-dark)','upcoming','setTodayPageUpcoming');
