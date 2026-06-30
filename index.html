@@ -697,16 +697,26 @@ const PRESETS=[
 ];
 function reRender(key){ ({dash:renderDash,list:renderList,report:renderReport,mkt:renderMarketing,team:renderTeam}[key])(); }
 // Tính chỉ số 1 nhóm khách: số khách, thị trường, tỷ lệ tương tác/chốt, DT mới/chăm sóc/tổng
-function saleStats(sd){
-  const total=sd.length;
-  const interacted=sd.filter(c=>['ktt','tuong_tac','dang_care','hen','da_chot','chot_nguoi'].includes(c.tt)).length;
-  const won=sd.filter(c=>isChot(c.tt));
-  const dtMoi=won.filter(c=>c.loai_don!=='upsell').reduce((s,c)=>s+(Number(c.dt)||0),0);
-  const dtCu =won.filter(c=>c.loai_don==='upsell').reduce((s,c)=>s+(Number(c.dt)||0),0)
-              + won.reduce((s,c)=>s+ordersOf(c).reduce((a,o)=>a+(Number(o.so_tien)||0),0),0);
-  const markets=[...new Set(sd.map(c=>c.quoc_gia).filter(Boolean))];
-  const no=sd.reduce((s,c)=>s+(Number(c.no_goc)||0),0);
-  const dtVND=won.reduce((s,c)=>s+tongChiTieu(c)*rateVN(c),0);
+function saleStats(sd, rg){
+  rg = rg || {s:'0000-01-01', e:'9999-12-31'};
+  const inR = ds => { ds=(''+(ds||'')).slice(0,10); return ds>=rg.s && ds<=rg.e; };
+  // Khách trong kỳ (theo Ngày lên đơn) — dùng cho Số khách & tỷ lệ
+  const sdR=sd.filter(c=>inR(c.ngay_chot||c.ngay_tao));
+  const total=sdR.length;
+  const interacted=sdR.filter(c=>['ktt','tuong_tac','dang_care','hen','da_chot','chot_nguoi'].includes(c.tt)).length;
+  const won=sdR.filter(c=>isChot(c.tt));
+  const markets=[...new Set(sdR.map(c=>c.quoc_gia).filter(Boolean))];
+  const no=sdR.reduce((s,c)=>s+(Number(c.no_goc)||0),0);
+  // Doanh thu tính theo TỪNG lần mua trong kỳ (KHÔNG gộp cả lịch sử vào tháng chốt)
+  let dtMoi=0, dtCu=0, dtVND=0;
+  sd.forEach(c=>{
+    const r=rateVN(c);
+    if(isChot(c.tt)){
+      const amt=Number(c.dt)||0;
+      if(amt>0 && inR(c.ngay_chot||c.ngay_tao)){ if(c.loai_don==='upsell') dtCu+=amt; else dtMoi+=amt; dtVND+=amt*r; }
+    }
+    ordersOf(c).forEach(o=>{ const amt=Number(o.so_tien)||0; if(amt>0 && inR(o.ngay)){ dtCu+=amt; dtVND+=amt*r; } });
+  });
   return {total, won:won.length, dtMoi, dtCu, dtTong:dtMoi+dtCu, no, dtVND, markets,
     rTuongtac: total?Math.round(interacted/total*100):0,
     rChot: total?Math.round(won.length/total*100):0};
@@ -1569,8 +1579,8 @@ function renderReport(){
     <tr><th>Sale</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th></tr>`;
   let T={total:0,dtMoi:0,dtCu:0};
   rows.forEach(([id,name])=>{
-    const sd=DATA.filter(c=>c.owner===id && inChotRange('report',c));
-    const x=saleStats(sd); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu;
+    const sd=DATA.filter(c=>c.owner===id);
+    const x=saleStats(sd, getRange('report')); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu;
     html+=`<tr><td><b>${name}</b></td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td>
       <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td></tr>`;
   });
@@ -1966,10 +1976,10 @@ function renderTeam(){
   let T={total:0,dtMoi:0,dtCu:0,no:0,dtVND:0};
   Object.entries(SALES).forEach(([id,name])=>{
     if(TEAM_F.sale && id!==TEAM_F.sale) return;
-    let sd=DATA.filter(c=>c.owner===id && inChotRange('team',c));
+    let sd=DATA.filter(c=>c.owner===id);
     if(TEAM_F.market) sd=sd.filter(c=>countryGroup(c.quoc_gia)===TEAM_F.market);
     if(TEAM_F.mkt) sd=sd.filter(c=>c.mkt===TEAM_F.mkt);
-    const x=saleStats(sd); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu; T.no+=x.no; T.dtVND+=x.dtVND;
+    const x=saleStats(sd, getRange('team')); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu; T.no+=x.no; T.dtVND+=x.dtVND;
     html+=`<tr><td><b>${name}</b></td><td>Sale</td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td>
       <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVND).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">$${x.no.toLocaleString('en-US')}</td></tr>`;
   });
@@ -1983,11 +1993,11 @@ function renderTeam(){
   let TM={total:0,won:0,dtTong:0,no:0,dtVND:0};
   Object.entries(MKT).forEach(([id,name])=>{
     if(TEAM_F.mkt && id!==TEAM_F.mkt) return;
-    let sd=DATA.filter(c=>c.mkt===id && inChotRange('team',c));
+    let sd=DATA.filter(c=>c.mkt===id);
     if(TEAM_F.market) sd=sd.filter(c=>countryGroup(c.quoc_gia)===TEAM_F.market);
     if(TEAM_F.sale) sd=sd.filter(c=>c.owner===TEAM_F.sale);
-    if(!sd.length) return;
-    const x=saleStats(sd);
+    const x=saleStats(sd, getRange('team'));
+    if(!x.total && x.dtTong===0) return;
     TM.total+=x.total; TM.won+=x.won; TM.dtTong+=x.dtTong; TM.no+=x.no; TM.dtVND+=x.dtVND;
     html+=`<tr><td><b>${name}</b></td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td><td>${x.won}</td><td>${x.rChot}%</td><td><b>$${x.dtTong}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVND).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">$${x.no.toLocaleString('en-US')}</td></tr>`;
   });
