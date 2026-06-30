@@ -216,7 +216,7 @@ function addSpPick(){ const p=document.getElementById('f-sppick'); const q=docum
 const ALL_MODULES = [
   ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
   ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
-  ['marketing','BC Marketing'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
+  ['marketing','BC Marketing'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['pancake','Khách mới (Pancake)'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
 ];
 // Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
 const DEFAULT_PERMS = {
@@ -286,6 +286,26 @@ let TODAY_PAGE={over:1,today:1,upcoming:1};
 function setTodayPageOver(n){ TODAY_PAGE.over=n; renderToday(); }
 function setTodayPageToday(n){ TODAY_PAGE.today=n; renderToday(); }
 function setTodayPageUpcoming(n){ TODAY_PAGE.upcoming=n; renderToday(); }
+let TASK_SEL=new Set();
+function toggleTaskSel(id,on){ if(on)TASK_SEL.add(id); else TASK_SEL.delete(id); renderTaskBulkBar(); }
+function clearTaskSel(){ TASK_SEL.clear(); renderToday(); }
+function selectAllShownTasks(){ (window.TODAY_TASK_IDS||[]).forEach(id=>TASK_SEL.add(id)); renderToday(); }
+function renderTaskBulkBar(){
+  const el=document.getElementById('task-bulk'); if(!el) return;
+  const n=TASK_SEL.size;
+  if(!n){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="card" style="margin:0 0 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#eef6f1;border:1px solid #bfe0cd;position:sticky;top:0;z-index:7">
+    <b style="color:var(--teal-dark)">✅ Đã chọn ${n} việc</b>
+    <button class="btn" type="button" onclick="bulkTaskDone()" style="padding:6px 12px">✓ Đánh dấu Xong</button>
+    <span style="color:var(--muted)">·</span>
+    <span style="font-size:13px">Giao cho sale:</span>
+    <select id="task-bulk-sale" style="width:auto"><option value="">— Chọn sale —</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+    <button class="btn ghost" type="button" onclick="bulkTaskAssign()" style="padding:6px 12px">Giao việc</button>
+    <button class="btn ghost" type="button" onclick="clearTaskSel()" style="padding:6px 12px;margin-left:auto">✕ Bỏ chọn</button>
+  </div>`;
+}
+async function bulkTaskDone(){ const ids=[...TASK_SEL]; if(!ids.length)return; if(!confirm('Đánh dấu XONG '+ids.length+' việc đã chọn?'))return; const {error}=await sb.from('tasks').update({xong:true}).in('id',ids); if(error){alert('Lỗi: '+error.message);return;} TASK_SEL.clear(); await loadAll(); renderAll(); }
+async function bulkTaskAssign(){ const sel=document.getElementById('task-bulk-sale'); const owner=sel?sel.value:''; if(!owner){alert('Chọn sale để giao việc.');return;} const ids=[...TASK_SEL]; if(!ids.length)return; if(!confirm('Giao '+ids.length+' việc cho '+(SALES[owner]||owner)+'?'))return; const {error}=await sb.from('tasks').update({owner}).in('id',ids); if(error){alert('Lỗi: '+error.message);return;} TASK_SEL.clear(); await loadAll(); renderAll(); }
 let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='';
 function setDoneQ(v){ DONE_Q=v; renderToday(); const el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 function setDoneSale(v){ DONE_SALE=v; renderToday(); }
@@ -336,7 +356,7 @@ function applyMenu(){
   const allowed=PERMS[ME.uname]||[];
   document.querySelectorAll('#nav a').forEach(a=>{
     let v=a.dataset.v; if(v==='list_chot'||v==='list_chua'||v==='list_all') v='list';
-    if(v==='pancake'){ a.style.display=canPancake()?'flex':'none'; return; }
+    if(v==='pancake'){ a.style.display=(canPancake()||allowed.includes('pancake'))?'flex':'none'; return; }
     a.style.display=allowed.includes(v)?'flex':'none';
   });
 }
@@ -663,7 +683,7 @@ function pkFindCrm(r){ /* tìm khách CRM trùng với lead (theo SĐT rồi tê
 }
 function renderPancake(){
   const el=document.getElementById('v-pancake'); if(!el) return;
-  if(!canPancake()){ el.innerHTML='<div class="card empty">Chỉ chị Nguyệt / Admin xem được mục này.</div>'; return; }
+  if(!(canPancake()||(PERMS[ME.uname]||[]).includes('pancake'))){ el.innerHTML='<div class="card empty">Bạn chưa được cấp quyền xem mục này. Liên hệ Admin để cấp ở trang Tài khoản.</div>'; return; }
   const rows=pkFilteredRows();
   const totalAll=(PLEADS||[]).length, dupN=(PLEADS||[]).filter(r=>pkFindCrm(r)).length;
   const saleOpts=Array.from(new Set((PLEADS||[]).map(r=>r.sale).filter(Boolean))).sort();
@@ -1721,10 +1741,12 @@ function renderToday(){
   html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 8px">
     ${chip('','Tất cả',nOver+nToday+nUp)}${chip('over','🔴 Quá hạn',nOver)}${chip('today','🟡 Hôm nay',nToday)}${chip('upcoming','🟢 Sắp tới',nUp)}
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn ghost" type="button" onclick="selectAllShownTasks()" title="Chọn tất cả việc đang hiển thị để thao tác hàng loạt" style="padding:6px 14px;font-size:13px">☑ Chọn tất cả hiển thị</button>
     ${isAdmin()?`<button class="btn" type="button" onclick="markAllTasksDone()" title="Chỉ Admin — tích Xong cho tất cả việc đang hiển thị" style="padding:6px 14px;font-size:13px;background:var(--won);border-color:var(--won);color:#fff">✓ Tích tất cả Xong</button>`:''}
     <button class="btn ghost" type="button" onclick="toggleTaskPanel()" style="padding:6px 14px;font-size:13px">${TASK_PANEL_OPEN?'✕ Đóng':'➕ Thêm việc / Bộ lọc'}${((TASK_Q||TASK_SALE||TASK_TT||TASK_FROM||TASK_TO)&&!TASK_PANEL_OPEN)?' 🔵':''}</button>
     </div>
   </div>`;
+  html+=`<div id="task-bulk"></div>`;
   if(TASK_PANEL_OPEN) html+=`<div class="card" style="margin:0 0 16px">
     <h2 class="sec" style="margin-top:0">Thêm việc cần làm</h2>
     <div style="display:grid;grid-template-columns:1.3fr 1.6fr 2fr 1fr ${fullView()?'1.1fr ':''}auto;gap:8px;align-items:end">
@@ -1747,11 +1769,11 @@ function renderToday(){
     </div></div>`;
   const taskRow=t=>{ const cn=taskCustName(t); const tc=DATA.find(x=>String(x.id)===String(t.customer_id));
     const khachCell = tc ? `<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten} ✏️</b>` : (cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">— Không gắn khách —</span>');
-    return `<tr><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đánh dấu xong" onchange="toggleTask('${t.id}')"></td>
+    return `<tr><td style="width:36px;text-align:center"><input type="checkbox" class="task-sel" style="width:auto;transform:scale(1.3)" title="Chọn để thao tác hàng loạt" ${TASK_SEL.has(t.id)?'checked':''} onchange="toggleTaskSel('${t.id}',this.checked)"></td>
     <td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td>
     <td>${khachCell}</td>
     <td>${t.noi_dung||''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
-    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
+    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--won);font-weight:700" onclick="toggleTask('${t.id}')">✓ Xong</span> · <span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
   const followRow=c=>`<tr style="background:#fff8f0"><td style="width:36px;text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" title="Đã follow hôm nay → hẹn lại +3 ngày" onchange="followDone('${c.id}')"></td>
     <td><span class="pill" style="background:#fde9d9;color:#b06a00">Follow</span></td>
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten} ✏️</b></td>
@@ -1765,7 +1787,7 @@ function renderToday(){
   const bucketTable=(title,rowsArr,color,key,pageFn)=>{ const count=rowsArr.length; if(!count) return '';
     const pg=Math.min(Math.max(1,TODAY_PAGE[key]||1),Math.max(1,Math.ceil(count/LIST_PAGE_SIZE)));
     const slice=rowsArr.slice((pg-1)*LIST_PAGE_SIZE, pg*LIST_PAGE_SIZE).join('');
-    return `<h2 class="sec" style="color:${color}">${title} (${count})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Xong</th><th>Loại</th><th>Khách</th><th>Nội dung / Trạng thái</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${slice}</table>${pagerHTML(count,pg,LIST_PAGE_SIZE,pageFn)}</div>`; };
+    return `<h2 class="sec" style="color:${color}">${title} (${count})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th title="Tích chọn để thao tác hàng loạt">Chọn</th><th>Loại</th><th>Khách</th><th>Nội dung / Trạng thái</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${slice}</table>${pagerHTML(count,pg,LIST_PAGE_SIZE,pageFn)}</div>`; };
   const showB=k=> !TASK_BUCKET || TASK_BUCKET===k;
   if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn', tOver.map(taskRow).concat(foOver.map(followRow),deOver.map(debtRow)), 'var(--over)','over','setTodayPageOver');
   if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay', tToday.map(taskRow).concat(foToday.map(followRow),deToday.map(debtRow)), '#b07d00','today','setTodayPageToday');
@@ -1809,6 +1831,7 @@ function renderToday(){
   if(CARE_TODAY_OPEN) html+=`<p style="color:var(--muted);font-size:12px;margin:8px 0 8px">💡 <b>Tự động lưu</b> trong lúc gõ (ngừng gõ ~1 giây là lưu) — hiện "✓ Đã lưu" ở góc phải. Bảng này cũng có ở trang <b>Chăm sóc khách</b>.</p>
     <div class="filters" style="margin-bottom:10px"><input id="cct-q" class="search" value="${(CARE_TODAY_Q||'').replace(/"/g,'&quot;')}" oninput="setCareTodayQ(this.value)" placeholder="🔎 Tìm tên / SĐT / ghi chú / kết quả..." style="max-width:420px">${cctSale}${cctMkt}${cctDate}</div>`+careTableHTML(careArr);
   document.getElementById('v-today').innerHTML=html;
+  renderTaskBulkBar();
 }
 
 /* ====== MỤC TIÊU DOANH THU THEO THÁNG ====== */
