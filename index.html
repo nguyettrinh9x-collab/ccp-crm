@@ -2308,10 +2308,15 @@ function bestSaleHTML(){
     ${banner}${avatarBtns}
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:22px">${podium('Best Sale hôm nay',today,dayRank)}${podium('Best Sale tháng này',ym,monRank)}</div>`;
 }
+let TEAM_ST_SHOW=false;
+function toggleTeamStatus(){ if(!canPancake()){alert('Chỉ chị Nguyệt / Admin xem được cột này.');return;} TEAM_ST_SHOW=!TEAM_ST_SHOW; renderTeam(); }
 function renderTeam(){
   const STCOLS=['kcnc','ktt','tuong_tac','web','khach_chan','dang_care','hen','da_chot','chot_nguoi'];
-  let html=bestSaleHTML()+renderDateFilterBar('team')+buildTeamFilterBar()+`<div class="card" style="padding:0;overflow-x:auto"><table>
-    <tr><th>Nhân viên</th><th>Vai trò</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th><th>Doanh số VNĐ (sale điền)</th><th>Nợ gốc</th>${STCOLS.map(k=>`<th style="background:#eef4f0">${STATUS[k]}</th>`).join('')}</tr>`;
+  const $f=n=>'$'+Math.round(Number(n)||0).toLocaleString('en-US');
+  const canSt=canPancake(); const showSt=canSt && TEAM_ST_SHOW;
+  const stToggle=canSt?`<div style="margin:6px 0"><button class="btn ghost" type="button" onclick="toggleTeamStatus()" style="padding:5px 12px;font-size:13px">${TEAM_ST_SHOW?'🙈 Ẩn cột trạng thái':'👁 Hiện cột trạng thái (chỉ chị xem)'}</button></div>`:'';
+  let html=bestSaleHTML()+renderDateFilterBar('team')+buildTeamFilterBar()+stToggle+`<div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Nhân viên</th><th>Vai trò</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th><th>Doanh số VNĐ (sale điền)</th><th>Nợ gốc</th>${showSt?STCOLS.map(k=>`<th style="background:#eef4f0">${STATUS[k]}</th>`).join(''):''}</tr>`;
   let T={total:0,dtMoi:0,dtCu:0,no:0,dtVND:0,dtVNDman:0,st:{}};
   Object.entries(SALES).forEach(([id,name])=>{
     if(TEAM_F.sale && id!==TEAM_F.sale) return;
@@ -2321,10 +2326,10 @@ function renderTeam(){
     const x=saleStats(sd, getRange('team')); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu; T.no+=x.no; T.dtVND+=x.dtVND; T.dtVNDman+=x.dtVNDman;
     const stc={}; STCOLS.forEach(k=>{ stc[k]=sd.filter(c=>c.tt===k).length; T.st[k]=(T.st[k]||0)+stc[k]; });
     html+=`<tr><td><b>${name}</b></td><td>Sale</td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td>
-      <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">$${x.no.toLocaleString('en-US')}</td>${STCOLS.map(k=>`<td style="text-align:center${(k==='da_chot'||k==='chot_nguoi')&&stc[k]?';color:var(--won);font-weight:700':''}">${stc[k]||'—'}</td>`).join('')}</tr>`;
+      <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>${$f(x.dtMoi)}</td><td>${$f(x.dtCu)}</td><td><b>${$f(x.dtTong)}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">${$f(x.no)}</td>${showSt?STCOLS.map(k=>`<td style="text-align:center${(k==='da_chot'||k==='chot_nguoi')&&stc[k]?';color:var(--won);font-weight:700':''}">${stc[k]||'—'}</td>`).join(''):''}</tr>`;
   });
-  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td></td><td>${T.total}</td><td colspan="3"></td><td>$${T.dtMoi}</td><td>$${T.dtCu}</td><td>$${T.dtMoi+T.dtCu}</td><td style="color:var(--teal-dark);white-space:nowrap">${Math.round(T.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="color:var(--over)">$${T.no.toLocaleString('en-US')}</td>${STCOLS.map(k=>`<td style="text-align:center">${T.st[k]||0}</td>`).join('')}</tr></table></div>
-    <p style="color:var(--muted);font-size:12px;margin:6px 0 0">📌 9 cột trạng thái = pipeline <b>hiện tại</b> của từng sale (không lọc theo kỳ ngày). Tổng 9 cột = tổng khách sale đang giữ.</p>`;
+  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td></td><td>${T.total}</td><td colspan="3"></td><td>${$f(T.dtMoi)}</td><td>${$f(T.dtCu)}</td><td>${$f(T.dtMoi+T.dtCu)}</td><td style="color:var(--teal-dark);white-space:nowrap">${Math.round(T.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="color:var(--over)">${$f(T.no)}</td>${showSt?STCOLS.map(k=>`<td style="text-align:center">${T.st[k]||0}</td>`).join(''):''}</tr></table></div>
+    ${showSt?`<p style="color:var(--muted);font-size:12px;margin:6px 0 0">📌 9 cột trạng thái = pipeline <b>hiện tại</b> của từng sale (không lọc theo kỳ ngày) · chỉ chị xem được.</p>`:''}`;
 
   // ----- Doanh số theo Marketing (song song với Sale) -----
   html+=`<h2 class="sec" style="margin-top:24px">📣 Doanh số theo Marketing (Nguyệt / Việt / Duy)</h2>
@@ -2340,9 +2345,9 @@ function renderTeam(){
     const x=saleStats(sd, getRange('team'));
     if(!x.total && x.dtTong===0) return;
     TM.total+=x.total; TM.won+=x.won; TM.dtTong+=x.dtTong; TM.no+=x.no; TM.dtVND+=x.dtVND; TM.dtVNDman+=x.dtVNDman;
-    html+=`<tr><td><b>${name}</b></td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td><td>${x.won}</td><td>${x.rChot}%</td><td><b>$${x.dtTong}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">$${x.no.toLocaleString('en-US')}</td></tr>`;
+    html+=`<tr><td><b>${name}</b></td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td><td>${x.won}</td><td>${x.rChot}%</td><td><b>${$f(x.dtTong)}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">${$f(x.no)}</td></tr>`;
   });
-  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>${TM.total}</td><td></td><td>${TM.won}</td><td></td><td>$${TM.dtTong}</td><td style="color:var(--teal-dark);white-space:nowrap">${Math.round(TM.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="color:var(--over)">$${TM.no.toLocaleString('en-US')}</td></tr></table></div>`;
+  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>${TM.total}</td><td></td><td>${TM.won}</td><td></td><td>${$f(TM.dtTong)}</td><td style="color:var(--teal-dark);white-space:nowrap">${Math.round(TM.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="color:var(--over)">${$f(TM.no)}</td></tr></table></div>`;
 
   html+=`<p style="color:var(--muted);font-size:12px;margin-top:10px">Admin có thể thêm/khóa tài khoản sale ở bản thật.</p>`;
   document.getElementById('v-team').innerHTML=html;
