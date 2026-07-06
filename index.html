@@ -495,6 +495,7 @@ function editCustomer(id){
       <div><label>Ngày follow tiếp theo</label><input id="e-follow" type="date" value="${c.follow||''}"></div>
       <div class="full"><label>Bệnh lý / nhu cầu</label><input id="e-benh" value="${esc(c.benh_list||BENH[c.benh]||'')}" placeholder="Sale tự ghi: VD PCOS, tắc vòi trứng..."></div>
       <div><label>Doanh thu (USD)</label><input id="e-dt" type="number" value="${Number(c.dt)||0}"></div>
+      <div><label>💵 Doanh số (VNĐ) — sale tự điền</label><input id="e-dtvnd" type="number" value="${Number(c.dt_vnd)||0}" placeholder="Nhập doanh số quy VNĐ"></div>
       <div><label>💰 Tiền gốc (${curSym(c)})</label><input id="e-tiengoc" type="number" value="${Number(c.tien_goc)||0}"></div>
       <div><label>💸 Nợ gốc (${curSym(c)})</label><input id="e-nogoc" type="number" value="${Number(c.no_goc)||0}"></div>
       <div><label>📅 Ngày thu hồi nợ</label><input id="e-thuno" type="date" value="${c.ngay_thu_no||''}"></div>
@@ -596,7 +597,7 @@ function renderCarePanel(){ const c=DATA.find(x=>String(x.id)===String(CARE_PANE
 function collectEdit(){ const g=x=>document.getElementById(x).value;
   return { ten:g('e-ten'), phone:g('e-phone'), has_wa:document.getElementById('e-wa').checked, email:g('e-email'),
     quoc_gia:g('e-qg'), dia_chi:g('e-diachi')||null, nguon:g('e-nguon'), mkt:g('e-mkt')||null, owner:g('e-owner'), muc:g('e-muc'), tt:g('e-tt'),
-    follow:g('e-follow')||null, benh:'khac', benh_list:(g('e-benh')||'').trim(), dt:Number(g('e-dt'))||0, ngay_chot:g('e-ngaychot')||null, sp:g('e-sp'), ghi:g('e-ghi'),
+    follow:g('e-follow')||null, benh:'khac', benh_list:(g('e-benh')||'').trim(), dt:Number(g('e-dt'))||0, dt_vnd:Number(g('e-dtvnd'))||0, ngay_chot:g('e-ngaychot')||null, sp:g('e-sp'), ghi:g('e-ghi'),
     tien_goc:Number(g('e-tiengoc'))||0, no_goc:Number(g('e-nogoc'))||0, ngay_thu_no:g('e-thuno')||null, ngay_capnhat:D(0) }; }
 function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
   Object.assign(c, collectEdit()); if(isChot(c.tt)&&!c.loai_don)c.loai_don=c.khach_cu?'upsell':'moi';
@@ -939,16 +940,17 @@ function saleStats(sd, rg){
   const markets=[...new Set(sdR.map(c=>c.quoc_gia).filter(Boolean))];
   const no=sdR.reduce((s,c)=>s+(Number(c.no_goc)||0),0);
   // Doanh thu tính theo TỪNG lần mua trong kỳ (KHÔNG gộp cả lịch sử vào tháng chốt)
-  let dtMoi=0, dtCu=0, dtVND=0;
+  let dtMoi=0, dtCu=0, dtVND=0, dtVNDman=0;
   sd.forEach(c=>{
     const r=rateVN(c);
     if(isChot(c.tt)){
       const amt=Number(c.dt)||0;
       if(amt>0 && inR(c.ngay_chot||c.ngay_tao)){ if(c.loai_don==='upsell') dtCu+=amt; else dtMoi+=amt; dtVND+=amt*r; }
+      if(inR(c.ngay_chot||c.ngay_tao)) dtVNDman += Number(c.dt_vnd)||0; // doanh số VNĐ sale tự điền
     }
     ordersOf(c).forEach(o=>{ const amt=Number(o.so_tien)||0; if(amt>0 && inR(o.ngay)){ dtCu+=amt; dtVND+=amt*r; } });
   });
-  return {total, won:won.length, dtMoi, dtCu, dtTong:dtMoi+dtCu, no, dtVND, markets,
+  return {total, won:won.length, dtMoi, dtCu, dtTong:dtMoi+dtCu, no, dtVND, dtVNDman, markets,
     rTuongtac: total?Math.round(interacted/total*100):0,
     rChot: total?Math.round(won.length/total*100):0};
 }
@@ -1317,13 +1319,14 @@ function syncHScroll(topId,bodyId){
 function careTableHTML(arr){
   let t=`<div class="hscroll-top" id="care-htop"><div style="height:1px"></div></div>
     <div class="card hscroll-body" id="care-hbody" style="padding:0;overflow-x:auto"><table style="min-width:1180px">
-    <tr><th>STT</th><th>Khách</th><th>Ngày chốt</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Tình trạng dùng SP / Phản hồi</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th><th>💰 Tiền gốc</th><th>💸 Nợ gốc</th><th>📅 Ngày thu nợ</th></tr>`;
-  if(!arr.length) t+=`<tr><td colspan="13" class="empty">Chưa có khách đã chốt.</td></tr>`;
+    <tr><th>STT</th><th>Khách</th><th>Ngày chốt</th><th>💵 DT VNĐ</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Tình trạng dùng SP / Phản hồi</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th><th>💰 Tiền gốc</th><th>💸 Nợ gốc</th><th>📅 Ngày thu nợ</th></tr>`;
+  if(!arr.length) t+=`<tr><td colspan="14" class="empty">Chưa có khách đã chốt.</td></tr>`;
   arr.forEach((c,i)=>{ const ph=c.phan_hoi||'';
     t+=`<tr class="${rowClass(c)}">
       <td>${i+1}</td>
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="Mở bảng chăm sóc chi tiết" onclick="openCarePanel('${c.id}')">${c.ten}</b> <span title="Mở chăm sóc chi tiết" style="cursor:pointer" onclick="openCarePanel('${c.id}')">🩺</span> <span title="Sửa thông tin" style="cursor:pointer" onclick="editCustomer('${c.id}')">✏️</span><br><span style="color:var(--muted);font-size:11px">${c.phone||''} · ${SALES[c.owner]||'—'}</span></td>
       <td>${c.ngay_chot||'—'}</td>
+      <td><input data-k="${c.id}|dt_vnd" type="number" value="${Number(c.dt_vnd)||0}" oninput="debSave('dt_vnd','${c.id}',this.value)" onchange="saveCol('${c.id}','dt_vnd',this.value)" style="padding:4px;width:105px" title="Doanh số quy VNĐ (sale tự điền)"></td>
       <td style="font-size:11px">${careCell(c.ngay_chot,7,10)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,20,25)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,28,35)}</td>
@@ -1563,7 +1566,7 @@ function importExcel(){
 }
 
 /* ====== CỘT HIỂN THỊ + TỔNG DT THEO QUỐC GIA ====== */
-const LIST_COLS=[{k:'qg',label:'Quốc gia'},{k:'nguon',label:'Nguồn'},{k:'benh',label:'Bệnh lý'},{k:'sp',label:'SP'},{k:'muc',label:'Mức'},{k:'tt',label:'Trạng thái'},{k:'follow',label:'Follow'},{k:'mkt',label:'MKT'},{k:'sale',label:'Sale'},{k:'ghi',label:'Ghi chú / Việc'},{k:'dt',label:'DT'},{k:'tiengoc',label:'Tiền gốc'},{k:'nogoc',label:'Nợ gốc'},{k:'thuno',label:'Ngày thu nợ'}];
+const LIST_COLS=[{k:'qg',label:'Quốc gia'},{k:'nguon',label:'Nguồn'},{k:'benh',label:'Bệnh lý'},{k:'sp',label:'SP'},{k:'muc',label:'Mức'},{k:'tt',label:'Trạng thái'},{k:'follow',label:'Follow'},{k:'mkt',label:'MKT'},{k:'sale',label:'Sale'},{k:'ghi',label:'Ghi chú / Việc'},{k:'dt',label:'DT'},{k:'dtvnd',label:'DT VNĐ'},{k:'tiengoc',label:'Tiền gốc'},{k:'nogoc',label:'Nợ gốc'},{k:'thuno',label:'Ngày thu nợ'}];
 let COL_HIDE={}; try{COL_HIDE=JSON.parse(localStorage.getItem('ccp_col_hide')||'{}');}catch(e){COL_HIDE={};}
 function applyColVis(){ const css=LIST_COLS.filter(c=>COL_HIDE[c.k]).map(c=>`#list-table .c-${c.k}{display:none}`).join(''); let st=document.getElementById('col-vis-style'); if(!st){st=document.createElement('style');st.id='col-vis-style';document.head.appendChild(st);} st.textContent=css; }
 function toggleCol(k){ COL_HIDE[k]=!COL_HIDE[k]; try{localStorage.setItem('ccp_col_hide',JSON.stringify(COL_HIDE));}catch(e){} applyColVis(); }
@@ -1668,8 +1671,8 @@ function renderList(){
   let t=`<div style="padding:10px 14px;font-size:13px;border-bottom:1px solid var(--line);background:var(--cream)">
     ✅ Đã chốt: <b style="color:var(--won)">${_nChot}</b> &nbsp;·&nbsp; ⏳ Chưa chốt: <b style="color:#b07d00">${_nChua}</b>
     &nbsp;·&nbsp; Hiển thị: <b>${rows.length}</b></div>
-    <table><tr><th>Khách</th><th class="c-qg">Quốc gia</th><th class="c-nguon">Nguồn</th><th class="c-benh">Bệnh lý</th><th class="c-sp">SP</th><th class="c-muc">Mức</th><th class="c-tt">Trạng thái</th><th class="c-follow">Follow</th>${fullView()?'<th class="c-mkt">MKT</th><th class="c-sale">Sale</th>':''}<th class="c-ghi">Ghi chú / Việc</th><th class="c-dt">DT</th><th class="c-tiengoc">Tiền gốc</th><th class="c-nogoc">Nợ gốc</th><th class="c-thuno">Ngày thu nợ</th></tr>`;
-  if(!rows.length) t+=`<tr><td colspan="15" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
+    <table><tr><th>Khách</th><th class="c-qg">Quốc gia</th><th class="c-nguon">Nguồn</th><th class="c-benh">Bệnh lý</th><th class="c-sp">SP</th><th class="c-muc">Mức</th><th class="c-tt">Trạng thái</th><th class="c-follow">Follow</th>${fullView()?'<th class="c-mkt">MKT</th><th class="c-sale">Sale</th>':''}<th class="c-ghi">Ghi chú / Việc</th><th class="c-dt">DT</th><th class="c-dtvnd">DT VNĐ</th><th class="c-tiengoc">Tiền gốc</th><th class="c-nogoc">Nợ gốc</th><th class="c-thuno">Ngày thu nợ</th></tr>`;
+  if(!rows.length) t+=`<tr><td colspan="16" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
   const noteCell=c=>{
     const esc2=s=>(''+s).replace(/</g,'&lt;');
     const parts=[];
@@ -1689,6 +1692,7 @@ function renderList(){
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
       <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
       <td class="c-dt">${tongChiTieu(c)?'$'+tongChiTieu(c).toLocaleString('en-US'):'—'}</td>
+      <td class="c-dtvnd"><input data-k="${c.id}|dt_vnd" type="number" value="${Number(c.dt_vnd)||0}" oninput="debSave('dt_vnd','${c.id}',this.value)" onchange="saveCol('${c.id}','dt_vnd',this.value)" style="padding:3px;width:95px" title="Doanh số VNĐ (sale tự điền)"></td>
       <td class="c-tiengoc">${Number(c.tien_goc)?fmtCur(c,c.tien_goc):'—'}</td>
       <td class="c-nogoc">${Number(c.no_goc)?'<b style="color:var(--over)">'+fmtCur(c,c.no_goc)+'</b>':'—'}</td>
       <td class="c-thuno">${c.ngay_thu_no?(Number(c.no_goc)&&c.ngay_thu_no<=D(0)?'<b style="color:var(--over)">'+c.ngay_thu_no+' ⚠</b>':c.ngay_thu_no):'—'}</td></tr>`;
@@ -2307,27 +2311,27 @@ function bestSaleHTML(){
 function renderTeam(){
   const STCOLS=['kcnc','ktt','tuong_tac','web','khach_chan','dang_care','hen','da_chot','chot_nguoi'];
   let html=bestSaleHTML()+renderDateFilterBar('team')+buildTeamFilterBar()+`<div class="card" style="padding:0;overflow-x:auto"><table>
-    <tr><th>Nhân viên</th><th>Vai trò</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th>${STCOLS.map(k=>`<th style="background:#eef4f0">${STATUS[k]}</th>`).join('')}</tr>`;
-  let T={total:0,dtMoi:0,dtCu:0,no:0,dtVND:0,st:{}};
+    <tr><th>Nhân viên</th><th>Vai trò</th><th>Số khách</th><th>Thị trường</th><th>Tỷ lệ tương tác</th><th>Tỷ lệ chốt</th><th>DT chốt mới</th><th>DT chăm sóc</th><th>DT tổng</th><th>Doanh số VNĐ (sale điền)</th><th>Nợ gốc</th>${STCOLS.map(k=>`<th style="background:#eef4f0">${STATUS[k]}</th>`).join('')}</tr>`;
+  let T={total:0,dtMoi:0,dtCu:0,no:0,dtVND:0,dtVNDman:0,st:{}};
   Object.entries(SALES).forEach(([id,name])=>{
     if(TEAM_F.sale && id!==TEAM_F.sale) return;
     let sd=DATA.filter(c=>c.owner===id);
     if(TEAM_F.market) sd=sd.filter(c=>countryGroup(c.quoc_gia)===TEAM_F.market);
     if(TEAM_F.mkt) sd=sd.filter(c=>c.mkt===TEAM_F.mkt);
-    const x=saleStats(sd, getRange('team')); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu; T.no+=x.no; T.dtVND+=x.dtVND;
+    const x=saleStats(sd, getRange('team')); T.total+=x.total; T.dtMoi+=x.dtMoi; T.dtCu+=x.dtCu; T.no+=x.no; T.dtVND+=x.dtVND; T.dtVNDman+=x.dtVNDman;
     const stc={}; STCOLS.forEach(k=>{ stc[k]=sd.filter(c=>c.tt===k).length; T.st[k]=(T.st[k]||0)+stc[k]; });
     html+=`<tr><td><b>${name}</b></td><td>Sale</td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td>
-      <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVND).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">$${x.no.toLocaleString('en-US')}</td>${STCOLS.map(k=>`<td style="text-align:center${(k==='da_chot'||k==='chot_nguoi')&&stc[k]?';color:var(--won);font-weight:700':''}">${stc[k]||'—'}</td>`).join('')}</tr>`;
+      <td>${x.rTuongtac}%</td><td>${x.rChot}%</td><td>$${x.dtMoi}</td><td>$${x.dtCu}</td><td><b>$${x.dtTong}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">$${x.no.toLocaleString('en-US')}</td>${STCOLS.map(k=>`<td style="text-align:center${(k==='da_chot'||k==='chot_nguoi')&&stc[k]?';color:var(--won);font-weight:700':''}">${stc[k]||'—'}</td>`).join('')}</tr>`;
   });
-  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td></td><td>${T.total}</td><td colspan="3"></td><td>$${T.dtMoi}</td><td>$${T.dtCu}</td><td>$${T.dtMoi+T.dtCu}</td><td style="color:var(--teal-dark);white-space:nowrap">${Math.round(T.dtVND).toLocaleString('vi-VN')} ₫</td><td style="color:var(--over)">$${T.no.toLocaleString('en-US')}</td>${STCOLS.map(k=>`<td style="text-align:center">${T.st[k]||0}</td>`).join('')}</tr></table></div>
+  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td></td><td>${T.total}</td><td colspan="3"></td><td>$${T.dtMoi}</td><td>$${T.dtCu}</td><td>$${T.dtMoi+T.dtCu}</td><td style="color:var(--teal-dark);white-space:nowrap">${Math.round(T.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="color:var(--over)">$${T.no.toLocaleString('en-US')}</td>${STCOLS.map(k=>`<td style="text-align:center">${T.st[k]||0}</td>`).join('')}</tr></table></div>
     <p style="color:var(--muted);font-size:12px;margin:6px 0 0">📌 9 cột trạng thái = pipeline <b>hiện tại</b> của từng sale (không lọc theo kỳ ngày). Tổng 9 cột = tổng khách sale đang giữ.</p>`;
 
   // ----- Doanh số theo Marketing (song song với Sale) -----
   html+=`<h2 class="sec" style="margin-top:24px">📣 Doanh số theo Marketing (Nguyệt / Việt / Duy)</h2>
     <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Doanh số quy theo MKT kéo khách về (Ngày lên đơn). Quy đổi VNĐ: USD×23.500 · CAD×16.000 · EUR×24.500.</p>
     <div class="card" style="padding:0;overflow-x:auto"><table>
-    <tr><th>Marketing</th><th>Số khách</th><th>Thị trường</th><th>Đã chốt</th><th>Tỷ lệ chốt</th><th>DT tổng</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th></tr>`;
-  let TM={total:0,won:0,dtTong:0,no:0,dtVND:0};
+    <tr><th>Marketing</th><th>Số khách</th><th>Thị trường</th><th>Đã chốt</th><th>Tỷ lệ chốt</th><th>DT tổng</th><th>Doanh số VNĐ (sale điền)</th><th>Nợ gốc</th></tr>`;
+  let TM={total:0,won:0,dtTong:0,no:0,dtVND:0,dtVNDman:0};
   Object.entries(MKT).forEach(([id,name])=>{
     if(TEAM_F.mkt && id!==TEAM_F.mkt) return;
     let sd=DATA.filter(c=>c.mkt===id);
@@ -2335,10 +2339,10 @@ function renderTeam(){
     if(TEAM_F.sale) sd=sd.filter(c=>c.owner===TEAM_F.sale);
     const x=saleStats(sd, getRange('team'));
     if(!x.total && x.dtTong===0) return;
-    TM.total+=x.total; TM.won+=x.won; TM.dtTong+=x.dtTong; TM.no+=x.no; TM.dtVND+=x.dtVND;
-    html+=`<tr><td><b>${name}</b></td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td><td>${x.won}</td><td>${x.rChot}%</td><td><b>$${x.dtTong}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVND).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">$${x.no.toLocaleString('en-US')}</td></tr>`;
+    TM.total+=x.total; TM.won+=x.won; TM.dtTong+=x.dtTong; TM.no+=x.no; TM.dtVND+=x.dtVND; TM.dtVNDman+=x.dtVNDman;
+    html+=`<tr><td><b>${name}</b></td><td>${x.total}</td><td>${x.markets.join(', ')||'—'}</td><td>${x.won}</td><td>${x.rChot}%</td><td><b>$${x.dtTong}</b></td><td style="font-weight:700;color:var(--teal-dark);white-space:nowrap">${Math.round(x.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="${x.no>0?'color:var(--over);font-weight:700':'color:var(--muted)'}">$${x.no.toLocaleString('en-US')}</td></tr>`;
   });
-  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>${TM.total}</td><td></td><td>${TM.won}</td><td></td><td>$${TM.dtTong}</td><td style="color:var(--teal-dark);white-space:nowrap">${Math.round(TM.dtVND).toLocaleString('vi-VN')} ₫</td><td style="color:var(--over)">$${TM.no.toLocaleString('en-US')}</td></tr></table></div>`;
+  html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>${TM.total}</td><td></td><td>${TM.won}</td><td></td><td>$${TM.dtTong}</td><td style="color:var(--teal-dark);white-space:nowrap">${Math.round(TM.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="color:var(--over)">$${TM.no.toLocaleString('en-US')}</td></tr></table></div>`;
 
   html+=`<p style="color:var(--muted);font-size:12px;margin-top:10px">Admin có thể thêm/khóa tài khoản sale ở bản thật.</p>`;
   document.getElementById('v-team').innerHTML=html;
@@ -2518,7 +2522,7 @@ async function loadAll(){
   const allc = (cs||[]).map(c=>({ ...c,
     follow:c.follow||'', ngay_tao:(c.ngay_tao||'').slice(0,10),
     ngay_capnhat:(c.ngay_capnhat||c.ngay_tao||'').slice(0,10), ngay_upsale:c.ngay_upsale||'',
-    dt:Number(c.dt)||0, benh_list:c.benh_list||'', has_wa:!!c.has_wa, khach_cu:!!c.khach_cu, da_xoa:!!c.da_xoa,
+    dt:Number(c.dt)||0, dt_vnd:Number(c.dt_vnd)||0, benh_list:c.benh_list||'', has_wa:!!c.has_wa, khach_cu:!!c.khach_cu, da_xoa:!!c.da_xoa,
     phan_hoi:c.phan_hoi||'', cham_kq:c.cham_kq||'', su_dung:c.su_dung||'' }));
   DATA = allc.filter(c=>!c.da_xoa);
   TRASH = allc.filter(c=>c.da_xoa);
