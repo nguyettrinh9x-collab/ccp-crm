@@ -1326,7 +1326,7 @@ function careTableHTML(arr){
       <td>${i+1}</td>
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="Mở bảng chăm sóc chi tiết" onclick="openCarePanel('${c.id}')">${c.ten}</b> <span title="Mở chăm sóc chi tiết" style="cursor:pointer" onclick="openCarePanel('${c.id}')">🩺</span> <span title="Sửa thông tin" style="cursor:pointer" onclick="editCustomer('${c.id}')">✏️</span><br><span style="color:var(--muted);font-size:11px">${c.phone||''} · ${SALES[c.owner]||'—'}</span></td>
       <td>${c.ngay_chot||'—'}</td>
-      <td><input data-k="${c.id}|dt_vnd" type="number" value="${Number(c.dt_vnd)||0}" oninput="debSave('dt_vnd','${c.id}',this.value)" onchange="saveCol('${c.id}','dt_vnd',this.value)" style="padding:4px;width:105px" title="Doanh số quy VNĐ (sale tự điền)"></td>
+      <td style="white-space:nowrap"><input data-k="${c.id}|dt_vnd" type="number" value="${Number(c.dt_vnd)||0}" oninput="debSave('dt_vnd','${c.id}',this.value);this.nextElementSibling.textContent=(Number(this.value)||0).toLocaleString('vi-VN')+' đ'" onchange="saveCol('${c.id}','dt_vnd',this.value)" style="padding:4px;width:110px" title="Doanh số quy VNĐ (sale tự điền)"><div style="font-size:11px;color:var(--teal-dark);font-weight:700;margin-top:2px">${(Number(c.dt_vnd)||0).toLocaleString('vi-VN')} đ</div></td>
       <td style="font-size:11px">${careCell(c.ngay_chot,7,10)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,20,25)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,28,35)}</td>
@@ -1692,7 +1692,7 @@ function renderList(){
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
       <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
       <td class="c-dt">${tongChiTieu(c)?'$'+tongChiTieu(c).toLocaleString('en-US'):'—'}</td>
-      <td class="c-dtvnd"><input data-k="${c.id}|dt_vnd" type="number" value="${Number(c.dt_vnd)||0}" oninput="debSave('dt_vnd','${c.id}',this.value)" onchange="saveCol('${c.id}','dt_vnd',this.value)" style="padding:3px;width:95px" title="Doanh số VNĐ (sale tự điền)"></td>
+      <td class="c-dtvnd" style="white-space:nowrap"><input data-k="${c.id}|dt_vnd" type="number" value="${Number(c.dt_vnd)||0}" oninput="debSave('dt_vnd','${c.id}',this.value);this.nextElementSibling.textContent=(Number(this.value)||0).toLocaleString('vi-VN')+' đ'" onchange="saveCol('${c.id}','dt_vnd',this.value)" style="padding:3px;width:100px" title="Doanh số VNĐ (sale tự điền)"><div style="font-size:11px;color:var(--teal-dark);font-weight:700;margin-top:2px">${(Number(c.dt_vnd)||0).toLocaleString('vi-VN')} đ</div></td>
       <td class="c-tiengoc">${Number(c.tien_goc)?fmtCur(c,c.tien_goc):'—'}</td>
       <td class="c-nogoc">${Number(c.no_goc)?'<b style="color:var(--over)">'+fmtCur(c,c.no_goc)+'</b>':'—'}</td>
       <td class="c-thuno">${c.ngay_thu_no?(Number(c.no_goc)&&c.ngay_thu_no<=D(0)?'<b style="color:var(--over)">'+c.ngay_thu_no+' ⚠</b>':c.ngay_thu_no):'—'}</td></tr>`;
