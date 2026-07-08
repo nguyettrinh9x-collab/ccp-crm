@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>CCP CRM — Demo</title>
 <style>
   :root{
@@ -456,6 +459,7 @@ function tongChiTieu(c){ return (Number(c.dt)||0) + ordersOf(c).reduce((s,o)=>s+
 function lanMuaBadge(c){ const n=soLanMua(c); if(n<1) return '';
   const st = n>=2 ? 'background:#fde68a;color:#92400e' : 'background:#eef2f0;color:#5a6b64';
   return ` <span title="Đã mua ${n} lần" style="${st};font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap">🛒 ${n} lần</span>`; }
+let EDIT_ORDER_ID=null, EDIT_LAN1_CID=null;
 function orderHistoryHTML(c){
   const list=ordersOf(c); const n=soLanMua(c); const total=tongChiTieu(c);
   let h=`<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:14px">
@@ -465,9 +469,34 @@ function orderHistoryHTML(c){
     h+=`<div class="card" style="padding:0;background:var(--cream);margin-bottom:12px;overflow-x:auto"><table>
       <tr><th style="padding:7px 10px">Lần</th><th>Ngày mua</th><th>Sản phẩm</th><th>Số tiền</th><th>💵 DT VNĐ</th><th></th></tr>`;
     let idx=1;
-    if(hasLan1(c)){ h+=`<tr><td style="padding:7px 10px"><b>Lần 1</b></td><td>${(c.ngay_chot||c.ngay_tao||'—')}</td><td>${c.sp||'—'}</td><td><b>$${(Number(c.dt)||0).toLocaleString('en-US')}</b></td><td><b style="color:var(--teal-dark)">${(Number(c.dt_vnd)||0).toLocaleString('vi-VN')} đ</b></td><td style="white-space:nowrap"><span style="color:var(--muted);font-size:11px">đơn đầu</span> <span style="cursor:pointer;color:var(--teal-dark)" title="Sửa đơn đầu (ngày/SP/doanh thu)" onclick="editLan1('${c.id}')">✏️</span></td></tr>`; idx=2; }
-    list.forEach(o=>{ h+=`<tr><td style="padding:7px 10px"><b>Lần ${idx}</b></td><td>${(''+(o.ngay||'')).slice(0,10)||'—'}</td><td>${o.san_pham||'—'}</td><td><b>$${(Number(o.so_tien)||0).toLocaleString('en-US')}</b></td><td><b style="color:var(--teal-dark)">${(Number(o.so_tien_vnd)||0).toLocaleString('vi-VN')} đ</b></td>
-      <td style="white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" title="Sửa lần mua" onclick="editOrder('${o.id}','${c.id}')">✏️</span> <span style="cursor:pointer;color:var(--over)" title="Xoá lần mua này" onclick="delOrder('${o.id}','${c.id}')">🗑️</span></td></tr>`; idx++; });
+    const vndInput=(idp,val)=>`<input id="${idp}" type="text" inputmode="numeric" value="${(Number(val)||0)>0?(Number(val)||0).toLocaleString('vi-VN'):''}" placeholder="0 đ" oninput="var v=this.value.replace(/\\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):''" style="padding:4px;width:110px">`;
+    if(hasLan1(c)){
+      if(String(EDIT_LAN1_CID)===String(c.id)){
+        h+=`<tr style="background:#eef6f1"><td style="padding:7px 10px"><b>Lần 1</b></td>
+          <td><input id="l1-ngay" type="date" value="${(''+(c.ngay_chot||c.ngay_tao||'')).slice(0,10)}" style="padding:4px;width:140px"></td>
+          <td><input id="l1-sp" value="${(''+(c.sp||'')).replace(/"/g,'&quot;')}" list="ago-sp-list" style="padding:4px;width:100%;min-width:180px"></td>
+          <td><input id="l1-dt" type="number" value="${Number(c.dt)||0}" style="padding:4px;width:80px"></td>
+          <td>${vndInput('l1-vnd',c.dt_vnd)}</td>
+          <td style="white-space:nowrap"><button class="btn" type="button" style="padding:3px 10px;font-size:12px" onclick="saveLan1Inline('${c.id}')">💾 Lưu</button> <span style="cursor:pointer;color:var(--muted)" onclick="cancelOrderEdit('${c.id}')">✕ Huỷ</span></td></tr>`;
+      } else {
+        h+=`<tr><td style="padding:7px 10px"><b>Lần 1</b></td><td>${(c.ngay_chot||c.ngay_tao||'—')}</td><td>${c.sp||'—'}</td><td><b>$${(Number(c.dt)||0).toLocaleString('en-US')}</b></td><td><b style="color:var(--teal-dark)">${(Number(c.dt_vnd)||0).toLocaleString('vi-VN')} đ</b></td><td style="white-space:nowrap"><span style="color:var(--muted);font-size:11px">đơn đầu</span> <span style="cursor:pointer;color:var(--teal-dark)" title="Sửa đơn đầu (ngày/SP/doanh thu/VNĐ)" onclick="editLan1('${c.id}')">✏️</span></td></tr>`;
+      }
+      idx=2;
+    }
+    list.forEach(o=>{
+      if(String(EDIT_ORDER_ID)===String(o.id)){
+        h+=`<tr style="background:#eef6f1"><td style="padding:7px 10px"><b>Lần ${idx}</b></td>
+          <td><input id="oe-ngay" type="date" value="${(''+(o.ngay||'')).slice(0,10)}" style="padding:4px;width:140px"></td>
+          <td><input id="oe-sp" value="${(''+(o.san_pham||'')).replace(/"/g,'&quot;')}" list="ago-sp-list" style="padding:4px;width:100%;min-width:180px"></td>
+          <td><input id="oe-tien" type="number" value="${Number(o.so_tien)||0}" style="padding:4px;width:80px"></td>
+          <td>${vndInput('oe-vnd',o.so_tien_vnd)}</td>
+          <td style="white-space:nowrap"><button class="btn" type="button" style="padding:3px 10px;font-size:12px" onclick="saveOrderInline('${o.id}','${c.id}')">💾 Lưu</button> <span style="cursor:pointer;color:var(--muted)" onclick="cancelOrderEdit('${c.id}')">✕ Huỷ</span></td></tr>`;
+      } else {
+        h+=`<tr><td style="padding:7px 10px"><b>Lần ${idx}</b></td><td>${(''+(o.ngay||'')).slice(0,10)||'—'}</td><td>${o.san_pham||'—'}</td><td><b>$${(Number(o.so_tien)||0).toLocaleString('en-US')}</b></td><td><b style="color:var(--teal-dark)">${(Number(o.so_tien_vnd)||0).toLocaleString('vi-VN')} đ</b></td>
+        <td style="white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" title="Sửa lần mua" onclick="editOrder('${o.id}','${c.id}')">✏️</span> <span style="cursor:pointer;color:var(--over)" title="Xoá lần mua này" onclick="delOrder('${o.id}','${c.id}')">🗑️</span></td></tr>`;
+      }
+      idx++;
+    });
     h+=`</table></div>`;
   }
   h+=`<div style="background:var(--cream);border:1px dashed var(--line);border-radius:10px;padding:12px">
@@ -534,7 +563,7 @@ async function loadCustomerLogs(id){ const el=document.getElementById('edit-logs
     h+='</table></div>'; el.innerHTML=h;
   }catch(e){ el.innerHTML='<div style="color:var(--over);font-size:12px">Lỗi tải lịch sử.</div>'; }
 }
-function closeEdit(){ const ov=document.getElementById('edit-overlay'); if(ov)ov.style.display='none'; }
+function closeEdit(){ EDIT_ORDER_ID=null; EDIT_LAN1_CID=null; const ov=document.getElementById('edit-overlay'); if(ov)ov.style.display='none'; }
 
 /* ===== PANEL CHĂM SÓC CHI TIẾT (mốc tự động + nhật ký) ===== */
 let CARE_PANEL_ID=null;
@@ -2657,27 +2686,22 @@ async function delOrder(oid, cid){
   if(error){ alert('Lỗi: '+error.message); return; }
   await loadAll(); editCustomer(cid); renderAll();
 }
-async function editOrder(oid, cid){
-  const o=(ORDERS[String(cid)]||[]).find(x=>String(x.id)===String(oid)); if(!o){ alert('Không tìm thấy lần mua.'); return; }
-  const ng=prompt('Ngày mua (YYYY-MM-DD):', (''+(o.ngay||'')).slice(0,10)); if(ng===null) return;
-  const sp=prompt('Sản phẩm:', o.san_pham||''); if(sp===null) return;
-  const ti=prompt('Số tiền ($):', o.so_tien||0); if(ti===null) return;
-  const tv=prompt('Doanh thu VNĐ (sale điền):', o.so_tien_vnd||0); if(tv===null) return;
-  const upd={ ngay:(ng||'').slice(0,10)||null, san_pham:(sp||'').trim(), so_tien:Number(ti)||0, so_tien_vnd:Number((''+tv).replace(/\D/g,''))||0 };
+function editOrder(oid, cid){ EDIT_ORDER_ID=String(oid); EDIT_LAN1_CID=null; editCustomer(cid); }
+function editLan1(cid){ EDIT_LAN1_CID=String(cid); EDIT_ORDER_ID=null; editCustomer(cid); }
+function cancelOrderEdit(cid){ EDIT_ORDER_ID=null; EDIT_LAN1_CID=null; editCustomer(cid); }
+async function saveOrderInline(oid, cid){
+  const g=x=>{const e=document.getElementById(x);return e?e.value:'';};
+  const upd={ ngay:(g('oe-ngay')||'').slice(0,10)||null, san_pham:(g('oe-sp')||'').trim(), so_tien:Number(g('oe-tien'))||0, so_tien_vnd:Number((g('oe-vnd')||'').replace(/\D/g,''))||0 };
   const { error }=await sb.from('orders').update(upd).eq('id', oid);
   if(error){ alert('Lỗi sửa: '+error.message); return; }
-  await loadAll(); editCustomer(cid); renderAll();
+  EDIT_ORDER_ID=null; await loadAll(); editCustomer(cid); renderAll();
 }
-async function editLan1(cid){
-  const c=DATA.find(x=>String(x.id)===String(cid)); if(!c){ return; }
-  const ng=prompt('Ngày lên đơn (YYYY-MM-DD):', c.ngay_chot||''); if(ng===null) return;
-  const sp=prompt('Sản phẩm (đơn đầu):', c.sp||''); if(sp===null) return;
-  const ti=prompt('Doanh thu đơn đầu ($):', c.dt||0); if(ti===null) return;
-  const tv=prompt('Doanh số VNĐ (sale điền):', c.dt_vnd||0); if(tv===null) return;
-  const upd={ ngay_chot:(ng||'').slice(0,10)||null, sp:(sp||'').trim()||'—', dt:Number(ti)||0, dt_vnd:Number((''+tv).replace(/\D/g,''))||0, ngay_capnhat:D(0) };
+async function saveLan1Inline(cid){
+  const g=x=>{const e=document.getElementById(x);return e?e.value:'';};
+  const upd={ ngay_chot:(g('l1-ngay')||'').slice(0,10)||null, sp:(g('l1-sp')||'').trim()||'—', dt:Number(g('l1-dt'))||0, dt_vnd:Number((g('l1-vnd')||'').replace(/\D/g,''))||0, ngay_capnhat:D(0) };
   const { error }=await sb.from('customers').update(upd).eq('id', cid);
   if(error){ alert('Lỗi sửa: '+error.message); return; }
-  await loadAll(); editCustomer(cid); renderAll();
+  EDIT_LAN1_CID=null; await loadAll(); editCustomer(cid); renderAll();
 }
 async function afterLogin(){
   if(!await loadAll()) return;
