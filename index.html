@@ -213,6 +213,10 @@ const AGO_SP = ['AGO Mom','AGO Eva','AGO Dad','AGO Tumor','AGO Women','AGO Mama'
 function spDatalist(){ return '<datalist id="ago-sp-list">'+AGO_SP.map(s=>`<option value="${s}">`).join('')+'</datalist>'; }
 function spChips(inputId){ return '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">'+AGO_SP.map(s=>`<button type="button" onclick="addSP('${inputId}','${s.replace(/'/g,"\\'")}')" style="font-size:11px;padding:3px 9px;border:1px solid var(--line);border-radius:20px;background:#fff;cursor:pointer">${s}</button>`).join('')+'</div>'; }
 function addSP(inputId,name){ const el=document.getElementById(inputId); if(!el) return; const v=el.value.trim(); el.value = v ? (v.replace(/\s*\+?\s*$/,'')+' + 1 '+name) : ('1 '+name); el.focus(); }
+/* Bệnh lý chuẩn — chọn nhanh để báo cáo chính xác (vẫn gõ tay thêm được) */
+const BENH_STD=['U xơ tử cung','PCOS / Đa nang','Tắc vòi trứng','AMH thấp / Trứng yếu','Nội tiết / Kinh nguyệt','Lạc nội mạc TC','U nang','Sảy / Lưu thai','Yếu tố nam','Tiền mãn kinh','IVF/IUI thất bại'];
+function benhChips(inputId){ return '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">'+BENH_STD.map(s=>`<button type="button" onclick="addBenh('${inputId}','${s.replace(/'/g,"\\'")}')" style="font-size:11px;padding:3px 9px;border:1px solid #cfe0d8;border-radius:20px;background:#f2f8f5;color:var(--teal-dark);cursor:pointer">+ ${s}</button>`).join('')+'</div>'; }
+function addBenh(inputId,name){ const el=document.getElementById(inputId); if(!el)return; const cur=el.value.trim(); const parts=cur?cur.split(/\s*,\s*/):[]; if(parts.some(p=>p.toLowerCase()===name.toLowerCase())){el.focus();return;} parts.push(name); el.value=parts.join(', '); el.focus(); }
 function addSpPick(){ const p=document.getElementById('f-sppick'); const q=document.getElementById('f-spqty'); const el=document.getElementById('f-sp'); if(!p||!el)return; const name=p.value; const qty=q&&q.value?q.value:1; const v=el.value.trim(); el.value = v ? (v.replace(/\s*\+?\s*$/,'')+' + '+qty+' '+name) : (qty+' '+name); }
 // Tất cả các mục có thể phân quyền
 const ALL_MODULES = [
@@ -495,7 +499,7 @@ function editCustomer(id){
       <div><label>Mức độ khách</label><select id="e-muc"><option value="nong" ${c.muc==='nong'?'selected':''}>🔥 Nóng</option><option value="am" ${c.muc==='am'?'selected':''}>☀️ Ấm</option><option value="lanh" ${c.muc==='lanh'?'selected':''}>❄️ Lạnh</option></select></div>
       <div><label>Trạng thái</label><select id="e-tt" onchange="if(this.value==='kcnc'||this.value==='khach_chan'){var f=document.getElementById('e-follow');if(f)f.value='';}">${opt(STATUS,c.tt)}</select></div>
       <div><label>Ngày follow tiếp theo</label><input id="e-follow" type="date" value="${c.follow||''}"></div>
-      <div class="full"><label>Bệnh lý / nhu cầu</label><input id="e-benh" value="${esc(c.benh_list||BENH[c.benh]||'')}" placeholder="Sale tự ghi: VD PCOS, tắc vòi trứng..."></div>
+      <div class="full"><label>Bệnh lý / nhu cầu <span style="font-weight:400;color:var(--muted)">(bấm chọn nhanh + gõ thêm)</span></label><input id="e-benh" value="${esc(c.benh_list||BENH[c.benh]||'')}" placeholder="Bấm nút bên dưới hoặc gõ...">${benhChips('e-benh')}</div>
       <div><label>Doanh thu (USD)</label><input id="e-dt" type="number" value="${Number(c.dt)||0}"></div>
       <div><label>💵 Doanh số (VNĐ) — sale tự điền</label><input id="e-dtvnd" type="number" value="${Number(c.dt_vnd)||0}" placeholder="Nhập doanh số quy VNĐ"></div>
       <div><label>💰 Tiền gốc (${curSym(c)})</label><input id="e-tiengoc" type="number" value="${Number(c.tien_goc)||0}"></div>
@@ -1474,9 +1478,9 @@ function renderAdd(){
           ❄️ <b>Lạnh</b>: mới biết tới, chưa rõ nhu cầu, ít tương tác — nuôi dưỡng dần.
         </div></details></div>
       <div class="full"><label>Địa chỉ khách hàng (nếu có)</label><input id="f-diachi" placeholder="Số nhà, đường, thành phố, quốc gia..."></div>
-      <div class="full"><label>Bệnh lý / nhu cầu</label>
-        <input id="f-benh" placeholder="Sale tự ghi: VD PCOS, tắc vòi trứng, nội tiết kém, tinh trùng yếu...">
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">Gõ tự do — nhiều bệnh cách nhau bằng dấu phẩy.</div></div>
+      <div class="full"><label>Bệnh lý / nhu cầu <span style="font-weight:400;color:var(--muted)">(bấm chọn nhanh + gõ thêm)</span></label>
+        <input id="f-benh" placeholder="Bấm nút bên dưới hoặc gõ...">${benhChips('f-benh')}
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Bấm nút để chọn nhanh · nhiều bệnh cách nhau bằng dấu phẩy.</div></div>
       <div class="full"><label>Sản phẩm quan tâm</label>
         <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
           <select id="f-sppick" style="flex:1;min-width:180px;padding:8px">${[...AGO_SP,'Combo khác'].map(s=>`<option>${s}</option>`).join('')}</select>
@@ -2771,8 +2775,8 @@ async function saveCustomer(e){
   }
   const { data:ins, error } = await sb.from('customers').insert(rec).select('id').single();
   if(error){ alert('Lưu lỗi: '+error.message); return; }
-  /* Tự tạo việc chăm sóc cho Sale phụ trách khách mới để tối ưu thời gian */
-  if(ins && ins.id){
+  /* Tự tạo việc chăm sóc — CHỈ khi khách có SĐT + đã gán sale (tránh đẻ việc cho lead rác) */
+  if(ins && ins.id && (rec.phone&&(''+rec.phone).trim()) && rec.owner){
     await sb.from('tasks').insert({ owner:rec.owner, customer_id:ins.id, loai:'cham_chua',
       noi_dung:'Chăm sóc khách mới: '+rec.ten, han:(rec.follow||D(1)), xong:false });
   }
@@ -2813,6 +2817,7 @@ async function deleteCustomer(id){
   if(!confirm('Đưa khách "'+c.ten+'" vào thùng rác? Admin có thể khôi phục lại.')) return;
   const { error }=await sb.from('customers').update({da_xoa:true}).eq('id', id);
   if(error){ alert('Lỗi: '+error.message); return; }
+  try{ await sb.from('tasks').delete().eq('customer_id',id).eq('xong',false); }catch(e){} /* dọn việc chưa xong của khách bị xoá */
   alert('🗑️ Đã chuyển "'+c.ten+'" vào thùng rác'); await loadAll(); renderAll();
 }
 async function restoreCustomer(id){
