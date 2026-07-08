@@ -1595,10 +1595,12 @@ function renderRevenue(allRows){ const el=document.getElementById('list-revenue'
   const rows={length:custSet.size};
   const noRows=allRows.filter(c=>Number(c.no_goc)>0);
   const totNo=noRows.reduce((a,c)=>a+(Number(c.no_goc)||0),0);
+  const totVnd=allRows.filter(c=>isChot(c.tt) && inR(c.ngay_chot||c.ngay_tao)).reduce((a,c)=>a+(Number(c.dt_vnd)||0),0);
+  const nVnd=allRows.filter(c=>isChot(c.tt) && inR(c.ngay_chot||c.ngay_tao) && Number(c.dt_vnd)>0).length;
   const cards=[['US','🇺🇸 US'],['Canada','🇨🇦 Canada'],['Euro','🇪🇺 Euro'],['Khác','🌍 Khác']]
     .filter(([k])=>rev[k].n>0||k!=='Khác')
     .map(([k,lbl])=>`<div class="rev-card"><div class="rl">${lbl}</div><div class="rv">$${rev[k].s.toLocaleString('en-US')}</div><div class="rn">${rev[k].n} khách</div></div>`).join('');
-  el.innerHTML=`<div class="rev-grid">${cards}<div class="rev-card" style="background:var(--cream)"><div class="rl">💰 Tổng đã chốt</div><div class="rv">$${tot.toLocaleString('en-US')}</div><div class="rn">${rows.length} khách chốt</div></div><div class="rev-card" style="background:#fdeeee"><div class="rl">💳 Số nợ (nợ gốc)</div><div class="rv" style="color:var(--over)">$${totNo.toLocaleString('en-US')}</div><div class="rn">${noRows.length} khách còn nợ</div></div></div>`;
+  el.innerHTML=`<div class="rev-grid">${cards}<div class="rev-card" style="background:var(--cream)"><div class="rl">💰 Tổng đã chốt (USD)</div><div class="rv">$${tot.toLocaleString('en-US')}</div><div class="rn">${rows.length} khách chốt</div></div><div class="rev-card" style="background:#eef6f1"><div class="rl">💵 Doanh số VNĐ (sale điền)</div><div class="rv" style="color:var(--teal-dark)">${totVnd.toLocaleString('vi-VN')} đ</div><div class="rn">${nVnd} khách có nhập</div></div><div class="rev-card" style="background:#fdeeee"><div class="rl">💳 Số nợ (nợ gốc)</div><div class="rv" style="color:var(--over)">$${totNo.toLocaleString('en-US')}</div><div class="rn">${noRows.length} khách còn nợ</div></div></div>`;
 }
 function renderList(){
   const opt=(o,all)=>`<option value="">${all}</option>`+Object.entries(o).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
