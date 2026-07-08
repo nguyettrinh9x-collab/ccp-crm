@@ -504,7 +504,18 @@ function editCustomer(id){
       <div class="full"><label>Ghi chú tư vấn</label><textarea id="e-ghi" rows="3">${(''+(c.ghi||'')).replace(/</g,'&lt;')}</textarea></div>
       <div class="full" style="display:flex;gap:8px"><button class="btn" type="submit">💾 Lưu thay đổi</button>
         <button type="button" class="btn ghost" onclick="closeEdit()">Hủy</button></div>
-    </div></form>${orderHistoryHTML(c)}</div>`;
+    </div></form>${orderHistoryHTML(c)}<div id="edit-logs" style="margin-top:16px"></div></div>`;
+  loadCustomerLogs(c.id);
+}
+async function loadCustomerLogs(id){ const el=document.getElementById('edit-logs'); if(!el)return; el.innerHTML='<div style="color:var(--muted);font-size:12px">🕓 Đang tải lịch sử chỉnh sửa…</div>';
+  if(!window.sb){ el.innerHTML=''; return; }
+  try{ const {data}=await sb.from('customer_logs').select('*').eq('customer_id',id).order('at',{ascending:false}).limit(80);
+    if(!data||!data.length){ el.innerHTML='<h2 class="sec" style="margin-bottom:6px">🕓 Lịch sử chỉnh sửa</h2><div class="card empty" style="font-size:13px">Chưa có chỉnh sửa nào được ghi.</div>'; return; }
+    let h='<h2 class="sec" style="margin-bottom:6px">🕓 Lịch sử chỉnh sửa ('+data.length+')</h2><div class="card" style="padding:0;overflow-x:auto;max-height:300px;overflow-y:auto"><table><tr><th>Thời gian</th><th>Người sửa</th><th>Mục</th><th>Từ</th><th>→ Thành</th></tr>';
+    data.forEach(r=>{ let ts=r.at; try{ ts=new Date(r.at).toLocaleString('vi-VN'); }catch(e){}
+      h+=`<tr><td style="white-space:nowrap;font-size:12px;color:var(--muted)">${escapeHtml(ts)}</td><td style="white-space:nowrap"><b>${escapeHtml(r.who||'—')}</b></td><td style="white-space:nowrap">${escapeHtml(LOG_FIELDS[r.field]||r.field)}</td><td style="color:var(--muted);max-width:220px">${escapeHtml(logDisp(r.field,r.old_val))}</td><td style="font-weight:600;color:var(--teal-dark);max-width:220px">${escapeHtml(logDisp(r.field,r.new_val))}</td></tr>`; });
+    h+='</table></div>'; el.innerHTML=h;
+  }catch(e){ el.innerHTML='<div style="color:var(--over);font-size:12px">Lỗi tải lịch sử.</div>'; }
 }
 function closeEdit(){ const ov=document.getElementById('edit-overlay'); if(ov)ov.style.display='none'; }
 
@@ -1375,9 +1386,16 @@ let CARE_PAGE=1;
 function setCarePage(n){ CARE_PAGE=n; renderCare(); const el=document.getElementById('care-table'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
 function toast(msg,ok){ let t=document.getElementById('cpp-toast'); if(!t){t=document.createElement('div'); t.id='cpp-toast'; t.style.cssText='position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:10px;font-size:14px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:99999;opacity:0;transition:opacity .25s;color:#fff'; document.body.appendChild(t);} t.style.background=ok===false?'#e23d3d':'#2f9e6e'; t.textContent=msg; t.style.opacity='1'; clearTimeout(window.__toastT); window.__toastT=setTimeout(()=>{t.style.opacity='0';},1600); }
 function syncTwins(id,col,val){ const s=(val==null?'':String(val)); document.querySelectorAll('[data-k="'+id+'|'+col+'"]').forEach(el=>{ if(el!==document.activeElement && el.value!==s) el.value=s; }); }
-async function saveCol(id,col,val){ const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=val; syncTwins(id,col,val); const patch={[col]:val}; if(col==='tt'&&(val==='kcnc'||val==='khach_chan')){ patch.follow=null; if(c)c.follow=''; } if(!window.sb){toast('✓ Đã lưu');return;} try{ const {error}=await sb.from('customers').update(patch).eq('id',id); if(error){toast('⚠ Lỗi lưu, thử lại',false);} else {toast(patch.follow===null?'✓ Đã lưu (bỏ follow vì KCNC/Khách chặn)':'✓ Đã lưu');} }catch(e){toast('⚠ Lỗi lưu, thử lại',false);} }
+/* ===== LỊCH SỬ CHỈNH SỬA ===== */
+const LOG_FIELDS={tt:'Trạng thái',benh_list:'Bệnh lý / nhu cầu',ghi:'Ghi chú',follow:'Ngày follow',dt:'Doanh thu (USD)',dt_vnd:'Doanh số (VNĐ)',no_goc:'Nợ gốc',sp:'Sản phẩm',muc:'Mức độ',owner:'Sale',mkt:'MKT',phone:'SĐT',quoc_gia:'Quốc gia',cham_kq:'Kết quả chăm',su_dung:'Tình trạng dùng SP',phan_hoi:'Phản hồi',ngay_chot:'Ngày lên đơn',tien_goc:'Tiền gốc',ngay_thu_no:'Ngày thu nợ',email:'Email',dia_chi:'Địa chỉ'};
+function logDisp(field,v){ if(v==null||v==='')return '(trống)'; if(field==='tt')return STATUS[v]||v; if(field==='owner')return SALES[v]||MKT[v]||v; if(field==='mkt')return MKT[v]||v; if(field==='muc')return ({nong:'🔥 Nóng',am:'☀️ Ấm',lanh:'❄️ Lạnh'})[v]||v; return String(v); }
+async function logChange(cid,field,oldv,newv){ if(!window.sb||!cid)return; try{ await sb.from('customer_logs').insert({customer_id:cid,who:(ME&&ME.name)||(ME&&ME.uname)||'',field,old_val:String(oldv==null?'':oldv).slice(0,400),new_val:String(newv==null?'':newv).slice(0,400)}); }catch(e){} }
+const __oldVals={};
+async function saveCol(id,col,val){ const c=DATA.find(x=>String(x.id)===String(id)); const k=col+'|'+id; const _old=(k in __oldVals)?__oldVals[k]:(c?c[col]:undefined); delete __oldVals[k];
+  if((col in LOG_FIELDS) && String(_old==null?'':_old)!==String(val==null?'':val)) logChange(id,col,_old,val);
+  if(c)c[col]=val; syncTwins(id,col,val); const patch={[col]:val}; if(col==='tt'&&(val==='kcnc'||val==='khach_chan')){ patch.follow=null; if(c)c.follow=''; } if(!window.sb){toast('✓ Đã lưu');return;} try{ const {error}=await sb.from('customers').update(patch).eq('id',id); if(error){toast('⚠ Lỗi lưu, thử lại',false);} else {toast(patch.follow===null?'✓ Đã lưu (bỏ follow vì KCNC/Khách chặn)':'✓ Đã lưu');} }catch(e){toast('⚠ Lỗi lưu, thử lại',false);} }
 let __saveTimers={};
-function debSave(col,id,v){ const k=col+'|'+id; clearTimeout(__saveTimers[k]); if(v!==undefined){const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=v;} __saveTimers[k]=setTimeout(()=>{ saveCol(id,col,v); },700); }
+function debSave(col,id,v){ const k=col+'|'+id; if(!(k in __oldVals)){const c0=DATA.find(x=>String(x.id)===String(id)); if(c0)__oldVals[k]=c0[col];} clearTimeout(__saveTimers[k]); if(v!==undefined){const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=v;} __saveTimers[k]=setTimeout(()=>{ saveCol(id,col,v); },700); }
 async function savePhanHoi(id,v){ await saveCol(id,'phan_hoi',v); }
 async function saveChamKq(id,v){ await saveCol(id,'cham_kq',v); }
 async function saveSuDung(id,v){ await saveCol(id,'su_dung',v); }
@@ -2778,6 +2796,7 @@ async function saveEdit(e,id){ e.preventDefault();
   const c=DATA.find(x=>String(x.id)===String(id));
   if(upd.tt==='da_chot') upd.loai_don=(c&&c.khach_cu)?'upsell':'moi';
   if(upd.tt==='kcnc'||upd.tt==='khach_chan') upd.follow=null; /* KCNC/Khách chặn: bỏ follow, khỏi nhắc */
+  if(c){ Object.keys(LOG_FIELDS).forEach(f=>{ if(f in upd){ const ov=c[f], nv=upd[f]; if(String(ov==null?'':ov)!==String(nv==null?'':nv)) logChange(id,f,ov,nv); } }); }
   const { error }=await sb.from('customers').update(upd).eq('id', id);
   if(error){ alert('Lưu lỗi: '+error.message); return; }
   closeEdit(); alert('✅ Đã lưu thay đổi'); await loadAll(); renderAll();
