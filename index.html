@@ -416,15 +416,25 @@ function deleteCustomer(id){
   alert('🗑️ Đã chuyển "'+c.ten+'" vào thùng rác'); renderAll();
 }
 /* ====== THÙNG RÁC (chỉ admin) ====== */
+let TRASH_SEL=new Set();
+function toggleTrashSel(id,on){ if(on)TRASH_SEL.add(String(id)); else TRASH_SEL.delete(String(id)); const b=document.getElementById('trash-bulk'); if(b) b.textContent='♻️ Khôi phục đã chọn ('+TRASH_SEL.size+')'; }
+function selectAllTrash(on){ if(on) TRASH.forEach(c=>TRASH_SEL.add(String(c.id))); else TRASH_SEL.clear(); renderTrash(); }
+async function bulkRestoreTrash(all){ if(!window.sb) return; let ids= all? TRASH.map(c=>String(c.id)) : [...TRASH_SEL]; if(!ids.length){ alert('Chưa chọn khách nào để khôi phục.'); return; } if(!confirm('Khôi phục '+ids.length+' khách?')) return; for(let i=0;i<ids.length;i+=200){ const chunk=ids.slice(i,i+200); const {error}=await sb.from('customers').update({da_xoa:false, ngay_capnhat:D(0)}).in('id',chunk); if(error){ alert('Lỗi: '+error.message); return; } } TRASH_SEL.clear(); await loadAll(); renderAll(); toast('✓ Đã khôi phục '+ids.length+' khách'); }
 function renderTrash(){
   const el=document.getElementById('v-trash'); if(!el)return;
   if(!(ME.role==='owner'||ME.role==='admin')){ el.innerHTML='<div class="card empty">Chỉ Admin xem được thùng rác.</div>'; return; }
   let html=`<p style="color:var(--muted);font-size:13px;margin-bottom:12px">Khách bị xoá nằm ở đây. Admin có thể <b>♻️ Khôi phục</b> để lấy lại, hoặc <b>xoá vĩnh viễn</b>.</p>`;
   if(!TRASH.length){ el.innerHTML=html+'<div class="card empty">Thùng rác trống 🎉</div>'; return; }
+  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    <button class="btn ghost" type="button" onclick="selectAllTrash(true)" style="padding:6px 12px;font-size:13px">☑ Chọn tất cả (${TRASH.length})</button>
+    ${TRASH_SEL.size?`<button class="btn ghost" type="button" onclick="selectAllTrash(false)" style="padding:6px 12px;font-size:13px">Bỏ chọn</button>`:''}
+    <button class="btn" id="trash-bulk" type="button" onclick="bulkRestoreTrash(false)" style="padding:6px 14px;font-size:13px">♻️ Khôi phục đã chọn (${TRASH_SEL.size})</button>
+    <button class="btn" type="button" onclick="bulkRestoreTrash(true)" style="padding:6px 14px;font-size:13px;background:var(--won);border-color:var(--won)">♻️ Khôi phục TẤT CẢ (${TRASH.length})</button>
+  </div>`;
   html+=`<div class="card" style="padding:0;overflow-x:auto"><table>
-    <tr><th>Khách</th><th>SĐT</th><th>Quốc gia</th><th>Bệnh lý</th><th>Trạng thái</th><th>MKT</th><th>Sale</th><th>Thao tác</th></tr>`;
+    <tr><th>Chọn</th><th>Khách</th><th>SĐT</th><th>Quốc gia</th><th>Bệnh lý</th><th>Trạng thái</th><th>MKT</th><th>Sale</th><th>Thao tác</th></tr>`;
   TRASH.forEach(c=>{
-    html+=`<tr><td><b>${c.ten}</b></td><td>${c.phone||'—'}</td><td>${c.quoc_gia||'—'}</td>
+    html+=`<tr><td style="text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" ${TRASH_SEL.has(String(c.id))?'checked':''} onchange="toggleTrashSel('${c.id}',this.checked)"></td><td><b>${c.ten}</b></td><td>${c.phone||'—'}</td><td>${c.quoc_gia||'—'}</td>
       <td>${benhLabel(c)}</td><td>${STATUS[c.tt]||c.tt}</td><td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>
       <td style="white-space:nowrap"><button class="btn" style="padding:4px 10px;font-size:12px" onclick="restoreCustomer('${c.id}')">♻️ Khôi phục</button>
       <button class="btn ghost" style="padding:4px 10px;font-size:12px;color:var(--over)" onclick="purgeCustomer('${c.id}')">Xoá vĩnh viễn</button></td></tr>`;
