@@ -456,6 +456,11 @@ function ordersOf(c){ return (ORDERS[String(c.id)]||[]).slice().sort((a,b)=>(''+
 function hasLan1(c){ return isChot(c.tt) || Number(c.dt)>0; }
 function soLanMua(c){ return (hasLan1(c)?1:0) + ordersOf(c).length; }
 function tongChiTieu(c){ return (Number(c.dt)||0) + ordersOf(c).reduce((s,o)=>s+(Number(o.so_tien)||0),0); }
+function tongVnd(c){ return (Number(c.dt_vnd)||0) + ordersOf(c).reduce((s,o)=>s+(Number(o.so_tien_vnd)||0),0); }
+function dtVndCell(c,w){ w=w||120; var orders=ordersOf(c); var total=tongVnd(c);
+  if(orders.length>0){ return `<span style="font-weight:700;color:var(--teal-dark)" title="Tổng VNĐ tất cả đơn — sửa từng đơn trong Lịch sử mua hàng">${total>0?total.toLocaleString('vi-VN')+' đ':'0 đ'}</span> <span style="cursor:pointer" title="Sửa từng đơn" onclick="editCustomer('${c.id}')">✏️</span>`; }
+  var val=(Number(c.dt_vnd)||0)>0?(Number(c.dt_vnd)||0).toLocaleString('vi-VN'):'';
+  return `<input data-k="${c.id}|dt_vnd" type="text" inputmode="numeric" value="${val}" placeholder="0 đ" oninput="var v=this.value.replace(/[^0-9]/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):'';debSave('dt_vnd','${c.id}',v?Number(v):0)" onchange="saveCol('${c.id}','dt_vnd',Number(this.value.replace(/[^0-9]/g,''))||0)" style="padding:4px;width:${w}px;font-weight:700;color:var(--teal-dark)" title="Doanh số quy VNĐ (sale tự điền)">`; }
 function lanMuaBadge(c){ const n=soLanMua(c); if(n<1) return '';
   const st = n>=2 ? 'background:#fde68a;color:#92400e' : 'background:#eef2f0;color:#5a6b64';
   return ` <span title="Đã mua ${n} lần" style="${st};font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap">🛒 ${n} lần</span>`; }
@@ -682,7 +687,7 @@ function pagerHTML(total,page,size,fnName){
 function exportList(){
   const rows=LIST_ROWS||[];
   if(!rows.length){ alert('Không có khách trong danh sách để tải.'); return; }
-  const cols=[['Tên khách','ten'],['SĐT','phone'],['Email','email'],['Quốc gia','quoc_gia'],['Nguồn',c=>NGUON[c.nguon]||c.nguon||''],['Bệnh lý',c=>c.benh_list||BENH[c.benh]||''],['Sản phẩm','sp'],['Mức',c=>({nong:'Nóng',am:'Ấm',lanh:'Lạnh'}[c.muc]||c.muc||'')],['Trạng thái',c=>STATUS[c.tt]||c.tt||''],['Ngày lên đơn','ngay_chot'],['Ngày follow','follow'],['MKT',c=>MKT[c.mkt]||''],['Sale',c=>SALES[c.owner]||''],['Địa chỉ','dia_chi'],['DT (USD)',c=>tongChiTieu(c)],['Ghi chú','ghi']];
+  const cols=[['Tên khách','ten'],['SĐT','phone'],['Email','email'],['Quốc gia','quoc_gia'],['Nguồn',c=>NGUON[c.nguon]||c.nguon||''],['Bệnh lý',c=>c.benh_list||BENH[c.benh]||''],['Sản phẩm','sp'],['Mức',c=>({nong:'Nóng',am:'Ấm',lanh:'Lạnh'}[c.muc]||c.muc||'')],['Trạng thái',c=>STATUS[c.tt]||c.tt||''],['Ngày lên đơn','ngay_chot'],['Ngày follow','follow'],['MKT',c=>MKT[c.mkt]||''],['Sale',c=>SALES[c.owner]||''],['Địa chỉ','dia_chi'],['DT (USD)',c=>tongChiTieu(c)],['DT VNĐ (tổng)',c=>tongVnd(c)],['Ghi chú','ghi']];
   const esc2=v=>'<td>'+String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</td>';
   let html='<table border="1"><tr>'+cols.map(c=>'<th>'+c[0]+'</th>').join('')+'</tr>';
   rows.forEach(c=>{ html+='<tr>'+cols.map(col=>{const f=col[1]; return esc2(typeof f==='function'?f(c):c[f]);}).join('')+'</tr>'; });
@@ -1009,7 +1014,7 @@ function saleStats(sd, rg){
       if(amt>0 && inR(c.ngay_chot||c.ngay_tao)){ if(c.loai_don==='upsell') dtCu+=amt; else dtMoi+=amt; dtVND+=amt*r; }
       if(inR(c.ngay_chot||c.ngay_tao)) dtVNDman += Number(c.dt_vnd)||0; // doanh số VNĐ sale tự điền
     }
-    ordersOf(c).forEach(o=>{ const amt=Number(o.so_tien)||0; if(amt>0 && inR(o.ngay)){ dtCu+=amt; dtVND+=amt*r; } });
+    ordersOf(c).forEach(o=>{ const amt=Number(o.so_tien)||0; if(amt>0 && inR(o.ngay)){ dtCu+=amt; dtVND+=amt*r; } if(inR(o.ngay)) dtVNDman += Number(o.so_tien_vnd)||0; });
   });
   return {total, won:won.length, dtMoi, dtCu, dtTong:dtMoi+dtCu, no, dtVND, dtVNDman, markets,
     rTuongtac: total?Math.round(interacted/total*100):0,
@@ -1389,7 +1394,7 @@ function careTableHTML(arr){
       <td style="font-size:12px;font-weight:600">${SALES[c.owner]||'—'}</td>
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="Mở bảng chăm sóc chi tiết" onclick="openCarePanel('${c.id}')">${c.ten}</b> <span title="Mở chăm sóc chi tiết" style="cursor:pointer" onclick="openCarePanel('${c.id}')">🩺</span> <span title="Sửa thông tin" style="cursor:pointer" onclick="editCustomer('${c.id}')">✏️</span><br><span style="color:var(--muted);font-size:11px">${c.phone||''} · ${SALES[c.owner]||'—'}</span></td>
       <td>${c.ngay_chot||'—'}</td>
-      <td style="white-space:nowrap"><input data-k="${c.id}|dt_vnd" type="text" inputmode="numeric" value="${(Number(c.dt_vnd)||0)>0?(Number(c.dt_vnd)||0).toLocaleString('vi-VN'):''}" placeholder="0 đ" oninput="var v=this.value.replace(/\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):'';debSave('dt_vnd','${c.id}',v?Number(v):0)" onchange="saveCol('${c.id}','dt_vnd',Number(this.value.replace(/\D/g,''))||0)" style="padding:4px;width:120px;font-weight:700;color:var(--teal-dark)" title="Doanh số quy VNĐ (sale tự điền)"></td>
+      <td style="white-space:nowrap">${dtVndCell(c,120)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,7,10)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,20,25)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,28,35)}</td>
@@ -1673,8 +1678,15 @@ function renderRevenue(allRows){ const el=document.getElementById('list-revenue'
   const rows={length:custSet.size};
   const noRows=allRows.filter(c=>Number(c.no_goc)>0);
   const totNo=noRows.reduce((a,c)=>a+(Number(c.no_goc)||0),0);
-  const totVnd=allRows.filter(c=>isChot(c.tt) && inR(c.ngay_chot||c.ngay_tao)).reduce((a,c)=>a+(Number(c.dt_vnd)||0),0);
-  const nVnd=allRows.filter(c=>isChot(c.tt) && inR(c.ngay_chot||c.ngay_tao) && Number(c.dt_vnd)>0).length;
+  let totVnd=0; const vndSet=new Set();
+  allRows.filter(c=>isChot(c.tt)).forEach(c=>{ let v=0;
+    if(field==='lendon'){ // theo kỳ: chỉ cộng đơn có ngày trong kỳ (đơn đầu theo ngày chốt, đơn sau theo ngày đơn)
+      if(inR(c.ngay_chot||c.ngay_tao)) v+=Number(c.dt_vnd)||0;
+      ordersOf(c).forEach(o=>{ if(inR(o.ngay)) v+=Number(o.so_tien_vnd)||0; });
+    } else { v=tongVnd(c); } // tổng: cả đời khách
+    if(v>0){ totVnd+=v; vndSet.add(c.id); }
+  });
+  const nVnd=vndSet.size;
   const cards=[['US','🇺🇸 US'],['Canada','🇨🇦 Canada'],['Euro','🇪🇺 Euro'],['Khác','🌍 Khác']]
     .filter(([k])=>rev[k].n>0||k!=='Khác')
     .map(([k,lbl])=>`<div class="rev-card"><div class="rl">${lbl}</div><div class="rv">$${rev[k].s.toLocaleString('en-US')}</div><div class="rn">${rev[k].n} khách</div></div>`).join('');
@@ -1772,7 +1784,7 @@ function renderList(){
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
       <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
       <td class="c-dt">${tongChiTieu(c)?'$'+tongChiTieu(c).toLocaleString('en-US'):'—'}</td>
-      <td class="c-dtvnd" style="white-space:nowrap"><input data-k="${c.id}|dt_vnd" type="text" inputmode="numeric" value="${(Number(c.dt_vnd)||0)>0?(Number(c.dt_vnd)||0).toLocaleString('vi-VN'):''}" placeholder="0 đ" oninput="var v=this.value.replace(/\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):'';debSave('dt_vnd','${c.id}',v?Number(v):0)" onchange="saveCol('${c.id}','dt_vnd',Number(this.value.replace(/\D/g,''))||0)" style="padding:3px;width:118px;font-weight:700;color:var(--teal-dark)" title="Doanh số VNĐ (sale tự điền)"></td>
+      <td class="c-dtvnd" style="white-space:nowrap">${dtVndCell(c,118)}</td>
       <td class="c-tiengoc">${Number(c.tien_goc)?fmtCur(c,c.tien_goc):'—'}</td>
       <td class="c-nogoc">${Number(c.no_goc)?'<b style="color:var(--over)">'+fmtCur(c,c.no_goc)+'</b>':'—'}</td>
       <td class="c-thuno">${c.ngay_thu_no?(Number(c.no_goc)&&c.ngay_thu_no<=D(0)?'<b style="color:var(--over)">'+c.ngay_thu_no+' ⚠</b>':c.ngay_thu_no):'—'}</td></tr>`;
