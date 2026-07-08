@@ -1351,14 +1351,16 @@ function syncHScroll(topId,bodyId){
 function careTableHTML(arr){
   let t=`<div class="hscroll-top" id="care-htop"><div style="height:1px"></div></div>
     <div class="card hscroll-body" id="care-hbody" style="padding:0;overflow-x:auto"><table style="min-width:1180px">
-    <tr><th>STT</th><th>Khách</th><th>Ngày chốt</th><th>💵 DT VNĐ</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Tình trạng dùng SP / Phản hồi</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th><th>💰 Tiền gốc</th><th>💸 Nợ gốc</th><th>📅 Ngày thu nợ</th></tr>`;
-  if(!arr.length) t+=`<tr><td colspan="14" class="empty">Chưa có khách đã chốt.</td></tr>`;
+    <tr><th>STT</th><th>MKT</th><th>Sale</th><th>Khách</th><th>Ngày chốt</th><th>💵 DT VNĐ</th><th>7-10 Hỏi thăm</th><th>20-25 Theo dõi</th><th>28-35 Chào LT2</th><th>Phản hồi?</th><th>Tình trạng dùng SP / Phản hồi</th><th>Ngày hẹn kế</th><th>Ghi chú / kết quả</th><th>💰 Tiền gốc</th><th>💸 Nợ gốc</th><th>📅 Ngày thu nợ</th></tr>`;
+  if(!arr.length) t+=`<tr><td colspan="16" class="empty">Chưa có khách đã chốt.</td></tr>`;
   arr.forEach((c,i)=>{ const ph=c.phan_hoi||'';
     t+=`<tr class="${rowClass(c)}">
       <td>${i+1}</td>
+      <td style="font-size:12px">${MKT[c.mkt]||'—'}</td>
+      <td style="font-size:12px;font-weight:600">${SALES[c.owner]||'—'}</td>
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="Mở bảng chăm sóc chi tiết" onclick="openCarePanel('${c.id}')">${c.ten}</b> <span title="Mở chăm sóc chi tiết" style="cursor:pointer" onclick="openCarePanel('${c.id}')">🩺</span> <span title="Sửa thông tin" style="cursor:pointer" onclick="editCustomer('${c.id}')">✏️</span><br><span style="color:var(--muted);font-size:11px">${c.phone||''} · ${SALES[c.owner]||'—'}</span></td>
       <td>${c.ngay_chot||'—'}</td>
-      <td style="white-space:nowrap"><input data-k="${c.id}|dt_vnd" type="text" inputmode="numeric" value="${c.dt_vnd?Number(c.dt_vnd).toLocaleString('vi-VN'):''}" placeholder="0 đ" oninput="var v=this.value.replace(/\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):'';debSave('dt_vnd','${c.id}',v)" onchange="saveCol('${c.id}','dt_vnd',this.value.replace(/\D/g,''))" style="padding:4px;width:120px;font-weight:700;color:var(--teal-dark)" title="Doanh số quy VNĐ (sale tự điền)"></td>
+      <td style="white-space:nowrap"><input data-k="${c.id}|dt_vnd" type="text" inputmode="numeric" value="${(Number(c.dt_vnd)||0)>0?(Number(c.dt_vnd)||0).toLocaleString('vi-VN'):''}" placeholder="0 đ" oninput="var v=this.value.replace(/\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):'';debSave('dt_vnd','${c.id}',v?Number(v):0)" onchange="saveCol('${c.id}','dt_vnd',Number(this.value.replace(/\D/g,''))||0)" style="padding:4px;width:120px;font-weight:700;color:var(--teal-dark)" title="Doanh số quy VNĐ (sale tự điền)"></td>
       <td style="font-size:11px">${careCell(c.ngay_chot,7,10)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,20,25)}</td>
       <td style="font-size:11px">${careCell(c.ngay_chot,28,35)}</td>
@@ -1741,7 +1743,7 @@ function renderList(){
       ${fullView()?`<td class="c-mkt">${MKT[c.mkt]||'—'}</td><td class="c-sale">${SALES[c.owner]||'—'}</td>`:''}
       <td class="c-ghi" style="max-width:260px">${noteCell(c)}</td>
       <td class="c-dt">${tongChiTieu(c)?'$'+tongChiTieu(c).toLocaleString('en-US'):'—'}</td>
-      <td class="c-dtvnd" style="white-space:nowrap"><input data-k="${c.id}|dt_vnd" type="text" inputmode="numeric" value="${c.dt_vnd?Number(c.dt_vnd).toLocaleString('vi-VN'):''}" placeholder="0 đ" oninput="var v=this.value.replace(/\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):'';debSave('dt_vnd','${c.id}',v)" onchange="saveCol('${c.id}','dt_vnd',this.value.replace(/\D/g,''))" style="padding:3px;width:118px;font-weight:700;color:var(--teal-dark)" title="Doanh số VNĐ (sale tự điền)"></td>
+      <td class="c-dtvnd" style="white-space:nowrap"><input data-k="${c.id}|dt_vnd" type="text" inputmode="numeric" value="${(Number(c.dt_vnd)||0)>0?(Number(c.dt_vnd)||0).toLocaleString('vi-VN'):''}" placeholder="0 đ" oninput="var v=this.value.replace(/\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):'';debSave('dt_vnd','${c.id}',v?Number(v):0)" onchange="saveCol('${c.id}','dt_vnd',Number(this.value.replace(/\D/g,''))||0)" style="padding:3px;width:118px;font-weight:700;color:var(--teal-dark)" title="Doanh số VNĐ (sale tự điền)"></td>
       <td class="c-tiengoc">${Number(c.tien_goc)?fmtCur(c,c.tien_goc):'—'}</td>
       <td class="c-nogoc">${Number(c.no_goc)?'<b style="color:var(--over)">'+fmtCur(c,c.no_goc)+'</b>':'—'}</td>
       <td class="c-thuno">${c.ngay_thu_no?(Number(c.no_goc)&&c.ngay_thu_no<=D(0)?'<b style="color:var(--over)">'+c.ngay_thu_no+' ⚠</b>':c.ngay_thu_no):'—'}</td></tr>`;
@@ -2671,7 +2673,8 @@ async function editLan1(cid){
   const ng=prompt('Ngày lên đơn (YYYY-MM-DD):', c.ngay_chot||''); if(ng===null) return;
   const sp=prompt('Sản phẩm (đơn đầu):', c.sp||''); if(sp===null) return;
   const ti=prompt('Doanh thu đơn đầu ($):', c.dt||0); if(ti===null) return;
-  const upd={ ngay_chot:(ng||'').slice(0,10)||null, sp:(sp||'').trim()||'—', dt:Number(ti)||0, ngay_capnhat:D(0) };
+  const tv=prompt('Doanh số VNĐ (sale điền):', c.dt_vnd||0); if(tv===null) return;
+  const upd={ ngay_chot:(ng||'').slice(0,10)||null, sp:(sp||'').trim()||'—', dt:Number(ti)||0, dt_vnd:Number((''+tv).replace(/\D/g,''))||0, ngay_capnhat:D(0) };
   const { error }=await sb.from('customers').update(upd).eq('id', cid);
   if(error){ alert('Lỗi sửa: '+error.message); return; }
   await loadAll(); editCustomer(cid); renderAll();
