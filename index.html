@@ -669,8 +669,10 @@ function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)==
 const TITLES={dashboard:'Tổng quan',care:'Chăm sóc khách',add:'Thêm khách',list:'Khách hàng',
   list_all:'Tất cả khách',list_chot:'Khách hàng đã chốt',list_chua:'Khách hàng chưa chốt',
   today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',lichlam:'Đăng ký lịch làm',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác',pancake:'Khách mới từ Pancake'};
-let LIST_MODE='all'; let LIST_ROWS=[]; let LIST_PAGE=1; const LIST_PAGE_SIZE=50;
+let LIST_MODE='all'; let LIST_ROWS=[]; let LIST_PAGE=1; let LIST_PAGE_SIZE=50;
 function setListPage(n){ LIST_PAGE=n; renderList(); const el=document.getElementById('list-table'); if(el){ el.scrollIntoView({behavior:'smooth',block:'start'}); } }
+function setListSize(v){ LIST_PAGE_SIZE = v==='all'?1000000:(Number(v)||50); LIST_PAGE=1; CARE_PAGE=1; try{localStorage.setItem('ccp_page_size',v);}catch(e){} renderList(); }
+(function(){ try{ const v=localStorage.getItem('ccp_page_size'); if(v){ LIST_PAGE_SIZE = v==='all'?1000000:(Number(v)||50); } }catch(e){} })();
 function pagerHTML(total,page,size,fnName){
   const pages=Math.max(1,Math.ceil(total/size)); if(pages<=1) return '';
   const p=Math.min(Math.max(1,page),pages);
@@ -1763,7 +1765,13 @@ function renderList(){
   const _mine=myData(); const _nChot=_mine.filter(c=>isChot(c.tt)).length; const _nChua=_mine.length-_nChot;
   let t=`<div style="padding:10px 14px;font-size:13px;border-bottom:1px solid var(--line);background:var(--cream)">
     ✅ Đã chốt: <b style="color:var(--won)">${_nChot}</b> &nbsp;·&nbsp; ⏳ Chưa chốt: <b style="color:#b07d00">${_nChua}</b>
-    &nbsp;·&nbsp; Hiển thị: <b>${rows.length}</b></div>
+    &nbsp;·&nbsp; Hiển thị: <b>${rows.length}</b>
+    &nbsp;·&nbsp; <span style="color:var(--muted)">Số dòng/trang:</span> <select onchange="setListSize(this.value)" style="padding:2px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px">
+      <option value="50" ${LIST_PAGE_SIZE===50?'selected':''}>50</option>
+      <option value="100" ${LIST_PAGE_SIZE===100?'selected':''}>100</option>
+      <option value="200" ${LIST_PAGE_SIZE===200?'selected':''}>200</option>
+      <option value="all" ${LIST_PAGE_SIZE>=1000000?'selected':''}>Tất cả</option>
+    </select></div>
     <table><tr><th>Khách</th><th class="c-qg">Quốc gia</th><th class="c-nguon">Nguồn</th><th class="c-benh">Bệnh lý</th><th class="c-sp">SP</th><th class="c-muc">Mức</th><th class="c-tt">Trạng thái</th><th class="c-follow">Follow</th>${fullView()?'<th class="c-mkt">MKT</th><th class="c-sale">Sale</th>':''}<th class="c-ghi">Ghi chú / Việc</th><th class="c-dt">DT</th><th class="c-dtvnd">DT VNĐ</th><th class="c-tiengoc">Tiền gốc</th><th class="c-nogoc">Nợ gốc</th><th class="c-thuno">Ngày thu nợ</th></tr>`;
   if(!rows.length) t+=`<tr><td colspan="16" class="empty">Không có khách phù hợp bộ lọc.</td></tr>`;
   const noteCell=c=>{
