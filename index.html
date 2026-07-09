@@ -1458,9 +1458,20 @@ const LOG_FIELDS={tt:'Trạng thái',benh_list:'Bệnh lý / nhu cầu',ghi:'Ghi
 function logDisp(field,v){ if(v==null||v==='')return '(trống)'; if(field==='tt')return STATUS[v]||v; if(field==='owner')return SALES[v]||MKT[v]||v; if(field==='mkt')return MKT[v]||v; if(field==='muc')return ({nong:'🔥 Nóng',am:'☀️ Ấm',lanh:'❄️ Lạnh'})[v]||v; return String(v); }
 async function logChange(cid,field,oldv,newv){ if(!window.sb||!cid)return; try{ await sb.from('customer_logs').insert({customer_id:cid,who:(ME&&ME.name)||(ME&&ME.uname)||'',field,old_val:String(oldv==null?'':oldv).slice(0,400),new_val:String(newv==null?'':newv).slice(0,400)}); }catch(e){} }
 const __oldVals={};
+async function autoDoneTasks(id){ // tự đánh dấu XONG việc đến hạn của khách khi sale đã cập nhật trạng thái/follow (bớt tick tay)
+  try{ const t0=D(0);
+    const open=(TASKS||[]).filter(t=>!t.xong && t.customer_id!=null && String(t.customer_id)===String(id) && t.han && (''+t.han).slice(0,10)<=t0);
+    if(!open.length) return;
+    const ids=open.map(t=>t.id);
+    if(window.sb){ const {error}=await sb.from('tasks').update({xong:true}).in('id',ids); if(error) return; }
+    open.forEach(t=>t.xong=true);
+    if(typeof renderAlert==='function') renderAlert();
+    const vt=document.getElementById('v-today'); if(vt && vt.classList.contains('active') && typeof renderToday==='function') renderToday();
+  }catch(e){}
+}
 async function saveCol(id,col,val){ const c=DATA.find(x=>String(x.id)===String(id)); const k=col+'|'+id; const _old=(k in __oldVals)?__oldVals[k]:(c?c[col]:undefined); delete __oldVals[k];
   if((col in LOG_FIELDS) && String(_old==null?'':_old)!==String(val==null?'':val)) logChange(id,col,_old,val);
-  if(c)c[col]=val; syncTwins(id,col,val); const patch={[col]:val}; if(col==='tt'&&(val==='kcnc'||val==='khach_chan')){ patch.follow=null; if(c)c.follow=''; } if(!window.sb){toast('✓ Đã lưu');return;} try{ const {error}=await sb.from('customers').update(patch).eq('id',id); if(error){toast('⚠ Lỗi lưu, thử lại',false);} else {toast(patch.follow===null?'✓ Đã lưu (bỏ follow vì KCNC/Khách chặn)':'✓ Đã lưu');} }catch(e){toast('⚠ Lỗi lưu, thử lại',false);} }
+  if(c)c[col]=val; syncTwins(id,col,val); const patch={[col]:val}; if(col==='tt'&&(val==='kcnc'||val==='khach_chan')){ patch.follow=null; if(c)c.follow=''; } if(!window.sb){toast('✓ Đã lưu');return;} try{ const {error}=await sb.from('customers').update(patch).eq('id',id); if(error){toast('⚠ Lỗi lưu, thử lại',false);} else {toast(patch.follow===null?'✓ Đã lưu (bỏ follow vì KCNC/Khách chặn)':'✓ Đã lưu'); if(col==='tt'||col==='follow') autoDoneTasks(id);} }catch(e){toast('⚠ Lỗi lưu, thử lại',false);} }
 let __saveTimers={};
 function debSave(col,id,v){ const k=col+'|'+id; if(!(k in __oldVals)){const c0=DATA.find(x=>String(x.id)===String(id)); if(c0)__oldVals[k]=c0[col];} clearTimeout(__saveTimers[k]); if(v!==undefined){const c=DATA.find(x=>String(x.id)===String(id)); if(c)c[col]=v;} __saveTimers[k]=setTimeout(()=>{ saveCol(id,col,v); },700); }
 async function savePhanHoi(id,v){ await saveCol(id,'phan_hoi',v); }
@@ -1854,7 +1865,7 @@ function renderToday(){
     ${chip('','Tất cả',nOver+nToday+nUp)}${chip('over','🔴 Quá hạn',nOver)}${chip('today','🟡 Hôm nay',nToday)}${chip('upcoming','🟢 Sắp tới',nUp)}
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn ghost" type="button" onclick="selectAllShownTasks()" title="Chọn tất cả việc đang hiển thị để thao tác hàng loạt" style="padding:6px 14px;font-size:13px">☑ Chọn tất cả hiển thị</button>
-    ${isAdmin()?`<button class="btn" type="button" onclick="markAllTasksDone()" title="Chỉ Admin — tích Xong cho tất cả việc đang hiển thị" style="padding:6px 14px;font-size:13px;background:var(--won);border-color:var(--won);color:#fff">✓ Tích tất cả Xong</button>`:''}
+    ${isAdmin()?`<button class="btn" type="button" onclick="markAllTasksDone()" title="Chỉ Admin — tích Xong tất cả VIỆC + hẹn lại FOLLOW đang hiển thị (theo bộ lọc/nhóm hiện tại)" style="padding:6px 14px;font-size:13px;background:var(--won);border-color:var(--won);color:#fff">✓ Xong tất cả (đang lọc)</button>`:''}
     <button class="btn ghost" type="button" onclick="toggleTaskPanel()" style="padding:6px 14px;font-size:13px">${TASK_PANEL_OPEN?'✕ Đóng':'➕ Thêm việc / Bộ lọc'}${((TASK_Q||TASK_SALE||TASK_TT||TASK_FROM||TASK_TO)&&!TASK_PANEL_OPEN)?' 🔵':''}</button>
     </div>
   </div>`;
@@ -1906,14 +1917,16 @@ function renderToday(){
   if(showB('today')){ tToday.forEach(t=>_selKeys.push('t:'+t.id)); foToday.forEach(c=>_selKeys.push('f:'+c.id)); deToday.forEach(c=>_selKeys.push('d:'+c.id)); }
   if(showB('upcoming')){ tUp.forEach(t=>_selKeys.push('t:'+t.id)); }
   window.TODAY_SEL_KEYS=_selKeys;
-  // Sắp xếp mỗi nhóm theo NGÀY (follow/hạn/thu nợ) tăng dần — quá hạn lâu nhất lên đầu
-  const mkSorted=items=>items.sort((a,b)=>{const x=a.d||'9999-99-99',y=b.d||'9999-99-99';return x<y?-1:x>y?1:0;}).map(i=>i.html);
-  const overItems=[].concat(tOver.map(t=>({d:t.han||'',html:taskRow(t)})),foOver.map(c=>({d:c.follow||'',html:followRow(c)})),deOver.map(c=>({d:c.ngay_thu_no||'',html:debtRow(c)})));
-  const todayItems=[].concat(tToday.map(t=>({d:t.han||'',html:taskRow(t)})),foToday.map(c=>({d:c.follow||'',html:followRow(c)})),deToday.map(c=>({d:c.ngay_thu_no||'',html:debtRow(c)})));
-  const upItems=tUp.map(t=>({d:t.han||'',html:taskRow(t)}));
-  if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn (sắp theo ngày)', mkSorted(overItems), 'var(--over)','over','setTodayPageOver');
-  if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay', mkSorted(todayItems), '#b07d00','today','setTodayPageToday');
-  if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới (sắp theo ngày)', mkSorted(upItems), 'var(--teal-dark)','upcoming','setTodayPageUpcoming');
+  // Sắp xếp: khách NÓNG ưu tiên lên đầu (Nóng>Ấm>Lạnh), sau đó theo NGÀY tăng dần (quá hạn lâu nhất trước)
+  const mucRank=m=>({nong:0,am:1,lanh:2}[m]!==undefined?{nong:0,am:1,lanh:2}[m]:3);
+  const custMuc=cid=>{ const cc=DATA.find(x=>String(x.id)===String(cid)); return cc?cc.muc:''; };
+  const mkSorted=items=>items.sort((a,b)=>{ const mA=(a.m==null?3:a.m), mB=(b.m==null?3:b.m); if(mA!==mB) return mA-mB; const x=a.d||'9999-99-99',y=b.d||'9999-99-99';return x<y?-1:x>y?1:0;}).map(i=>i.html);
+  const overItems=[].concat(tOver.map(t=>({d:t.han||'',m:mucRank(custMuc(t.customer_id)),html:taskRow(t)})),foOver.map(c=>({d:c.follow||'',m:mucRank(c.muc),html:followRow(c)})),deOver.map(c=>({d:c.ngay_thu_no||'',m:mucRank(c.muc),html:debtRow(c)})));
+  const todayItems=[].concat(tToday.map(t=>({d:t.han||'',m:mucRank(custMuc(t.customer_id)),html:taskRow(t)})),foToday.map(c=>({d:c.follow||'',m:mucRank(c.muc),html:followRow(c)})),deToday.map(c=>({d:c.ngay_thu_no||'',m:mucRank(c.muc),html:debtRow(c)})));
+  const upItems=tUp.map(t=>({d:t.han||'',m:mucRank(custMuc(t.customer_id)),html:taskRow(t)}));
+  if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn (🔥 Nóng ưu tiên)', mkSorted(overItems), 'var(--over)','over','setTodayPageOver');
+  if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay (🔥 Nóng ưu tiên)', mkSorted(todayItems), '#b07d00','today','setTodayPageToday');
+  if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới (🔥 Nóng ưu tiên)', mkSorted(upItems), 'var(--teal-dark)','upcoming','setTodayPageUpcoming');
   if(!(nOver+nToday+nUp)) html+=`<div class="card empty">Không có việc hay follow nào đến hạn. 🎉</div>`;
   /* ===== Thống kê việc theo Sale + kích hoạt lại (chỉ quản lý/admin) ===== */
   if(isAdmin()){
@@ -2684,11 +2697,14 @@ async function toggleTask(id){
 async function reactivateTask(id){ if(!confirm('Kích hoạt lại việc này để nhắc sale làm tiếp?'))return; await toggleTask(id); }
 async function markAllTasksDone(){
   if(!isAdmin()){ alert('Chỉ Admin mới dùng được chức năng này.'); return; }
-  const ids=(window.TODAY_TASK_IDS||[]).slice();
-  if(!ids.length){ alert('Không có việc nào đang hiển thị để tích.'); return; }
-  if(!confirm('Đánh dấu XONG cho '+ids.length+' việc đang hiển thị?')) return;
-  const { error }=await sb.from('tasks').update({xong:true}).in('id', ids);
-  if(error){ alert('Lỗi: '+error.message); return; }
+  const keys=(window.TODAY_SEL_KEYS||[]);
+  const tasks=[], follows=[];
+  keys.forEach(k=>{ if(k.startsWith('t:')) tasks.push(k.slice(2)); else if(k.startsWith('f:')) follows.push(k.slice(2)); }); // bỏ qua thu nợ (d:) — không tự tắt nhắc nợ
+  const n=tasks.length+follows.length;
+  if(!n){ alert('Không có việc/follow nào đang hiển thị (theo bộ lọc) để tích.'); return; }
+  if(!confirm('Xử lý XONG '+n+' mục đang hiển thị theo bộ lọc?\n• Việc → đánh dấu Xong\n• Follow → hẹn lại +3 ngày\n(Thu nợ giữ nguyên)')) return;
+  if(tasks.length){ const { error }=await sb.from('tasks').update({xong:true}).in('id', tasks); if(error){ alert('Lỗi việc: '+error.message); return; } }
+  if(follows.length){ const { error }=await sb.from('customers').update({follow:D(3), ngay_capnhat:D(0)}).in('id',[...new Set(follows)]); if(error){ alert('Lỗi follow: '+error.message); return; } }
   await loadAll(); renderAll();
 }
 async function editTask(id){
@@ -2890,6 +2906,7 @@ async function saveEdit(e,id){ e.preventDefault();
   if(c){ Object.keys(LOG_FIELDS).forEach(f=>{ if(f in upd){ const ov=c[f], nv=upd[f]; if(String(ov==null?'':ov)!==String(nv==null?'':nv)) logChange(id,f,ov,nv); } }); }
   const { error }=await sb.from('customers').update(upd).eq('id', id);
   if(error){ alert('Lưu lỗi: '+error.message); return; }
+  if(('tt' in upd)||('follow' in upd)){ try{ const t0=D(0); const open=(TASKS||[]).filter(t=>!t.xong && t.customer_id!=null && String(t.customer_id)===String(id) && t.han && (''+t.han).slice(0,10)<=t0).map(t=>t.id); if(open.length) await sb.from('tasks').update({xong:true}).in('id',open); }catch(e){} }
   closeEdit(); alert('✅ Đã lưu thay đổi'); await loadAll(); renderAll();
 }
 async function deleteCustomer(id){
