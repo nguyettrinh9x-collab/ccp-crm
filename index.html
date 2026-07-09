@@ -2599,6 +2599,19 @@ function resetIdle(){ if(!sb||!ME) return; clearTimeout(__idleTimer); __idleTime
 function startIdle(){ ['click','keydown','mousemove','touchstart','scroll'].forEach(ev=>document.addEventListener(ev, resetIdle, {passive:true})); resetIdle(); }
 
 /* ---- Tải toàn bộ dữ liệu từ Supabase vào app ---- */
+async function fetchAllRows(tbl, orderCol, asc){ // phân trang lấy HẾT (Supabase mặc định giới hạn 1000 dòng)
+  let out=[], from=0; const PZ=1000;
+  while(true){
+    let q=sb.from(tbl).select('*');
+    if(orderCol) q=q.order(orderCol,{ascending:!!asc});
+    const { data, error } = await q.range(from, from+PZ-1);
+    if(error){ console.error('fetchAllRows '+tbl, error); break; }
+    out=out.concat(data||[]);
+    if(!data || data.length<PZ) break;
+    from+=PZ;
+  }
+  return out;
+}
 async function loadAll(){
   const { data:{ user } } = await sb.auth.getUser();
   if(!user) return false;
@@ -2616,7 +2629,7 @@ async function loadAll(){
   });
   const myp = (profs||[]).find(p=>p.id===user.id) || {id:user.id, ten:user.email, role:'sale', quyen:[]};
   ME = {id:user.id, name:myp.ten, role:myp.role, uname:user.id, quyen:myp.quyen||PERMS[user.id]||[]};
-  const { data:cs } = await sb.from('customers').select('*').order('ngay_tao',{ascending:false});
+  const cs = await fetchAllRows('customers','ngay_tao',false);
   const allc = (cs||[]).map(c=>({ ...c,
     follow:c.follow||'', ngay_tao:(c.ngay_tao||'').slice(0,10),
     ngay_capnhat:(c.ngay_capnhat||c.ngay_tao||'').slice(0,10), ngay_upsale:c.ngay_upsale||'',
@@ -2628,7 +2641,7 @@ async function loadAll(){
   SPEND = (spd||[]).map(s=>({ngay:(s.ngay||'').slice(0,10), nguon:s.nguon, mkt:s.mkt, chi_phi:Number(s.chi_phi)||0}));
   try{ const { data:imgs } = await sb.from('app_images').select('*'); IMAGES={}; (imgs||[]).forEach(r=>IMAGES[r.key]=r.data); }catch(e){ IMAGES=IMAGES||{}; }
   ORDERS = {};
-  const { data:od } = await sb.from('orders').select('*');
+  const od = await fetchAllRows('orders');
   (od||[]).forEach(o=>{ const k=String(o.customer_id); (ORDERS[k]=ORDERS[k]||[]).push({id:o.id, ngay:(o.ngay||'').slice(0,10), san_pham:o.san_pham, so_tien:Number(o.so_tien)||0, so_tien_vnd:Number(o.so_tien_vnd)||0}); });
   TASKS = [];
   const { data:tk } = await sb.from('tasks').select('*');
