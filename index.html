@@ -146,6 +146,7 @@
       <a data-v="report">Báo cáo</a>
       <a data-v="marketing">Marketing</a>
       <a data-v="team">Sale team</a>
+      <a data-v="danhgia">📊 Đánh giá Sale/MKT</a>
       <a data-v="lichlam">Đăng ký lịch làm</a>
       <a data-v="perms">Tài khoản</a>
       <a data-v="settings">Cài đặt</a>
@@ -182,6 +183,7 @@
     <div class="view" id="v-marketing"></div>
     <!-- TEAM -->
     <div class="view" id="v-team"></div>
+    <div class="view" id="v-danhgia"></div>
     <!-- LICH LAM -->
     <div class="view" id="v-lichlam"></div>
     <!-- SETTINGS -->
@@ -278,6 +280,7 @@ let MTRASH = [];   // báo cáo marketing đã xoá (có thể khôi phục)
 let ME = null;
 let TRASH = [];  // khách đã xoá (chỉ admin xem & khôi phục)
 let ORDERS = {};  // lịch sử mua hàng theo khách: { customer_id: [ {id,ngay,san_pham,so_tien} ] }
+let MKTREP = [];  // báo cáo marketing (mkt_reports): {owner,ngay,tien,sl_mes,so_cmt,mes_tt,sd_chot}
 let TASKS = [];   // việc cần làm / nhắc việc
 let PLEADS = [];  // khách mới từ Pancake chờ duyệt (bảng pancake_leads, status='new')
 let TARGETS = {}; // mục tiêu DT theo tháng: { 'owner|YYYY-MM': muc_tieu }
@@ -348,6 +351,7 @@ const FILTERS = {
   report:{ start:null, end:null, field:'lendon', open:false, calBase:null, def:'all' },
   mkt:   { start:null, end:null, field:'lendon', open:false, calBase:null, def:'all' },
   team:  { start:null, end:null, field:'lendon', open:false, calBase:null, def:'all' },
+  danhgia:{ start:null, end:null, field:'lendon', open:false, calBase:null, def:'thang_nay' },
 };
 function login(){
   const u=document.getElementById('u').value.trim().toLowerCase();
@@ -373,6 +377,7 @@ function applyMenu(){
   document.querySelectorAll('#nav a').forEach(a=>{
     let v=a.dataset.v; if(v==='list_chot'||v==='list_chua'||v==='list_all') v='list';
     if(v==='pancake'){ a.style.display=(canPancake()||allowed.includes('pancake'))?'flex':'none'; return; }
+    if(v==='danhgia'){ a.style.display=canPancake()?'flex':'none'; return; } /* chỉ Nguyệt/Admin */
     a.style.display=allowed.includes(v)?'flex':'none';
   });
 }
@@ -668,7 +673,7 @@ function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)==
 /* ============ NAV ============ */
 const TITLES={dashboard:'Tổng quan',care:'Chăm sóc khách',add:'Thêm khách',list:'Khách hàng',
   list_all:'Tất cả khách',list_chot:'Khách hàng đã chốt',list_chua:'Khách hàng chưa chốt',
-  today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',lichlam:'Đăng ký lịch làm',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác',pancake:'Khách mới từ Pancake'};
+  today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',danhgia:'📊 Đánh giá năng lực Sale & MKT',lichlam:'Đăng ký lịch làm',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác',pancake:'Khách mới từ Pancake'};
 let LIST_MODE='all'; let LIST_ROWS=[]; let LIST_PAGE=1; let LIST_PAGE_SIZE=50;
 function setListPage(n){ LIST_PAGE=n; renderList(); const el=document.getElementById('list-table'); if(el){ el.scrollIntoView({behavior:'smooth',block:'start'}); } }
 function setListSize(v){ LIST_PAGE_SIZE = v==='all'?1000000:(Number(v)||50); LIST_PAGE=1; CARE_PAGE=1; try{localStorage.setItem('ccp_page_size',v);}catch(e){} renderList(); }
@@ -718,6 +723,7 @@ function go(v){
   else if(view==='today') renderToday();
   else if(view==='lichlam') renderLichLam();
   else if(view==='pancake') renderPancake();
+  else if(view==='danhgia') renderDanhGia();
 }
 
 /* ============ KHÁCH MỚI TỪ PANCAKE (chỉ Nguyệt/Admin) ============ */
@@ -968,7 +974,7 @@ function renderLichLam(){
 }
 
 /* ============ RENDER ============ */
-function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTeam();renderLichLam();renderSettings();renderPerms();renderTrash();renderPancake(); }
+function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTeam();renderDanhGia();renderLichLam();renderSettings();renderPerms();renderTrash();renderPancake(); }
 
 function renderAlert(){
   const due=myData().filter(c=>flag(c)==='warn').length;
@@ -995,7 +1001,7 @@ const PRESETS=[
  {k:'30ngay',l:'30 ngày trước',g:t=>[dstr(addDays(t,-29)),dstr(t)]},
  {k:'60ngay',l:'60 ngày trước',g:t=>[dstr(addDays(t,-59)),dstr(t)]},
 ];
-function reRender(key){ ({dash:renderDash,list:renderList,report:renderReport,mkt:renderMarketing,team:renderTeam}[key])(); }
+function reRender(key){ ({dash:renderDash,list:renderList,report:renderReport,mkt:renderMarketing,team:renderTeam,danhgia:renderDanhGia}[key])(); }
 // Tính chỉ số 1 nhóm khách: số khách, thị trường, tỷ lệ tương tác/chốt, DT mới/chăm sóc/tổng
 function saleStats(sd, rg){
   rg = rg || {s:'0000-01-01', e:'9999-12-31'};
@@ -2467,6 +2473,121 @@ function renderTeam(){
   document.getElementById('v-team').innerHTML=html;
 }
 
+/* ============ ĐÁNH GIÁ NĂNG LỰC SALE & MKT (chỉ Nguyệt/Admin) ============ */
+function evalBadge(score){
+  if(score>=75) return {t:'A · Tốt', bg:'#e6f7ee', c:'#1a7a4a'};
+  if(score>=55) return {t:'B · Khá', bg:'#eef6f1', c:'#2f8f5b'};
+  if(score>=35) return {t:'C · Cần cải thiện', bg:'#fff6e5', c:'#b07d00'};
+  return {t:'D · Yếu', bg:'#fdeeee', c:'#c0392b'};
+}
+function renderDanhGia(){
+  const el=document.getElementById('v-danhgia'); if(!el) return;
+  if(!canPancake()){ el.innerHTML='<div class="card empty">🔒 Chỉ chị Nguyệt / Admin xem được mục này.</div>'; return; }
+  const rg=getRange('danhgia'); const inR=ds=>{ ds=(''+(ds||'')).slice(0,10); return ds>=rg.s && ds<=rg.e; };
+  const today=D(0);
+  const pc=(a,b)=>b?Math.round(a/b*100):0;
+  const $f=n=>'$'+Math.round(Number(n)||0).toLocaleString('en-US');
+  const vnd=n=>Math.round(Number(n)||0).toLocaleString('vi-VN')+' ₫';
+  let html = renderDateFilterBar('danhgia');
+  html += `<p style="color:var(--muted);font-size:12px;margin:2px 0 14px">🔒 Chỉ mình chị xem. Chấm điểm tự động từ dữ liệu CRM theo kỳ đã chọn — nhận diện điểm mạnh/yếu & hướng cải thiện từng người.</p>`;
+
+  /* ---- BẢNG 1: SALE ---- */
+  html += `<h2 class="sec">👤 Đánh giá năng lực SALE</h2>
+   <div class="card" style="padding:0;overflow-x:auto"><table>
+   <tr><th>Sale</th><th title="Khách phụ trách trong kỳ">Khách</th><th title="% khách chịu tương tác">TL tương tác</th><th title="Chốt / tổng khách">TL chốt</th><th title="Chốt / khách đã tương tác — đo kỹ năng chốt">Chốt/TT</th><th>DT (USD)</th><th>DT VNĐ</th><th title="Follow + việc đang quá hạn chưa xử lý">Tồn quá hạn</th><th title="KCNC + khách chặn / tổng — đo cách tiếp cận">TL mất khách</th><th>Điểm</th><th>Xếp loại</th><th>⚠ Vấn đề &amp; 💡 Giải pháp</th></tr>`;
+  const saleData=[];
+  Object.entries(SALES).forEach(([id,name])=>{
+    const sd=DATA.filter(c=>c.owner===id);
+    const x=saleStats(sd,rg);
+    const sdR=sd.filter(c=>inR(c.ngay_chot||c.ngay_tao));
+    const interacted=sdR.filter(c=>['ktt','tuong_tac','dang_care','hen','da_chot','chot_nguoi'].includes(c.tt)).length;
+    const lost=sdR.filter(c=>['kcnc','khach_chan'].includes(c.tt)).length;
+    const rChotTt=pc(x.won, interacted);
+    const rLost=pc(lost, sdR.length);
+    const followOver=sd.filter(c=>c.follow && (''+c.follow).slice(0,10)<today && !isChot(c.tt) && !['kcnc','khach_chan'].includes(c.tt)).length;
+    const taskOver=(TASKS||[]).filter(t=>!t.xong && t.owner===id && t.han && (''+t.han).slice(0,10)<today).length;
+    const ton=followOver+taskOver;
+    const tonPen=Math.max(0,100-Math.min(100, x.total? ton/x.total*150 : ton*10));
+    const lostScore=Math.max(0,100-rLost*2);
+    const score=Math.round(x.rChot*0.35 + rChotTt*0.25 + x.rTuongtac*0.15 + tonPen*0.15 + lostScore*0.10);
+    let issues=[];
+    if(x.total===0){ issues.push('<span style="color:var(--muted)">Chưa có khách trong kỳ</span>'); }
+    else {
+      if(x.rTuongtac<40) issues.push('⚠ Tương tác thấp → 💡 xem lại kịch bản mở lời, rep tin đầu nhanh (dưới 5 phút)');
+      if(interacted>=3 && rChotTt<20) issues.push('⚠ Chốt kém dù khách chịu nói → 💡 luyện xử lý từ chối, tạo urgency, chốt dứt khoát');
+      if(rLost>25) issues.push('⚠ Mất khách nhiều (KCNC/chặn) → 💡 giảm hối thúc/spam, cá nhân hoá tư vấn');
+      if(ton>10) issues.push('⚠ Tồn đọng follow/việc cao → 💡 bám lịch "Việc cần làm" mỗi ngày');
+      if(!issues.length) issues.push('✅ Ổn định, giữ phong độ');
+    }
+    saleData.push({name,x,rChotTt,rLost,ton,score,issues});
+  });
+  saleData.sort((a,b)=>b.score-a.score);
+  saleData.forEach(s=>{
+    const b=evalBadge(s.score);
+    const badge=s.x.total? `<span class="pill" style="background:${b.bg};color:${b.c};font-weight:700">${b.t}</span>` : '<span style="color:var(--muted)">—</span>';
+    html+=`<tr>
+      <td><b>${s.name}</b></td><td style="text-align:center">${s.x.total}</td>
+      <td style="text-align:center">${s.x.rTuongtac}%</td><td style="text-align:center"><b>${s.x.rChot}%</b></td>
+      <td style="text-align:center">${s.rChotTt}%</td><td>${$f(s.x.dtTong)}</td>
+      <td style="white-space:nowrap;color:var(--teal-dark)">${vnd(s.x.dtVNDman)}</td>
+      <td style="text-align:center;${s.ton>10?'color:var(--over);font-weight:700':''}">${s.ton||'—'}</td>
+      <td style="text-align:center;${s.rLost>25?'color:var(--over);font-weight:700':''}">${s.rLost}%</td>
+      <td style="text-align:center;font-weight:800">${s.x.total?s.score:'—'}</td>
+      <td>${badge}</td><td style="font-size:12px;max-width:340px">${s.issues.join('<br>')}</td></tr>`;
+  });
+  html+=`</table></div>`;
+
+  /* ---- BẢNG 2: MKT ---- */
+  html += `<h2 class="sec" style="margin-top:26px">📣 Đánh giá năng lực MARKETING</h2>
+   <div class="card" style="padding:0;overflow-x:auto"><table>
+   <tr><th>MKT</th><th title="Chi phí quảng cáo trong kỳ">Chi phí</th><th>Mes</th><th title="Comment">Cmt</th><th title="Mes có tương tác / tổng mes">TL tương tác</th><th title="Khách thực chốt (theo CRM)">Khách chốt</th><th title="Khách chốt / mes">Chốt/Mes</th><th>DT (USD)</th><th title="Chi phí / mes">CP/Mes</th><th title="Chi phí / khách chốt">CP/Chốt</th><th title="Doanh thu quy VNĐ / chi phí">ROAS</th><th>Xếp loại</th><th>⚠ Vấn đề &amp; 💡 Giải pháp</th></tr>`;
+  const mktData=[];
+  Object.entries(MKT).forEach(([id,name])=>{
+    const rep=MKTREP.filter(r=>r.owner===id && inR(r.ngay));
+    const chiphi=rep.reduce((s,r)=>s+r.tien,0);
+    const mes=rep.reduce((s,r)=>s+r.sl_mes,0);
+    const cmt=rep.reduce((s,r)=>s+r.so_cmt,0);
+    const mestt=rep.reduce((s,r)=>s+r.mes_tt,0);
+    const sd=DATA.filter(c=>c.mkt===id);
+    const x=saleStats(sd,rg);
+    if(!chiphi && !mes && !x.total) return;
+    const rMesTt=pc(mestt,mes);
+    const rChotMes=pc(x.won,mes);
+    const cpMes= mes? Math.round(chiphi/mes):0;
+    const cpChot= x.won? Math.round(chiphi/x.won):0;
+    const roas= chiphi? (x.dtVND/chiphi):0;
+    let issues=[];
+    if(mes>0 && rMesTt<40) issues.push('⚠ Mes ít tương tác → 💡 rà lại target/nội dung QC & tốc độ rep');
+    if(cpChot>1500000) issues.push('⚠ Chi phí/khách chốt cao → 💡 tối ưu tệp target, loại nhóm không chuyển đổi');
+    if(roas>0 && roas<3) issues.push('⚠ ROAS thấp (dưới 3) → 💡 tắt camp lỗ, dồn ngân sách camp hiệu quả');
+    if(!issues.length) issues.push('✅ Hiệu quả ổn');
+    const score=Math.round(Math.min(100,roas*15)*0.4 + rMesTt*0.3 + Math.min(100,rChotMes*5)*0.3);
+    mktData.push({name,chiphi,mes,cmt,rMesTt,won:x.won,rChotMes,dt:x.dtTong,cpMes,cpChot,roas,score,issues});
+  });
+  mktData.sort((a,b)=>b.score-a.score);
+  if(!mktData.length) html+=`<div class="card empty" style="border-radius:0">Chưa có dữ liệu marketing (mkt_reports) trong kỳ này.</div>`;
+  mktData.forEach(m=>{
+    const b=evalBadge(m.score);
+    html+=`<tr>
+      <td><b>${m.name}</b></td><td style="white-space:nowrap">${vnd(m.chiphi)}</td>
+      <td style="text-align:center">${m.mes}</td><td style="text-align:center">${m.cmt}</td>
+      <td style="text-align:center;${m.mes&&m.rMesTt<40?'color:var(--over);font-weight:700':''}">${m.rMesTt}%</td>
+      <td style="text-align:center"><b>${m.won}</b></td><td style="text-align:center">${m.rChotMes}%</td>
+      <td>${$f(m.dt)}</td>
+      <td style="white-space:nowrap">${m.cpMes?vnd(m.cpMes):'—'}</td>
+      <td style="white-space:nowrap;${m.cpChot>1500000?'color:var(--over);font-weight:700':''}">${m.cpChot?vnd(m.cpChot):'—'}</td>
+      <td style="text-align:center;font-weight:700;${m.roas&&m.roas<3?'color:var(--over)':'color:var(--won)'}">${m.roas?m.roas.toFixed(1)+'x':'—'}</td>
+      <td><span class="pill" style="background:${b.bg};color:${b.c};font-weight:700">${b.t}</span></td>
+      <td style="font-size:12px;max-width:340px">${m.issues.join('<br>')}</td></tr>`;
+  });
+  html+=`</table></div>`;
+  html+=`<div class="card" style="background:#f6f8f7;margin-top:14px;font-size:12px;color:var(--muted);line-height:1.7">
+    <b>📖 Cách đọc:</b> Xếp loại A≥75 · B 55–74 · C 35–54 · D dưới 35.<br>
+    <b>Điểm Sale</b> = 35% tỷ lệ chốt + 25% chốt/tương tác + 15% tương tác + 15% ít tồn đọng + 10% giữ khách.<br>
+    <b>Điểm MKT</b> = 40% ROAS + 30% mes tương tác + 30% chốt/mes. ROAS = doanh thu quy VNĐ ÷ chi phí QC (USD×23.500·CAD×16.000·EUR×24.500).</div>`;
+  el.innerHTML=html;
+}
+
 function canManage(){ return (PERMS[ME.uname]||[]).includes('perms'); }
 function togglePerm(u,m){
   const p=PERMS[u]||(PERMS[u]=[]); const i=p.indexOf(m);
@@ -2660,6 +2781,7 @@ async function loadAll(){
   TRASH = allc.filter(c=>c.da_xoa);
   const { data:spd } = await sb.from('marketing_spend').select('*');
   SPEND = (spd||[]).map(s=>({ngay:(s.ngay||'').slice(0,10), nguon:s.nguon, mkt:s.mkt, chi_phi:Number(s.chi_phi)||0}));
+  try{ const mr = await fetchAllRows('mkt_reports'); MKTREP = (mr||[]).filter(r=>!r.da_xoa).map(r=>({owner:r.owner, ngay:(r.ngay||'').slice(0,10), tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0})); }catch(e){ MKTREP=[]; }
   try{ const { data:imgs } = await sb.from('app_images').select('*'); IMAGES={}; (imgs||[]).forEach(r=>IMAGES[r.key]=r.data); }catch(e){ IMAGES=IMAGES||{}; }
   ORDERS = {};
   const od = await fetchAllRows('orders');
