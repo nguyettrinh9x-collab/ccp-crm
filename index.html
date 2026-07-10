@@ -2504,7 +2504,9 @@ function renderDanhGia(){
     const a=aiMap[k]=aiMap[k]||{n:0,tot:0,speed:0,needs:0,product:0,viol:0,weak:[],worst:''};
     a.n++; a.tot+=r.score_total; a.speed+=r.s_speed; a.needs+=r.s_needs; a.product+=r.s_product; if(r.compliance_flag)a.viol++;
     if(r.weaknesses) a.weak.push(r.weaknesses); if(r.worst_quote && !a.worst) a.worst=r.worst_quote; });
-  const aiOf=name=>{ const a=aiMap[(name||'').trim()]; if(!a||!a.n) return null; return {n:a.n, tot:Math.round(a.tot/a.n), speed:Math.round(a.speed/a.n), needs:Math.round(a.needs/a.n), product:Math.round(a.product/a.n), viol:a.viol, weak:a.weak, worst:a.worst}; };
+  const aiOf=name=>{ const a=aiMap[(name||'').trim()]; if(!a||!a.n) return null;
+    const items=[]; a.weak.forEach(w=>String(w).split(/\s*\|\s*|\n+/).forEach(t=>{ t=t.trim().replace(/\.$/,''); if(t && !items.some(x=>x.toLowerCase()===t.toLowerCase())) items.push(t); }));
+    return {n:a.n, tot:Math.round(a.tot/a.n), speed:Math.round(a.speed/a.n), needs:Math.round(a.needs/a.n), product:Math.round(a.product/a.n), viol:a.viol, weak:a.weak, weakItems:items, worst:a.worst}; };
   const saleData=[];
   Object.entries(SALES).forEach(([id,name])=>{
     const sd=DATA.filter(c=>c.owner===id);
@@ -2530,7 +2532,7 @@ function renderDanhGia(){
       else if(rChotTt<15 && interacted>=5) issues.push(`🟠 <b>Nghẽn CHỐT</b>: chỉ chốt ${x.won}/${interacted} khách đã tương tác (${rChotTt}%) → 💡 luyện chốt đơn, tạo urgency, gọi điện thay vì chỉ nhắn`);
       if(ton>10) issues.push(`🟠 <b>Tồn đọng ${ton}</b> follow/việc quá hạn → 💡 bám "Việc cần làm" mỗi ngày`);
       if(rLost>20) issues.push(`🟠 <b>Mất ${lost} khách</b> (KCNC/chặn · ${rLost}%) → 💡 giảm hối thúc, cá nhân hoá tư vấn`);
-      if(ai && ai.weak.length) issues.push(`🤖 <b>AI đọc chat</b> (${ai.n} chat · ${ai.tot}đ${ai.viol?' · '+ai.viol+' vi phạm':''}): ${escH(ai.weak[0]).slice(0,140)}`);
+      if(ai && ai.weakItems && ai.weakItems.length) issues.push(`🤖 <b>AI đọc chat</b> (${ai.n} chat · ${ai.tot}đ${ai.viol?' · '+ai.viol+' vi phạm':''}): ${escH(ai.weakItems.slice(0,2).join('; ')).slice(0,180)}`);
       if(!issues.length) issues.push('✅ Ổn định, giữ phong độ');
     }
     saleData.push({name,x,interacted,rChotTt,rLost,ton,score,issues,ai});
@@ -2602,16 +2604,27 @@ function renderDanhGia(){
     <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Bot đọc hội thoại thật của từng sale trên Pancake, chấm theo rubric 100đ. Đây là "vấn đề thật" — không phụ thuộc việc sale có cập nhật CRM hay không.</p>`;
   if(!aiRows.length) html+=`<div class="card empty">Chưa có dữ liệu chấm AI tuần này. Bot sale-score chạy tự động mỗi Thứ 2. Muốn chấm ngay, nhắn em "chấm điểm sale tuần này".</div>`;
   else {
+    // Ô "vấn đề chung toàn team"
+    const aiAll=SCORES.filter(r=>r.week_start===aiWeek);
+    const tChat=aiAll.length, tViol=aiAll.filter(r=>r.compliance_flag).length;
+    const avgf=f=>tChat?Math.round(aiAll.reduce((s,r)=>s+(Number(r[f])||0),0)/tChat):0;
+    const pViol=tChat?Math.round(tViol/tChat*100):0;
+    html+=`<div class="card" style="background:#fdeeee;border:1px solid #f0c9c9;margin-bottom:12px">
+      <div style="font-weight:800;color:var(--over);margin-bottom:6px">🚨 Vấn đề chung toàn team (${tChat} chat được chấm)</div>
+      <div style="font-size:13px;line-height:1.7">
+      • <b>${tViol}/${tChat} hội thoại (${pViol}%) vi phạm health-claim</b> (hứa "chắc có thai", dùng từ "thuốc"/"điều trị") → <b>rủi ro pháp lý Mỹ/Canada</b>, cần chấn chỉnh gấp.<br>
+      • Điểm TB: khai thác nhu cầu <b>${avgf('s_needs')}</b> · tư vấn sản phẩm <b>${avgf('s_product')}</b> · tốc độ phản hồi <b>${avgf('s_speed')}</b> → team thường <b>bỏ bước hỏi nhu cầu</b> và <b>chưa giới thiệu SP / chưa chốt (thiếu CTA)</b>.</div></div>`;
     html+=`<div class="card" style="padding:0;overflow-x:auto"><table>
-      <tr><th>Sale</th><th title="Số hội thoại được chấm">Chat</th><th>Điểm AI /100</th><th title="Tốc độ phản hồi khách">Tốc độ</th><th title="Khai thác nhu cầu">Nhu cầu</th><th title="Tư vấn sản phẩm">Tư vấn SP</th><th title="Số chat vi phạm health-claim/cam kết">Vi phạm</th><th>Điểm yếu chính (AI chỉ ra)</th><th>Câu tư vấn cần sửa</th></tr>`;
+      <tr><th>Sale</th><th title="Số hội thoại được chấm">Chat</th><th>Điểm AI /100</th><th title="Tốc độ phản hồi khách">Tốc độ</th><th title="Khai thác nhu cầu">Nhu cầu</th><th title="Tư vấn sản phẩm">Tư vấn SP</th><th title="Số chat vi phạm health-claim/cam kết">Vi phạm</th><th>Điểm yếu AI chỉ ra (chi tiết)</th><th>Câu tư vấn cần sửa</th></tr>`;
     aiRows.sort((a,b)=>b.ai.tot-a.ai.tot).forEach(r=>{ const a=r.ai; const bb=evalBadge(a.tot);
+      const wl=(a.weakItems&&a.weakItems.length)? '• '+a.weakItems.slice(0,5).map(escH).join('<br>• ') : '—';
       html+=`<tr>
         <td><b>${r.name}</b></td><td style="text-align:center">${a.n}</td>
         <td style="text-align:center"><span class="pill" style="background:${bb.bg};color:${bb.c};font-weight:700">${a.tot}</span></td>
-        <td style="text-align:center">${a.speed}</td><td style="text-align:center">${a.needs}</td><td style="text-align:center">${a.product}</td>
+        <td style="text-align:center;${a.speed<10?'color:var(--over);font-weight:700':''}">${a.speed}</td><td style="text-align:center;${a.needs<10?'color:var(--over);font-weight:700':''}">${a.needs}</td><td style="text-align:center;${a.product<10?'color:var(--over);font-weight:700':''}">${a.product}</td>
         <td style="text-align:center;${a.viol?'color:var(--over);font-weight:700':''}">${a.viol||'—'}</td>
-        <td style="font-size:12px;max-width:300px">${escH(a.weak[0]||'—').slice(0,200)}</td>
-        <td style="font-size:12px;max-width:260px;color:var(--muted);font-style:italic">${a.worst?('"'+escH(a.worst).slice(0,140)+'"'):'—'}</td></tr>`;
+        <td style="font-size:12px;max-width:340px;line-height:1.6">${wl}</td>
+        <td style="font-size:12px;max-width:240px;color:var(--muted);font-style:italic">${a.worst?('"'+escH(a.worst).slice(0,140)+'"'):'—'}</td></tr>`;
     });
     html+=`</table></div>`;
   }
