@@ -63,6 +63,7 @@
     <button class="tab" data-t="translate" disabled>🌐 Dịch</button>
     <button class="tab" data-t="summarize" disabled>🧠 Tóm tắt AI</button>
     <button class="tab" data-t="content" disabled>✍️ Content ý tưởng</button>
+    <button class="tab" data-t="audio">🎙️ Tải audio</button>
   </div>
 
   <!-- RAW -->
@@ -113,6 +114,18 @@
     <div class="out" id="o-content">Gợi ý góc content marketing cho AGO (Mỹ/Canada) từ nội dung video.</div>
   </div>
 
+  <!-- AUDIO -->
+  <div class="panel" id="p-audio">
+    <div class="toolbar">
+      <div class="left">
+        <input type="file" id="afile" accept="audio/*,video/*" />
+        <button class="ghost" id="run-audio">Phiên âm</button>
+      </div>
+    </div>
+    <div class="hint" style="margin-bottom:10px">Tải file ghi âm/video (mp3, m4a, wav, ogg, mp4…), tối đa ~12MB. Phiên âm xong sẽ tự dùng được ở tab Dịch / Tóm tắt / Content.</div>
+    <div class="out" id="o-audio">Chọn file rồi bấm "Phiên âm". Nhận diện ngôn ngữ tự động (giữ nguyên ngôn ngữ gốc, chưa dịch).</div>
+  </div>
+
   <p class="foot">Butter Script — Tránh cam kết chữa bệnh/đảm bảo kết quả tuyệt đối trong content (thị trường US/Canada).</p>
 </div>
 
@@ -132,7 +145,7 @@ async function call(payload){
 
 function renderRaw(){
   if(!DATA) return;
-  if($('#ts').checked){
+  if($('#ts').checked && DATA.segments && DATA.segments.length){
     $('#o-raw').textContent = DATA.segments.map(s=>'['+fmt(s.t)+'] '+s.text).join('\n');
   } else {
     $('#o-raw').textContent = DATA.text;
@@ -193,6 +206,30 @@ async function runAI(task, btn){
 $('#run-translate').addEventListener('click',e=>runAI('translate',e.target));
 $('#run-summarize').addEventListener('click',e=>runAI('summarize',e.target));
 $('#run-content').addEventListener('click',e=>runAI('content',e.target));
+
+// audio upload -> transcribe
+$('#run-audio').addEventListener('click', async (e)=>{
+  const f=$('#afile').files[0];
+  clrErr();
+  if(!f){showErr('Chọn file audio đã nhé.');return;}
+  if(f.size>12*1024*1024){showErr('File hơi lớn (>12MB). Cắt ngắn hoặc nén lại giúp em nhé.');return;}
+  const btn=e.target; const old=btn.textContent; btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  const out=$('#o-audio'); out.textContent='Đang phiên âm bằng AI... (có thể mất 20–60 giây tùy độ dài)';
+  try{
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(f);});
+    const j=await call({action:'audio', mime:f.type||'audio/mpeg', data:b64});
+    if(j.error){ out.textContent='—'; showErr(j.message||'Không phiên âm được file này.'); }
+    else {
+      out.textContent=j.text;
+      DATA={title:f.name, lang:'?', segments:[], text:j.text};
+      $('#meta').style.display='block';
+      $('#meta').innerHTML='<b>🎙️ '+f.name+'</b> · đã phiên âm · '+j.text.length+' ký tự';
+      document.querySelectorAll('.tab').forEach(t=>t.disabled=false);
+      $('#o-raw').textContent=j.text;
+    }
+  }catch(err){ out.textContent='—'; showErr('Lỗi: '+(err.message||err)); }
+  btn.disabled=false; btn.textContent=old;
+});
 
 // copy
 document.querySelectorAll('[data-copy]').forEach(b=>{
