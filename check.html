@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Check Mỹ / Canada — CCP</title>
+<title>Check quốc gia khách — CCP</title>
 <style>
-:root{--teal:#1F6F54;--us:#3b6fb0;--ca:#c0392b;--bg:#f4f7f5;--line:#dde5e0;--muted:#7a8a83}
+:root{--teal:#1F6F54;--us:#3b6fb0;--ca:#c0392b;--eu:#2f7d6e;--ot:#8a6d3b;--bg:#f4f7f5;--line:#dde5e0;--muted:#7a8a83}
 *{box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 body{margin:0;background:var(--bg);color:#1c2b25;padding:18px;display:flex;justify-content:center}
-.wrap{width:100%;max-width:440px}
+.wrap{width:100%;max-width:460px}
 h1{font-size:20px;margin:6px 0 2px;color:var(--teal)}
 .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
 .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
@@ -19,46 +19,60 @@ input:focus{border-color:var(--teal)}
 #result{margin-top:16px;border-radius:14px;padding:18px;text-align:center;display:none}
 #result.show{display:block}
 .flag{font-size:52px;line-height:1}
-.country{font-size:26px;font-weight:800;margin:6px 0 2px}
+.country{font-size:24px;font-weight:800;margin:6px 0 2px}
 .loc{font-size:15px;color:#333}
-.area{display:inline-block;background:rgba(0,0,0,.06);border-radius:20px;padding:3px 12px;font-weight:700;margin-top:8px;font-size:13px}
-.us{background:#eaf1fa;color:var(--us)} .us .country{color:var(--us)}
-.ca{background:#fdeeee;color:var(--ca)} .ca .country{color:var(--ca)}
-.na{background:#f0f0f0;color:#666}
+.tag{display:inline-block;border-radius:20px;padding:3px 12px;font-weight:700;margin-top:8px;font-size:12px}
+.us{background:#eaf1fa} .us .country{color:var(--us)} .us .tag{background:#dceaf6;color:var(--us)}
+.ca{background:#fdeeee} .ca .country{color:var(--ca)} .ca .tag{background:#f8dcdc;color:var(--ca)}
+.eu{background:#eaf5f1} .eu .country{color:var(--eu)} .eu .tag{background:#d7eee6;color:var(--eu)}
+.ot{background:#f7f2e6} .ot .country{color:var(--ot)} .ot .tag{background:#efe6cf;color:var(--ot)}
+.na{background:#f0f0f0} .na .country{color:#666}
 .legend{font-size:12px;color:var(--muted);margin-top:16px;line-height:1.6}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🇺🇸/🇨🇦 Check Mỹ hay Canada</h1>
-  <p class="sub">Dán số điện thoại khách vào ô dưới — hệ thống tự nhận biết. (Mỹ & Canada dùng chung +1, phân biệt bằng area code)</p>
+  <h1>🌍 Check quốc gia khách</h1>
+  <p class="sub">Dán số điện thoại khách → tự nhận Mỹ / Canada / các nước EU / quốc gia khác. (Mỹ & Canada chung +1, phân biệt bằng area code)</p>
   <div class="card">
     <label>Số điện thoại khách</label>
-    <input id="ph" inputmode="tel" placeholder="VD: +1 416 555 1234 hoặc 84334211117" autocomplete="off">
-    <div class="hint">Dán kiểu gì cũng được: có +1, có dấu cách, có @c.us… đều nhận.</div>
+    <input id="ph" inputmode="tel" placeholder="VD: +1 416 555 1234 · 33617302982 · 84334211117" autocomplete="off">
+    <div class="hint">Dán kiểu gì cũng được: có +, có dấu cách, có @c.us… đều nhận.</div>
     <div id="result"></div>
-    <div class="legend">💡 Nếu là số Việt Nam (+84) hoặc nước khác (Pháp +33, Ý +39…) sẽ báo "Không phải Mỹ/Canada".</div>
+    <div class="legend">💡 Số cần có <b>mã quốc gia</b> ở đầu (vd +1, +33, +44…). Số +1 mà 10 chữ số cũng nhận là Mỹ/Canada.</div>
   </div>
 </div>
 <script>
-const CA={ '204':'Manitoba','226':'Ontario','236':'British Columbia','249':'Ontario','250':'British Columbia','263':'Quebec','289':'Ontario','306':'Saskatchewan','343':'Ontario','354':'Quebec','365':'Ontario','367':'Quebec','368':'Alberta','382':'Ontario','403':'Alberta','416':'Ontario (Toronto)','418':'Quebec','428':'New Brunswick','431':'Manitoba','437':'Ontario (Toronto)','438':'Quebec (Montreal)','450':'Quebec','468':'Quebec','474':'Saskatchewan','506':'New Brunswick','514':'Quebec (Montreal)','519':'Ontario','548':'Ontario','579':'Quebec','581':'Quebec','584':'Manitoba','587':'Alberta','604':'British Columbia (Vancouver)','613':'Ontario (Ottawa)','639':'Saskatchewan','647':'Ontario (Toronto)','672':'British Columbia','683':'Ontario','705':'Ontario','709':'Newfoundland','742':'Ontario','753':'Ontario','778':'British Columbia','780':'Alberta (Edmonton)','782':'Nova Scotia / PEI','807':'Ontario','819':'Quebec','825':'Alberta','867':'Yukon / NWT / Nunavut','873':'Quebec','879':'Newfoundland','902':'Nova Scotia / PEI','905':'Ontario' };
-const US={ '212':'New York, NY','213':'Los Angeles, CA','214':'Dallas, TX','215':'Philadelphia, PA','305':'Miami, FL','310':'Los Angeles, CA','312':'Chicago, IL','323':'Los Angeles, CA','404':'Atlanta, GA','407':'Orlando, FL','408':'San Jose, CA','412':'Pittsburgh, PA','415':'San Francisco, CA','469':'Dallas, TX','470':'Atlanta, GA','480':'Phoenix, AZ','502':'Louisville, KY','503':'Portland, OR','504':'New Orleans, LA','508':'Massachusetts','510':'Oakland, CA','512':'Austin, TX','516':'New York','571':'Virginia','602':'Phoenix, AZ','607':'New York','617':'Boston, MA','619':'San Diego, CA','626':'California','646':'New York, NY','678':'Atlanta, GA','702':'Las Vegas, NV','703':'Virginia','704':'Charlotte, NC','713':'Houston, TX','714':'California','718':'New York, NY','720':'Denver, CO','725':'Las Vegas, NV','737':'Austin, TX','747':'California','754':'Florida','760':'California','770':'Atlanta, GA','773':'Chicago, IL','786':'Miami, FL','801':'Salt Lake City, UT','805':'California','813':'Tampa, FL','818':'California','832':'Houston, TX','843':'South Carolina','858':'San Diego, CA','859':'Kentucky','904':'Jacksonville, FL','909':'California','913':'Kansas','914':'New York','916':'Sacramento, CA','917':'New York, NY','919':'North Carolina','929':'New York, NY','954':'Florida','972':'Dallas, TX' };
+const CA={'204':'Manitoba','226':'Ontario','236':'British Columbia','249':'Ontario','250':'British Columbia','263':'Quebec','289':'Ontario','306':'Saskatchewan','343':'Ontario','354':'Quebec','365':'Ontario','367':'Quebec','368':'Alberta','382':'Ontario','403':'Alberta','416':'Ontario (Toronto)','418':'Quebec','428':'New Brunswick','431':'Manitoba','437':'Ontario (Toronto)','438':'Quebec (Montreal)','450':'Quebec','468':'Quebec','474':'Saskatchewan','506':'New Brunswick','514':'Quebec (Montreal)','519':'Ontario','548':'Ontario','579':'Quebec','581':'Quebec','584':'Manitoba','587':'Alberta','604':'British Columbia (Vancouver)','613':'Ontario (Ottawa)','639':'Saskatchewan','647':'Ontario (Toronto)','672':'British Columbia','683':'Ontario','705':'Ontario','709':'Newfoundland','742':'Ontario','753':'Ontario','778':'British Columbia','780':'Alberta (Edmonton)','782':'Nova Scotia / PEI','807':'Ontario','819':'Quebec','825':'Alberta','867':'Yukon / NWT / Nunavut','873':'Quebec','879':'Newfoundland','902':'Nova Scotia / PEI','905':'Ontario'};
+const US={'212':'New York, NY','213':'Los Angeles, CA','214':'Dallas, TX','215':'Philadelphia, PA','305':'Miami, FL','310':'Los Angeles, CA','312':'Chicago, IL','323':'Los Angeles, CA','404':'Atlanta, GA','407':'Orlando, FL','408':'San Jose, CA','412':'Pittsburgh, PA','415':'San Francisco, CA','469':'Dallas, TX','470':'Atlanta, GA','480':'Phoenix, AZ','502':'Louisville, KY','503':'Portland, OR','504':'New Orleans, LA','508':'Massachusetts','510':'Oakland, CA','512':'Austin, TX','516':'New York','571':'Virginia','602':'Phoenix, AZ','607':'New York','617':'Boston, MA','619':'San Diego, CA','626':'California','646':'New York, NY','678':'Atlanta, GA','702':'Las Vegas, NV','703':'Virginia','704':'Charlotte, NC','713':'Houston, TX','714':'California','718':'New York, NY','720':'Denver, CO','725':'Las Vegas, NV','737':'Austin, TX','747':'California','754':'Florida','760':'California','770':'Atlanta, GA','773':'Chicago, IL','786':'Miami, FL','801':'Salt Lake City, UT','805':'California','813':'Tampa, FL','818':'California','832':'Houston, TX','843':'South Carolina','858':'San Diego, CA','859':'Kentucky','904':'Jacksonville, FL','909':'California','913':'Kansas','914':'New York','916':'Sacramento, CA','917':'New York, NY','919':'North Carolina','929':'New York, NY','954':'Florida','972':'Dallas, TX'};
+const CC={
+ '44':['Anh (UK)','🇬🇧','eu'],'33':['Pháp','🇫🇷','eu'],'49':['Đức','🇩🇪','eu'],'39':['Ý','🇮🇹','eu'],'34':['Tây Ban Nha','🇪🇸','eu'],'31':['Hà Lan','🇳🇱','eu'],'32':['Bỉ','🇧🇪','eu'],'41':['Thụy Sĩ','🇨🇭','eu'],'43':['Áo','🇦🇹','eu'],'351':['Bồ Đào Nha','🇵🇹','eu'],'353':['Ireland','🇮🇪','eu'],'358':['Phần Lan','🇫🇮','eu'],'46':['Thụy Điển','🇸🇪','eu'],'47':['Na Uy','🇳🇴','eu'],'45':['Đan Mạch','🇩🇰','eu'],'48':['Ba Lan','🇵🇱','eu'],'420':['Séc','🇨🇿','eu'],'421':['Slovakia','🇸🇰','eu'],'36':['Hungary','🇭🇺','eu'],'40':['Romania','🇷🇴','eu'],'359':['Bulgaria','🇧🇬','eu'],'30':['Hy Lạp','🇬🇷','eu'],'385':['Croatia','🇭🇷','eu'],'386':['Slovenia','🇸🇮','eu'],'370':['Lithuania','🇱🇹','eu'],'371':['Latvia','🇱🇻','eu'],'372':['Estonia','🇪🇪','eu'],'352':['Luxembourg','🇱🇺','eu'],'356':['Malta','🇲🇹','eu'],'357':['Cyprus','🇨🇾','eu'],'354':['Iceland','🇮🇸','eu'],'380':['Ukraine','🇺🇦','eu'],'90':['Thổ Nhĩ Kỳ','🇹🇷','ot'],'7':['Nga/Kazakhstan','🇷🇺','ot'],
+ '84':['Việt Nam','🇻🇳','ot'],'91':['Ấn Độ','🇮🇳','ot'],'92':['Pakistan','🇵🇰','ot'],'880':['Bangladesh','🇧🇩','ot'],'234':['Nigeria','🇳🇬','ot'],'509':['Haiti','🇭🇹','ot'],'256':['Uganda','🇺🇬','ot'],'237':['Cameroon','🇨🇲','ot'],'243':['CHDC Congo','🇨🇩','ot'],'225':["Côte d'Ivoire",'🇨🇮','ot'],'224':['Guinea','🇬🇳','ot'],'233':['Ghana','🇬🇭','ot'],'254':['Kenya','🇰🇪','ot'],'27':['Nam Phi','🇿🇦','ot'],'212':['Morocco','🇲🇦','ot'],'213':['Algeria','🇩🇿','ot'],'216':['Tunisia','🇹🇳','ot'],'221':['Senegal','🇸🇳','ot'],'20':['Ai Cập','🇪🇬','ot'],
+ '61':['Úc','🇦🇺','ot'],'64':['New Zealand','🇳🇿','ot'],'63':['Philippines','🇵🇭','ot'],'62':['Indonesia','🇮🇩','ot'],'60':['Malaysia','🇲🇾','ot'],'66':['Thái Lan','🇹🇭','ot'],'65':['Singapore','🇸🇬','ot'],'852':['Hong Kong','🇭🇰','ot'],'886':['Đài Loan','🇹🇼','ot'],'81':['Nhật Bản','🇯🇵','ot'],'82':['Hàn Quốc','🇰🇷','ot'],'86':['Trung Quốc','🇨🇳','ot'],'971':['UAE','🇦🇪','ot'],'966':['Ả Rập Xê Út','🇸🇦','ot'],'55':['Brazil','🇧🇷','ot'],'52':['Mexico','🇲🇽','ot'],'57':['Colombia','🇨🇴','ot'],'54':['Argentina','🇦🇷','ot']
+};
 const el=document.getElementById('ph'), out=document.getElementById('result');
-function areaOf(raw){ let d=(raw||'').replace(/\D/g,''); if(!d) return null;
-  if(d.length===11 && d[0]==='1') return d.substr(1,3);
-  if(d.length===10) return d.substr(0,3);
-  if(d.length===11 && d[0]!=='1') return null; // số nước khác (VN 84…, Pháp 33…)
-  if(d.length>11 && d.startsWith('1')) return d.substr(1,3);
+function detect(raw){ let d=(raw||'').replace(/\D/g,''); if(!d) return null;
+  if(d.length>=11 && d[0]==='1') return {kind:'na',area:d.substr(1,3)};
+  if(d.length===10) return {kind:'na',area:d.substr(0,3)};
+  for(let L=3;L>=1;L--){ const cc=d.substr(0,L); if(CC[cc]) return {kind:'cc',cc:cc,info:CC[cc]}; }
   return null;
 }
-function check(){ const a=areaOf(el.value);
+function render(r){
   if(!el.value.trim()){ out.className=''; out.classList.remove('show'); out.innerHTML=''; return; }
   out.classList.add('show');
-  if(!a){ out.className='na show'; out.innerHTML='<div class="flag">🌍</div><div class="country" style="color:#666">Không phải Mỹ/Canada</div><div class="loc">Số này không ở dạng +1 (có thể là VN +84, Pháp +33, Ý +39…)</div>'; return; }
-  if(CA[a]){ out.className='ca show'; out.innerHTML='<div class="flag">🇨🇦</div><div class="country">CANADA</div><div class="loc">'+CA[a]+'</div><div class="area">Area code +1 '+a+'</div>'; }
-  else { out.className='us show'; out.innerHTML='<div class="flag">🇺🇸</div><div class="country">MỸ (US)</div><div class="loc">'+(US[a]||'United States')+'</div><div class="area">Area code +1 '+a+'</div>'; }
+  if(!r){ out.className='na show'; out.innerHTML='<div class="flag">❓</div><div class="country" style="color:#666">Chưa nhận diện được</div><div class="loc">Số thiếu mã quốc gia hoặc sai định dạng. Thêm mã nước ở đầu (vd +33, +44…).</div>'; return; }
+  if(r.kind==='na'){
+    if(CA[r.area]){ out.className='ca show'; out.innerHTML='<div class="flag">🇨🇦</div><div class="country">CANADA</div><div class="loc">'+CA[r.area]+'</div><div class="tag">Area code +1 '+r.area+'</div>'; }
+    else { out.className='us show'; out.innerHTML='<div class="flag">🇺🇸</div><div class="country">MỸ (US)</div><div class="loc">'+(US[r.area]||'United States')+'</div><div class="tag">Area code +1 '+r.area+'</div>'; }
+    return;
+  }
+  const name=r.info[0], flag=r.info[1], grp=r.info[2];
+  const cls = grp==='eu'?'eu':'ot';
+  const tag = grp==='eu'?'🇪🇺 Thị trường Euro':'🌍 Quốc gia khác';
+  out.className=cls+' show';
+  out.innerHTML='<div class="flag">'+flag+'</div><div class="country">'+name+'</div><div class="loc">Mã quốc gia +'+r.cc+'</div><div class="tag">'+tag+'</div>';
 }
-el.addEventListener('input',check); el.focus();
+el.addEventListener('input',()=>render(detect(el.value))); el.focus();
 </script>
 </body>
 </html>
