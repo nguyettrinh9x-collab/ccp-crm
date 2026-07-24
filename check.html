@@ -32,8 +32,8 @@ input:focus{border-color:var(--teal)}
 </head>
 <body>
 <div class="wrap">
-  <h1>🌍 Check quốc gia khách</h1>
-  <p class="sub">Dán số điện thoại khách → tự nhận Mỹ / Canada / các nước EU / quốc gia khác. (Mỹ & Canada chung +1, phân biệt bằng area code)</p>
+  <h1>🌍 Check quốc gia + WhatsApp</h1>
+  <p class="sub">Dán số điện thoại khách → hiện quốc gia (Mỹ / Canada / EU / khác) + nút <b>Mở WhatsApp</b> để kết nối ngay trên điện thoại.</p>
   <div class="card">
     <label>Số điện thoại khách</label>
     <input id="ph" inputmode="tel" placeholder="VD: +1 416 555 1234 · 33617302982 · 84334211117" autocomplete="off">
@@ -57,20 +57,25 @@ function detect(raw){ let d=(raw||'').replace(/\D/g,''); if(!d) return null;
   for(let L=3;L>=1;L--){ const cc=d.substr(0,L); if(CC[cc]) return {kind:'cc',cc:cc,info:CC[cc]}; }
   return null;
 }
+function waNum(raw){ let d=(raw||'').replace(/\D/g,''); if(d.length===10) d='1'+d; return d.length>=8?d:null; }
+function waBtn(raw){ const w=waNum(raw); if(!w) return '';
+  return '<div style="margin-top:16px"><a href="https://wa.me/'+w+'" target="_blank" rel="noopener" style="display:inline-block;background:#25D366;color:#fff;font-weight:800;text-decoration:none;padding:13px 22px;border-radius:12px;font-size:17px">📱 Mở WhatsApp (+'+w+')</a><div style="font-size:12px;color:var(--muted);margin-top:8px">Bấm để mở chat ngay trên điện thoại. Nếu WhatsApp báo <b>"not on WhatsApp / số không hợp lệ"</b> → khách <b>KHÔNG</b> dùng WhatsApp.</div></div>';
+}
 function render(r){
   if(!el.value.trim()){ out.className=''; out.classList.remove('show'); out.innerHTML=''; return; }
   out.classList.add('show');
-  if(!r){ out.className='na show'; out.innerHTML='<div class="flag">❓</div><div class="country" style="color:#666">Chưa nhận diện được</div><div class="loc">Số thiếu mã quốc gia hoặc sai định dạng. Thêm mã nước ở đầu (vd +33, +44…).</div>'; return; }
+  const wa = waBtn(el.value);
+  if(!r){ out.className='na show'; out.innerHTML='<div class="flag">❓</div><div class="country" style="color:#666">Chưa nhận diện quốc gia</div><div class="loc">Số thiếu mã quốc gia — chị vẫn có thể thử mở WhatsApp bên dưới.</div>'+wa; return; }
   if(r.kind==='na'){
-    if(CA[r.area]){ out.className='ca show'; out.innerHTML='<div class="flag">🇨🇦</div><div class="country">CANADA</div><div class="loc">'+CA[r.area]+'</div><div class="tag">Area code +1 '+r.area+'</div>'; }
-    else { out.className='us show'; out.innerHTML='<div class="flag">🇺🇸</div><div class="country">MỸ (US)</div><div class="loc">'+(US[r.area]||'United States')+'</div><div class="tag">Area code +1 '+r.area+'</div>'; }
+    if(CA[r.area]){ out.className='ca show'; out.innerHTML='<div class="flag">🇨🇦</div><div class="country">CANADA</div><div class="loc">'+CA[r.area]+'</div><div class="tag">Area code +1 '+r.area+'</div>'+wa; }
+    else { out.className='us show'; out.innerHTML='<div class="flag">🇺🇸</div><div class="country">MỸ (US)</div><div class="loc">'+(US[r.area]||'United States')+'</div><div class="tag">Area code +1 '+r.area+'</div>'+wa; }
     return;
   }
   const name=r.info[0], flag=r.info[1], grp=r.info[2];
   const cls = grp==='eu'?'eu':'ot';
   const tag = grp==='eu'?'🇪🇺 Thị trường Euro':'🌍 Quốc gia khác';
   out.className=cls+' show';
-  out.innerHTML='<div class="flag">'+flag+'</div><div class="country">'+name+'</div><div class="loc">Mã quốc gia +'+r.cc+'</div><div class="tag">'+tag+'</div>';
+  out.innerHTML='<div class="flag">'+flag+'</div><div class="country">'+name+'</div><div class="loc">Mã quốc gia +'+r.cc+'</div><div class="tag">'+tag+'</div>'+wa;
 }
 el.addEventListener('input',()=>render(detect(el.value))); el.focus();
 </script>
