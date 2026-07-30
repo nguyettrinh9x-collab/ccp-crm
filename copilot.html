@@ -61,6 +61,8 @@ textarea{min-height:64px;resize:vertical}
     <div class="out" id="outCust">
       <div class="blk vi"><div class="mini">🇻🇳 Khách nói gì</div><div id="cVi"></div><div id="cIntent" style="color:var(--muted);font-size:13px;margin-top:6px"></div></div>
       <div class="blk reply"><div class="mini">✅ Trả lời khách (English) — copy gửi luôn</div><div class="t" id="cReply"></div>
+        <div id="cReplyVi" style="font-size:13px;color:#33553f;margin-top:8px"></div>
+        <div id="cReplyIpa" style="font-size:12px;color:var(--muted);font-style:italic;margin-top:4px"></div>
         <div class="acts"><button class="btn small" type="button" onclick="copyEl('cReply')">📋 Copy</button><button class="btn small" type="button" onclick="speak(document.getElementById('cReply').innerText)">🔊 Đọc</button></div></div>
       <div class="blk handle"><div class="mini">💡 Hướng xử lý & chốt</div><div id="cHandle"></div></div>
     </div>
@@ -76,6 +78,8 @@ textarea{min-height:64px;resize:vertical}
     <div class="busy" id="busySale" style="display:none">⏳ Đang xử lý...</div>
     <div class="out" id="outSale">
       <div class="blk reply"><div class="mini">🇺🇸 Câu English để gửi khách</div><div class="t" id="sEn"></div>
+        <div id="sEnVi" style="font-size:13px;color:#33553f;margin-top:8px"></div>
+        <div id="sEnIpa" style="font-size:12px;color:var(--muted);font-style:italic;margin-top:4px"></div>
         <div class="acts"><button class="btn small" type="button" onclick="copyEl('sEn')">📋 Copy</button><button class="btn small" type="button" onclick="speak(document.getElementById('sEn').innerText)">🔊 Đọc</button></div></div>
       <div id="sNote" style="font-size:13px;color:var(--muted);margin-top:8px"></div>
     </div>
@@ -97,7 +101,10 @@ async function runCust(){
   try{ const j=await callFn('from_customer',t);
     if(j.error){$('busyCust').innerHTML='⚠️ Lỗi: '+j.error;return;}
     $('cVi').innerHTML=esc(j.vi); $('cIntent').innerHTML=j.intent?('🎯 '+esc(j.intent)):'';
-    $('cReply').innerHTML=esc(j.reply_en); $('cHandle').innerHTML=esc(j.handling_vi);
+    $('cReply').innerHTML=esc(j.reply_en);
+    $('cReplyVi').innerHTML=j.reply_vi?('🇻🇳 '+esc(j.reply_vi)):'';
+    $('cReplyIpa').innerHTML=j.reply_ipa?('🔉 /'+esc(j.reply_ipa)+'/'):'';
+    $('cHandle').innerHTML=esc(j.handling_vi);
     $('busyCust').style.display='none'; $('outCust').classList.add('show');
   }catch(e){$('busyCust').innerHTML='⚠️ Lỗi mạng, thử lại.';}
 }
@@ -106,7 +113,10 @@ async function runSale(){
   $('busySale').style.display='block'; $('outSale').classList.remove('show');
   try{ const j=await callFn('to_customer',t);
     if(j.error){$('busySale').innerHTML='⚠️ Lỗi: '+j.error;return;}
-    $('sEn').innerHTML=esc(j.en); $('sNote').innerHTML=j.vi_note?('📝 '+esc(j.vi_note)):'';
+    $('sEn').innerHTML=esc(j.en);
+    $('sEnVi').innerHTML=j.reply_vi?('🇻🇳 '+esc(j.reply_vi)):'';
+    $('sEnIpa').innerHTML=j.reply_ipa?('🔉 /'+esc(j.reply_ipa)+'/'):'';
+    $('sNote').innerHTML=j.vi_note?('📝 '+esc(j.vi_note)):'';
     $('busySale').style.display='none'; $('outSale').classList.add('show');
   }catch(e){$('busySale').innerHTML='⚠️ Lỗi mạng, thử lại.';}
 }
