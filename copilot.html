@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trợ lý chốt đơn — CCP</title>
+<style>
+:root{--teal:#1F6F54;--teal2:#2f8f5b;--bg:#f4f7f5;--line:#dde5e0;--muted:#7a8a83;--blue:#3b6fb0;--amber:#b07d00}
+*{box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+body{margin:0;background:var(--bg);color:#1c2b25;padding:14px;display:flex;justify-content:center}
+.wrap{width:100%;max-width:560px}
+h1{font-size:19px;margin:4px 0 2px;color:var(--teal)}
+.sub{color:var(--muted);font-size:12px;margin:0 0 12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+select,textarea{border:2px solid var(--line);border-radius:12px;padding:11px;font-size:16px;outline:none;width:100%}
+select:focus,textarea:focus{border-color:var(--teal)}
+textarea{min-height:64px;resize:vertical}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.lbl{font-weight:800;font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.btn{border:none;border-radius:11px;padding:11px 16px;font-size:15px;font-weight:700;cursor:pointer}
+.btn.main{background:var(--teal);color:#fff}
+.btn.mic{background:#eef4f0;color:var(--teal);border:1px solid var(--line)}
+.btn.mic.on{background:#e23d3d;color:#fff}
+.btn.small{padding:6px 12px;font-size:13px;background:#eef4f0;color:var(--teal)}
+.out{margin-top:12px;display:none}.out.show{display:block}
+.blk{border-radius:12px;padding:12px;margin-top:10px;font-size:15px;line-height:1.55}
+.vi{background:#f4f7f5}
+.reply{background:#eafaf2;border:1px solid #bfe6d2}
+.reply .t{font-size:16px;color:#14432f;font-weight:600}
+.handle{background:#fff8e6;border:1px solid #f0deb0;white-space:pre-wrap;font-size:14px}
+.mini{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;font-weight:700}
+.acts{display:flex;gap:8px;margin-top:8px}
+.busy{color:var(--muted);font-style:italic;font-size:14px;margin-top:8px}
+.warn{font-size:11px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎧 Trợ lý chốt đơn (US)</h1>
+  <p class="sub">Dịch 2 chiều Anh↔Việt + gợi ý câu trả lời & cách chốt. Bấm 🎤 để nói, hoặc gõ/dán.</p>
+  <div class="row">
+    <span style="font-size:13px;font-weight:700">Tình trạng khách:</span>
+    <select id="cond" style="width:auto;flex:1;min-width:180px">
+      <option value="u_xo">U xơ tử cung</option>
+      <option value="noi_tiet">Nội tiết / kinh nguyệt</option>
+      <option value="pcos">PCOS (đa nang)</option>
+      <option value="say_luu">Sảy / lưu thai</option>
+      <option value="nam">Yếu tố nam</option>
+      <option value="khac">Khác / chung</option>
+    </select>
+  </div>
+
+  <div class="card">
+    <div class="lbl">🗣️ Khách nói (English)</div>
+    <textarea id="custIn" placeholder="Gõ/dán câu khách, hoặc bấm 🎤 để nghe..."></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn mic" id="micCust" type="button">🎤 Nói (EN)</button>
+      <button class="btn main" id="goCust" type="button" style="flex:1">Dịch + Gợi ý chốt</button>
+    </div>
+    <div class="busy" id="busyCust" style="display:none">⏳ Đang xử lý...</div>
+    <div class="out" id="outCust">
+      <div class="blk vi"><div class="mini">🇻🇳 Khách nói gì</div><div id="cVi"></div><div id="cIntent" style="color:var(--muted);font-size:13px;margin-top:6px"></div></div>
+      <div class="blk reply"><div class="mini">✅ Trả lời khách (English) — copy gửi luôn</div><div class="t" id="cReply"></div>
+        <div class="acts"><button class="btn small" type="button" onclick="copyEl('cReply')">📋 Copy</button><button class="btn small" type="button" onclick="speak(document.getElementById('cReply').innerText)">🔊 Đọc</button></div></div>
+      <div class="blk handle"><div class="mini">💡 Hướng xử lý & chốt</div><div id="cHandle"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="lbl">✍️ Bạn muốn nói (Tiếng Việt) → English</div>
+    <textarea id="saleIn" placeholder="Gõ/nói ý tiếng Việt, hệ thống chuyển sang English chuẩn để gửi khách..."></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn mic" id="micSale" type="button">🎤 Nói (VN)</button>
+      <button class="btn main" id="goSale" type="button" style="flex:1">Chuyển sang English</button>
+    </div>
+    <div class="busy" id="busySale" style="display:none">⏳ Đang xử lý...</div>
+    <div class="out" id="outSale">
+      <div class="blk reply"><div class="mini">🇺🇸 Câu English để gửi khách</div><div class="t" id="sEn"></div>
+        <div class="acts"><button class="btn small" type="button" onclick="copyEl('sEn')">📋 Copy</button><button class="btn small" type="button" onclick="speak(document.getElementById('sEn').innerText)">🔊 Đọc</button></div></div>
+      <div id="sNote" style="font-size:13px;color:var(--muted);margin-top:8px"></div>
+    </div>
+  </div>
+  <div class="warn">⚠️ Nội dung do AI gợi ý — luôn giữ compliance (support/help, không cam kết chữa khỏi/chắc có thai). 🎤 chạy tốt trên Chrome máy tính / Android.</div>
+</div>
+<script>
+const FN='https://wviyzewnokgirfkpdcvh.supabase.co/functions/v1/sales-copilot';
+const ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2aXl6ZXdub2tnaXJma3BkY3ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTQ0MTQsImV4cCI6MjA5NzQ3MDQxNH0.ilpvK4UkUPx7THaf7dldsgyX8GzwQSzCzvQO5j4YSjg';
+const $=id=>document.getElementById(id);
+async function callFn(mode,text){
+  const r=await fetch(FN,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},body:JSON.stringify({mode,text,condition:$('cond').value})});
+  return await r.json();
+}
+function esc(s){return String(s||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');}
+async function runCust(){
+  const t=$('custIn').value.trim(); if(!t)return;
+  $('busyCust').style.display='block'; $('outCust').classList.remove('show');
+  try{ const j=await callFn('from_customer',t);
+    if(j.error){$('busyCust').innerHTML='⚠️ Lỗi: '+j.error;return;}
+    $('cVi').innerHTML=esc(j.vi); $('cIntent').innerHTML=j.intent?('🎯 '+esc(j.intent)):'';
+    $('cReply').innerHTML=esc(j.reply_en); $('cHandle').innerHTML=esc(j.handling_vi);
+    $('busyCust').style.display='none'; $('outCust').classList.add('show');
+  }catch(e){$('busyCust').innerHTML='⚠️ Lỗi mạng, thử lại.';}
+}
+async function runSale(){
+  const t=$('saleIn').value.trim(); if(!t)return;
+  $('busySale').style.display='block'; $('outSale').classList.remove('show');
+  try{ const j=await callFn('to_customer',t);
+    if(j.error){$('busySale').innerHTML='⚠️ Lỗi: '+j.error;return;}
+    $('sEn').innerHTML=esc(j.en); $('sNote').innerHTML=j.vi_note?('📝 '+esc(j.vi_note)):'';
+    $('busySale').style.display='none'; $('outSale').classList.add('show');
+  }catch(e){$('busySale').innerHTML='⚠️ Lỗi mạng, thử lại.';}
+}
+$('goCust').onclick=runCust; $('goSale').onclick=runSale;
+function copyEl(id){const t=$(id).innerText;navigator.clipboard&&navigator.clipboard.writeText(t);}
+function speak(t){try{const u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=.95;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+// Voice input
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function mic(btnId,taId,lang,after){ const btn=$(btnId);
+  if(!SR){btn.style.display='none';return;}
+  let rec=null,on=false;
+  btn.onclick=()=>{ if(on){rec&&rec.stop();return;}
+    rec=new SR();rec.lang=lang;rec.interimResults=true;rec.continuous=false;
+    let txt=''; on=true;btn.classList.add('on');btn.textContent='⏹ Dừng';
+    rec.onresult=e=>{txt='';for(const r of e.results)txt+=r[0].transcript;$(taId).value=txt;};
+    rec.onend=()=>{on=false;btn.classList.remove('on');btn.textContent=btn.dataset.lbl;if(txt.trim())after();};
+    rec.onerror=()=>{on=false;btn.classList.remove('on');btn.textContent=btn.dataset.lbl;};
+    rec.start();
+  };
+}
+$('micCust').dataset.lbl='🎤 Nói (EN)'; $('micSale').dataset.lbl='🎤 Nói (VN)';
+mic('micCust','custIn','en-US',runCust);
+mic('micSale','saleIn','vi-VN',runSale);
+</script>
+</body>
+</html>
