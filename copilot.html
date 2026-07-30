@@ -49,10 +49,12 @@ textarea{min-height:60px;resize:vertical}
       <option value="u_xo">U xơ tử cung</option>
       <option value="noi_tiet">Nội tiết / kinh nguyệt</option>
       <option value="pcos">PCOS (đa nang)</option>
+      <option value="trung">Chất lượng trứng / AMH thấp</option>
       <option value="say_luu">Sảy / lưu thai</option>
       <option value="nam">Yếu tố nam</option>
       <option value="khac">Khác / chung</option>
     </select>
+    <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="withIpa" style="width:auto"> +IPA &amp; xử lý chi tiết <span style="color:var(--muted)">(chậm hơn)</span></label>
   </div>
 
   <div class="card">
@@ -96,13 +98,13 @@ const $=id=>document.getElementById(id);
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 function splitS(s){return String(s||'').split(/(?<=[.?!])\s+/).map(x=>x.trim()).filter(Boolean);}
 function renderRT(boxId,en,vi,ipa){
-  const A=splitS(en),B=splitS(vi),C=splitS(ipa); const n=Math.max(A.length,B.length,C.length,1);
-  let h='<div class="rwrap"><table class="rtbl"><tr><th>🇺🇸 English</th><th>🇻🇳 Tiếng Việt</th><th>🔉 IPA</th></tr>';
-  for(let i=0;i<n;i++){h+='<tr><td class="en">'+esc(A[i]||'')+'</td><td class="vi">'+esc(B[i]||'')+'</td><td class="ipa">'+(C[i]?'/'+esc(C[i])+'/':'')+'</td></tr>';}
+  const A=splitS(en),B=splitS(vi),C=splitS(ipa); const hasIpa=C.length>0; const n=Math.max(A.length,B.length,C.length,1);
+  let h='<div class="rwrap"><table class="rtbl"><tr><th>🇺🇸 English</th><th>🇻🇳 Tiếng Việt</th>'+(hasIpa?'<th>🔉 IPA</th>':'')+'</tr>';
+  for(let i=0;i<n;i++){h+='<tr><td class="en">'+esc(A[i]||'')+'</td><td class="vi">'+esc(B[i]||'')+'</td>'+(hasIpa?'<td class="ipa">'+(C[i]?'/'+esc(C[i])+'/':'')+'</td>':'')+'</tr>';}
   h+='</table></div>'; $(boxId).innerHTML=h;
 }
 async function callFn(mode,text){
-  const r=await fetch(FN,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},body:JSON.stringify({mode,text,condition:$('cond').value})});
+  const r=await fetch(FN,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},body:JSON.stringify({mode,text,condition:$('cond').value,full:$('withIpa').checked})});
   return await r.json();
 }
 let cBusy=false;
@@ -146,6 +148,9 @@ function mic(btnId,taId,lang,after,liveId){ const btn=$(btnId); if(!SR){btn.styl
 $('micCust').dataset.lbl='🎤 Bật nghe khách'; $('micSale').dataset.lbl='🎤 Nói (VN)';
 mic('micCust','custIn','en-US',runCust,'liveCust');
 mic('micSale','saleIn','vi-VN',runSale,null);
+// Tự chạy khi gõ/dán xong (dừng gõ ~1s)
+let dcT;$('custIn').addEventListener('input',()=>{clearTimeout(dcT);dcT=setTimeout(runCust,1000);});
+let dsT;$('saleIn').addEventListener('input',()=>{clearTimeout(dsT);dsT=setTimeout(runSale,1200);});
 </script>
 </body>
 </html>
