@@ -478,7 +478,7 @@ function orderHistoryHTML(c){
   if(n===0){ h+=`<p style="color:var(--muted);font-size:13px;margin:0 0 10px">Khách chưa có đơn nào. Khi chốt đơn đầu sẽ tính là Lần 1.</p>`; }
   else{
     h+=`<div class="card" style="padding:0;background:var(--cream);margin-bottom:12px;overflow-x:auto"><table>
-      <tr><th style="padding:7px 10px">Lần</th><th>Ngày mua</th><th>Sản phẩm</th><th>Số tiền</th><th>💵 DT VNĐ</th><th></th></tr>`;
+      <tr><th style="padding:7px 10px">Lần</th><th>Ngày mua</th><th>Sản phẩm</th><th>Số tiền</th><th>💵 DT VNĐ</th><th>💰 Tiền gốc</th><th>💸 Nợ gốc</th><th></th></tr>`;
     let idx=1;
     const vndInput=(idp,val)=>`<input id="${idp}" type="text" inputmode="numeric" value="${(Number(val)||0)>0?(Number(val)||0).toLocaleString('vi-VN'):''}" placeholder="0 đ" oninput="var v=this.value.replace(/\\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):''" style="padding:4px;width:110px">`;
     if(hasLan1(c)){
@@ -488,9 +488,11 @@ function orderHistoryHTML(c){
           <td><input id="l1-sp" value="${(''+(c.sp||'')).replace(/"/g,'&quot;')}" list="ago-sp-list" style="padding:4px;width:100%;min-width:180px"></td>
           <td><input id="l1-dt" type="number" value="${Number(c.dt)||0}" style="padding:4px;width:80px"></td>
           <td>${vndInput('l1-vnd',c.dt_vnd)}</td>
+          <td><input id="l1-tiengoc" type="number" value="${Number(c.tien_goc)||0}" style="padding:4px;width:80px"></td>
+          <td><input id="l1-nogoc" type="number" value="${Number(c.no_goc)||0}" style="padding:4px;width:80px"></td>
           <td style="white-space:nowrap"><button class="btn" type="button" style="padding:3px 10px;font-size:12px" onclick="saveLan1Inline('${c.id}')">💾 Lưu</button> <span style="cursor:pointer;color:var(--muted)" onclick="cancelOrderEdit('${c.id}')">✕ Huỷ</span></td></tr>`;
       } else {
-        h+=`<tr><td style="padding:7px 10px"><b>Lần 1</b></td><td>${(c.ngay_chot||c.ngay_tao||'—')}</td><td>${c.sp||'—'}</td><td><b>$${(Number(c.dt)||0).toLocaleString('en-US')}</b></td><td><b style="color:var(--teal-dark)">${(Number(c.dt_vnd)||0).toLocaleString('vi-VN')} đ</b></td><td style="white-space:nowrap"><span style="color:var(--muted);font-size:11px">đơn đầu</span> <span style="cursor:pointer;color:var(--teal-dark)" title="Sửa đơn đầu (ngày/SP/doanh thu/VNĐ)" onclick="editLan1('${c.id}')">✏️</span></td></tr>`;
+        h+=`<tr><td style="padding:7px 10px"><b>Lần 1</b></td><td>${(c.ngay_chot||c.ngay_tao||'—')}</td><td>${c.sp||'—'}</td><td><b>$${(Number(c.dt)||0).toLocaleString('en-US')}</b></td><td><b style="color:var(--teal-dark)">${(Number(c.dt_vnd)||0).toLocaleString('vi-VN')} đ</b></td><td>${curSym(c)}${(Number(c.tien_goc)||0).toLocaleString('en-US')}</td><td>${curSym(c)}${(Number(c.no_goc)||0).toLocaleString('en-US')}</td><td style="white-space:nowrap"><span style="color:var(--muted);font-size:11px">đơn đầu</span> <span style="cursor:pointer;color:var(--teal-dark)" title="Sửa đơn đầu (ngày/SP/doanh thu/VNĐ)" onclick="editLan1('${c.id}')">✏️</span></td></tr>`;
       }
       idx=2;
     }
@@ -501,9 +503,11 @@ function orderHistoryHTML(c){
           <td><input id="oe-sp" value="${(''+(o.san_pham||'')).replace(/"/g,'&quot;')}" list="ago-sp-list" style="padding:4px;width:100%;min-width:180px"></td>
           <td><input id="oe-tien" type="number" value="${Number(o.so_tien)||0}" style="padding:4px;width:80px"></td>
           <td>${vndInput('oe-vnd',o.so_tien_vnd)}</td>
+          <td><input id="oe-tiengoc" type="number" value="${Number(o.tien_goc)||0}" style="padding:4px;width:80px"></td>
+          <td><input id="oe-nogoc" type="number" value="${Number(o.no_goc)||0}" style="padding:4px;width:80px"></td>
           <td style="white-space:nowrap"><button class="btn" type="button" style="padding:3px 10px;font-size:12px" onclick="saveOrderInline('${o.id}','${c.id}')">💾 Lưu</button> <span style="cursor:pointer;color:var(--muted)" onclick="cancelOrderEdit('${c.id}')">✕ Huỷ</span></td></tr>`;
       } else {
-        h+=`<tr><td style="padding:7px 10px"><b>Lần ${idx}</b></td><td>${(''+(o.ngay||'')).slice(0,10)||'—'}</td><td>${o.san_pham||'—'}</td><td><b>$${(Number(o.so_tien)||0).toLocaleString('en-US')}</b></td><td><b style="color:var(--teal-dark)">${(Number(o.so_tien_vnd)||0).toLocaleString('vi-VN')} đ</b></td>
+        h+=`<tr><td style="padding:7px 10px"><b>Lần ${idx}</b></td><td>${(''+(o.ngay||'')).slice(0,10)||'—'}</td><td>${o.san_pham||'—'}</td><td><b>$${(Number(o.so_tien)||0).toLocaleString('en-US')}</b></td><td><b style="color:var(--teal-dark)">${(Number(o.so_tien_vnd)||0).toLocaleString('vi-VN')} đ</b></td><td>${curSym(c)}${(Number(o.tien_goc)||0).toLocaleString('en-US')}</td><td>${curSym(c)}${(Number(o.no_goc)||0).toLocaleString('en-US')}</td>
         <td style="white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark)" title="Sửa lần mua" onclick="editOrder('${o.id}','${c.id}')">✏️</span> <span style="cursor:pointer;color:var(--over)" title="Xoá lần mua này" onclick="delOrder('${o.id}','${c.id}')">🗑️</span></td></tr>`;
       }
       idx++;
@@ -512,11 +516,13 @@ function orderHistoryHTML(c){
   }
   h+=`<div style="background:var(--cream);border:1px dashed var(--line);border-radius:10px;padding:12px">
     <div style="font-weight:700;font-size:13px;margin-bottom:8px">➕ Thêm lần mua mới (mua lại)</div>
-    <div style="display:grid;grid-template-columns:130px 1fr 100px 130px auto;gap:8px;align-items:end">
-      <div><label style="font-size:12px">Ngày mua</label><input id="o-ngay" type="date" value="${D(0)}"></div>
-      <div><label style="font-size:12px">Sản phẩm</label><input id="o-sp" list="ago-sp-list" placeholder="VD: 2 AGO Eva + 1 AGO Mom"></div>
-      <div><label style="font-size:12px">Số tiền ($)</label><input id="o-tien" type="number" value="0"></div>
-      <div><label style="font-size:12px">💵 DT VNĐ</label><input id="o-vnd" type="text" inputmode="numeric" placeholder="0 đ" oninput="var v=this.value.replace(/\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):''"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
+      <div style="width:130px"><label style="font-size:12px">Ngày mua</label><input id="o-ngay" type="date" value="${D(0)}"></div>
+      <div style="flex:1;min-width:180px"><label style="font-size:12px">Sản phẩm</label><input id="o-sp" list="ago-sp-list" placeholder="VD: 2 AGO Eva + 1 AGO Mom"></div>
+      <div style="width:90px"><label style="font-size:12px">Số tiền ($)</label><input id="o-tien" type="number" value="0"></div>
+      <div style="width:120px"><label style="font-size:12px">💵 DT VNĐ</label><input id="o-vnd" type="text" inputmode="numeric" placeholder="0 đ" oninput="var v=this.value.replace(/\D/g,'');this.value=v?Number(v).toLocaleString('vi-VN'):''"></div>
+      <div style="width:110px"><label style="font-size:12px">💰 Tiền gốc (${curSym(c)})</label><input id="o-tiengoc" type="number" value="0"></div>
+      <div style="width:110px"><label style="font-size:12px">💸 Nợ gốc (${curSym(c)})</label><input id="o-nogoc" type="number" value="0"></div>
       <button class="btn" type="button" onclick="addOrder('${c.id}')">➕ Thêm</button>
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:8px">Bấm tên sản phẩm để thêm nhanh (tên đã chuẩn hoá) — rồi sửa số lượng:</div>
@@ -2894,7 +2900,7 @@ async function delTask(id){
 /* ---- Thêm / xoá lần mua (đơn mua lại) ---- */
 async function addOrder(id){
   const g=x=>document.getElementById(x).value;
-  const rec={ customer_id:id, ngay:g('o-ngay')||D(0), san_pham:g('o-sp').trim(), so_tien:Number(g('o-tien'))||0, so_tien_vnd:Number((g('o-vnd')||'').replace(/\D/g,''))||0 };
+  const rec={ customer_id:id, ngay:g('o-ngay')||D(0), san_pham:g('o-sp').trim(), so_tien:Number(g('o-tien'))||0, so_tien_vnd:Number((g('o-vnd')||'').replace(/\D/g,''))||0, tien_goc:Number(g('o-tiengoc'))||0, no_goc:Number(g('o-nogoc'))||0 };
   if(!rec.san_pham){ alert('Nhập sản phẩm của lần mua này.'); return; }
   const cc=DATA.find(x=>String(x.id)===String(id)); rec.lan = (cc?soLanMua(cc):0)+1;
   const { error }=await sb.from('orders').insert(rec);
@@ -2913,14 +2919,14 @@ function editLan1(cid){ EDIT_LAN1_CID=String(cid); EDIT_ORDER_ID=null; editCusto
 function cancelOrderEdit(cid){ EDIT_ORDER_ID=null; EDIT_LAN1_CID=null; editCustomer(cid); }
 async function saveOrderInline(oid, cid){
   const g=x=>{const e=document.getElementById(x);return e?e.value:'';};
-  const upd={ ngay:(g('oe-ngay')||'').slice(0,10)||null, san_pham:(g('oe-sp')||'').trim(), so_tien:Number(g('oe-tien'))||0, so_tien_vnd:Number((g('oe-vnd')||'').replace(/\D/g,''))||0 };
+  const upd={ ngay:(g('oe-ngay')||'').slice(0,10)||null, san_pham:(g('oe-sp')||'').trim(), so_tien:Number(g('oe-tien'))||0, so_tien_vnd:Number((g('oe-vnd')||'').replace(/\D/g,''))||0, tien_goc:Number(g('oe-tiengoc'))||0, no_goc:Number(g('oe-nogoc'))||0 };
   const { error }=await sb.from('orders').update(upd).eq('id', oid);
   if(error){ alert('Lỗi sửa: '+error.message); return; }
   EDIT_ORDER_ID=null; await loadAll(); editCustomer(cid); renderAll();
 }
 async function saveLan1Inline(cid){
   const g=x=>{const e=document.getElementById(x);return e?e.value:'';};
-  const upd={ ngay_chot:(g('l1-ngay')||'').slice(0,10)||null, sp:(g('l1-sp')||'').trim()||'—', dt:Number(g('l1-dt'))||0, dt_vnd:Number((g('l1-vnd')||'').replace(/\D/g,''))||0, ngay_capnhat:D(0) };
+  const upd={ ngay_chot:(g('l1-ngay')||'').slice(0,10)||null, sp:(g('l1-sp')||'').trim()||'—', dt:Number(g('l1-dt'))||0, dt_vnd:Number((g('l1-vnd')||'').replace(/\D/g,''))||0, tien_goc:Number(g('l1-tiengoc'))||0, no_goc:Number(g('l1-nogoc'))||0, ngay_capnhat:D(0) };
   const { error }=await sb.from('customers').update(upd).eq('id', cid);
   if(error){ alert('Lỗi sửa: '+error.message); return; }
   EDIT_LAN1_CID=null; await loadAll(); editCustomer(cid); renderAll();
@@ -3204,6 +3210,40 @@ window.addEventListener('DOMContentLoaded', ()=>{
     if(await ensureMFA()){ afterLogin(); } else { await sb.auth.signOut(); }
   } }); }
 });
+</script>
+<script>
+;(function(){
+function _dgfull(){try{
+ var host=document.getElementById('v-danhgia'); if(!host) return;
+ var old=document.getElementById('danhgia-full'); if(old) old.remove();
+ function tbl(H,R,col){var s='<div style=\"overflow-x:auto\"><table style=\"width:100%;border-collapse:collapse;font-size:13px;margin:4px 0 16px\"><tr style=\"background:'+col+';color:#fff\">';H.forEach(function(h){s+='<th style=\"padding:6px;border:1px solid #cfe0d8\">'+h+'</th>';});s+='</tr>';R.forEach(function(r){s+='<tr style=\"text-align:center\">';r.forEach(function(c){var st=(c&&typeof c==='object')?c.s:'';var v=(c&&typeof c==='object')?c.v:c;s+='<td style=\"padding:6px;border:1px solid #e3ece7;'+st+'\">'+v+'</td>';});s+='</tr>';});s+='</table></div>';return s;}
+ function ti(x){return '<div style=\"font-weight:800;color:#1F6F54;font-size:15px;margin:16px 0 4px\">'+x+'</div>';}
+ var TE='#1F6F54', PU='#6A3FA0';
+ var w='<div id="danhgia-full">';
+ w+='<div style=\"font-weight:800;color:#1F6F54;font-size:18px;margin:20px 0 2px\">📊 ĐÁNH GIÁ CHẤT LƯỢNG SALE & MKT — T1–T7/2026</div>';
+ w+='<div style=\"font-size:12px;color:#7a8a83;margin-bottom:6px\">Nguồn: sheet doanh số 2026 + CRM. Chỉ admin xem. Snapshot T7.</div>';
+ w+=ti('① Xếp hạng chất lượng');
+ var GC={A:'#2E7D32','A-':'#4CAF50','B+':'#8BC34A',C:'#F9A825'};
+ var RANK=[['Hòe','A','DS cao nhất 711tr, đều 7/7 tháng, AOV cao nhất. Yếu: %đơn mới thấp (38%), T7 chững.'],['Tiên','A-','Acquisition tốt nhất (63% đơn mới), tăng mạnh T6-T7. Yếu: AOV thấp, T5 tụt.'],['Bảo','B+','665tr, AOV cao nhất. Yếu: biến động mạnh, giảm nửa cuối (T6 sụt 29tr).'],['Yến','B+','Mới từ T6, khởi đầu mạnh & đều, %đơn mới cao nhất (79%).'],['Phúc','C','Đều nhưng năng suất thấp nhất nhóm full-time & giảm liên tục → cần kèm.']];
+ w+=tbl(['Sale','Xếp loại','Nhận xét'],RANK.map(function(r){return [{v:r[0],s:'font-weight:700'},{v:r[1],s:'background:'+GC[r[1]]+';color:#fff;font-weight:700'},{v:r[2],s:'text-align:left;font-size:12px'}];}),TE);
+ w+=ti('② Doanh số theo tháng (triệu đồng)');
+ var MON=[['Hòe',158,82,91,73,105,129,72,711],['Bảo',132,46,172,93,123,29,70,665],['Tiên',31,38,64,111,5,129,109,486],['Phúc',63,25,70,39,20,15,42,275],['Yến',0,0,0,0,0,65,67,132],['Ngàn',0,0,0,0,0,0,15,15]];
+ w+=tbl(['Sale','T1','T2','T3','T4','T5','T6','T7','Tổng'],MON.map(function(r){return r.map(function(c,i){return i===0?{v:c,s:'font-weight:700;text-align:left'}:(i===8?{v:c,s:'font-weight:700'}:(c||'-'));});}),TE);
+ w+=ti('③ Chỉ số Tháng 7 — Mes · Tương tác · Chốt · Năng suất/ngày công');
+ function pc(a,b){return (b&&a!=='')?((a/b*100).toFixed(1)+'%'):'—';}
+ function t2(x){return x?((Math.round(x/1e5)/10)+'tr'):'—';}
+ var FUN=[['Tiên',403,208,172,11,27,108575000,''],['Hòe','','','','','',72290000,'Chưa map tài khoản CRM'],['Bảo',425,266,135,3,24,70052500,''],['Yến',405,250,136,3,24,66560000,''],['Phúc',436,293,118,5,27,42376500,''],['Ngàn',333,202,121,5,10,14856500,'Khớp channgan']];
+ w+=tbl(['Sale','Mes nhận','KTT','Tương tác','Tỷ lệ TT','Chốt','Chốt/Mes','Chốt/TT','Ngày công','DT/ngày','Chốt/10 ngày','Ghi chú'],FUN.map(function(r){var sale=r[0],mes=r[1],ktt=r[2],tt=r[3],chot=r[4],ng=r[5],ds=r[6],note=r[7];var wst=note?'background:#FFF3CD;':'';return [{v:sale,s:'font-weight:700;text-align:left;'+wst},{v:mes||'—',s:wst},{v:ktt||'—',s:wst},{v:tt||'—',s:wst},{v:pc(tt,mes),s:wst},{v:chot===''?'—':chot,s:wst},{v:pc(chot,mes),s:wst},{v:pc(chot,tt),s:wst},{v:ng||'—',s:wst},{v:(ds&&ng)?t2(ds/ng):'—',s:wst},{v:(chot!==''&&ng)?(chot/ng*10).toFixed(1):'—',s:wst},{v:note,s:'text-align:left;font-size:11px;color:#b8860b;'+wst}];}),TE);
+ w+='<div style=\"font-size:12px;color:#555;margin:-6px 0 10px;line-height:1.5\">🔎 <b>Nút thắt:</b> Phúc 67% khách để KTT (phản hồi chậm) · Bảo/Yến chốt/TT ~2,2% (Tiên 6,4%) → yếu khâu chốt · Hiệu suất/ngày: Tiên 4,0tr dẫn đầu, Phúc 1,6tr thấp nhất.</div>';
+ w+=ti('④ Đánh giá MKT (doanh thu quy về marketer)');
+ var MK=[['Nguyệt (organic)',1023,'43,2%',103,'69%'],['Duy',742,'31,3%',70,'39%'],['Việt',352,'14,9%',33,'45%'],['Tuấn (ngưng T4)',253,'10,7%',19,'26%']];
+ w+=tbl(['MKT','Tổng DT (tr)','% đóng góp','Số đơn','% đơn Mới'],MK.map(function(r){return r.map(function(c,i){return i===0?{v:c,s:'font-weight:700;text-align:left'}:c;});}),PU);
+ w+='<div style=\"font-size:12px;color:#555;margin-top:-6px;line-height:1.5\">⚠️ 43% doanh thu gắn "Nguyệt/organic" = lỗ hổng attribution. Cần bổ sung chi phí ads để tính ROAS.</div>';
+ w+='</div>';
+ var d=document.createElement('div'); d.innerHTML=w; host.appendChild(d.firstChild);
+}catch(e){window.__dgerr=''+e;}}
+if(typeof renderDanhGia==='function'){var _o=renderDanhGia;renderDanhGia=function(){var x=_o.apply(this,arguments);setTimeout(_dgfull,40);return x;};}
+})();
 </script>
 </body>
 </html>
