@@ -333,6 +333,44 @@ function setDoneFrom(v){ DONE_FROM=v; renderToday(); }
 function setDoneTo(v){ DONE_TO=v; renderToday(); }
 function clearDoneFilters(){ DONE_Q=''; DONE_SALE=''; DONE_FROM=''; DONE_TO=''; renderToday(); }
 async function followDone(id){ const c=findC(id); if(!c) return; const { error }=await sb.from('customers').update({ follow:D(3), ngay_capnhat:D(0) }).eq('id', id); if(error){ alert(error.message); return; } await loadAll(); renderToday(); }
+/* ===== Việc cần làm: thao tác 1 chạm + Hoàn tác (tối ưu bớt tích tay) ===== */
+function toastUndo(msg, undoFn){
+  let t=document.getElementById('cpp-toast-undo');
+  if(!t){ t=document.createElement('div'); t.id='cpp-toast-undo'; t.style.cssText='position:fixed;bottom:24px;right:24px;padding:11px 16px;border-radius:10px;font-size:14px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:99999;color:#fff;background:#2f9e6e;display:flex;gap:12px;align-items:center'; document.body.appendChild(t); }
+  t.innerHTML=''; const s=document.createElement('span'); s.textContent=msg; t.appendChild(s);
+  const b=document.createElement('button'); b.textContent='↩ Hoàn tác'; b.style.cssText='background:#fff;color:#2f9e6e;border:none;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer';
+  b.onclick=async function(){ clearTimeout(window.__undoT); t.style.display='none'; const f=window.__undoFn; window.__undoFn=null; if(f){ try{await f();}catch(e){} } };
+  t.appendChild(b); window.__undoFn=undoFn; t.style.display='flex';
+  clearTimeout(window.__undoT); window.__undoT=setTimeout(()=>{ t.style.display='none'; window.__undoFn=null; },6000);
+}
+async function taskDoneQuick(id){
+  const { error }=await sb.from('tasks').update({xong:true}).eq('id',id);
+  if(error){ toast('⚠ Lỗi, thử lại',false); return; }
+  await loadAll(); renderAll();
+  toastUndo('✓ Đã xong việc', async()=>{ await sb.from('tasks').update({xong:false}).eq('id',id); await loadAll(); renderAll(); });
+}
+async function custDone(cid, taskCSV, hasFollow){
+  const taskIds=(taskCSV||'').split(',').filter(Boolean);
+  const c=findC(cid); const prevFollow=(c&&hasFollow)?c.follow:null;
+  if(taskIds.length){ const { error }=await sb.from('tasks').update({xong:true}).in('id',taskIds); if(error){ toast('⚠ Lỗi việc',false); return; } }
+  if(hasFollow){ const { error }=await sb.from('customers').update({follow:D(3), ngay_capnhat:D(0)}).eq('id',cid); if(error){ toast('⚠ Lỗi follow',false); return; } }
+  await loadAll(); renderAll();
+  toastUndo('✓ Đã xử lý khách này', async()=>{ if(taskIds.length) await sb.from('tasks').update({xong:false}).in('id',taskIds); if(hasFollow) await sb.from('customers').update({follow:prevFollow}).eq('id',cid); await loadAll(); renderAll(); });
+}
+async function bucketDone(bucket){
+  const bk=(window.__bucketKeys||{})[bucket]||{tasks:[],follows:[]};
+  const tasks=(bk.tasks||[]).slice(), follows=[...new Set(bk.follows||[])];
+  if(!tasks.length && !follows.length){ toast('Không có việc để xong',false); return; }
+  const prev=follows.map(id=>{ const c=findC(id); return {id, follow:c?c.follow:null}; });
+  if(tasks.length){ const { error }=await sb.from('tasks').update({xong:true}).in('id',tasks); if(error){ toast('⚠ Lỗi việc',false); return; } }
+  if(follows.length){ const { error }=await sb.from('customers').update({follow:D(3), ngay_capnhat:D(0)}).in('id',follows); if(error){ toast('⚠ Lỗi follow',false); return; } }
+  await loadAll(); renderAll();
+  toastUndo('✓ Đã xong cả nhóm ('+(tasks.length+follows.length)+')', async()=>{ if(tasks.length) await sb.from('tasks').update({xong:false}).in('id',tasks); for(const p of prev){ await sb.from('customers').update({follow:p.follow}).eq('id',p.id); } await loadAll(); renderAll(); });
+}
+function toggleCustSel(cid, taskCSV, hasF, hasD, on){
+  const keys=[]; (taskCSV||'').split(',').filter(Boolean).forEach(tid=>keys.push('t:'+tid)); if(hasF)keys.push('f:'+cid); if(hasD)keys.push('d:'+cid);
+  keys.forEach(k=>{ if(on)TASK_SEL.add(k); else TASK_SEL.delete(k); }); renderTaskBulkBar();
+}
 let TASK_BUCKET='', TASK_PANEL_OPEN=false, CARE_TODAY_OPEN=false; // lọc nhanh nhóm việc + thu gọn form & bảng chăm
 function setTaskBucket(v){ TASK_BUCKET=v; renderToday(); }
 function toggleTaskPanel(){ TASK_PANEL_OPEN=!TASK_PANEL_OPEN; renderToday(); }
@@ -1875,7 +1913,7 @@ function renderToday(){
   </div>`;
   const chip=(key,label,n)=>`<button class="btn ${TASK_BUCKET===key?'':'ghost'}" type="button" onclick="setTaskBucket('${key}')" style="padding:6px 14px;font-size:13px">${label} (${n})</button>`;
   html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 8px">
-    ${chip('','Tất cả',nOver+nToday+nUp)}${chip('over','🔴 Quá hạn',nOver)}${chip('today','🟡 Hôm nay',nToday)}${chip('upcoming','🟢 Sắp tới',nUp)}
+    ${chip('','Cần làm ngay',nOver+nToday)}${chip('over','🔴 Quá hạn',nOver)}${chip('today','🟡 Hôm nay',nToday)}${chip('upcoming','🟢 Sắp tới',nUp)}
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn ghost" type="button" onclick="selectAllShownTasks()" title="Chọn tất cả việc đang hiển thị để thao tác hàng loạt" style="padding:6px 14px;font-size:13px">☑ Chọn tất cả hiển thị</button>
     ${isAdmin()?`<button class="btn" type="button" onclick="markAllTasksDone()" title="Chỉ Admin — tích Xong tất cả VIỆC + hẹn lại FOLLOW đang hiển thị (theo bộ lọc/nhóm hiện tại)" style="padding:6px 14px;font-size:13px;background:var(--won);border-color:var(--won);color:#fff">✓ Xong tất cả (đang lọc)</button>`:''}
@@ -1909,7 +1947,7 @@ function renderToday(){
     <td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td>
     <td>${khachCell}</td>
     <td>${t.noi_dung||''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
-    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--won);font-weight:700" onclick="toggleTask('${t.id}')">✓ Xong</span> · <span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
+    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--won);font-weight:700" onclick="taskDoneQuick('${t.id}')">✓ Xong</span> · <span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
   const followRow=c=>`<tr style="background:#fff8f0"><td style="width:36px;text-align:center"><input type="checkbox" class="task-sel" style="width:auto;transform:scale(1.3)" title="Chọn để thao tác hàng loạt" ${TASK_SEL.has('f:'+c.id)?'checked':''} onchange="toggleTaskSel('f:${c.id}',this.checked)"></td>
     <td><span class="pill" style="background:#fde9d9;color:#b06a00">Follow</span></td>
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten} ✏️</b></td>
@@ -1923,8 +1961,10 @@ function renderToday(){
   const bucketTable=(title,rowsArr,color,key,pageFn)=>{ const count=rowsArr.length; if(!count) return '';
     const pg=Math.min(Math.max(1,TODAY_PAGE[key]||1),Math.max(1,Math.ceil(count/LIST_PAGE_SIZE)));
     const slice=rowsArr.slice((pg-1)*LIST_PAGE_SIZE, pg*LIST_PAGE_SIZE).join('');
-    return `<h2 class="sec" style="color:${color}">${title} (${count})</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th title="Tích chọn để thao tác hàng loạt">Chọn</th><th>Loại</th><th>Khách</th><th>Nội dung / Trạng thái</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${slice}</table>${pagerHTML(count,pg,LIST_PAGE_SIZE,pageFn)}</div>`; };
-  const showB=k=> !TASK_BUCKET || TASK_BUCKET===k;
+    const _bk=((window.__bucketKeys||{})[key]||{tasks:[],follows:[]}); const _dn=_bk.tasks.length+_bk.follows.length;
+    const _btn=(_dn&&key!=='upcoming')?`<button class="btn" type="button" title="Xong hết việc + hẹn lại follow của cả nhóm này (1 chạm)" onclick="bucketDone('${key}')" style="padding:5px 12px;font-size:13px;background:var(--won);border-color:var(--won);color:#fff">✓ Xong hết nhóm (${_dn})</button>`:'';
+    return `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px"><h2 class="sec" style="color:${color};margin:0">${title} (${count})</h2>${_btn}</div><div class="card" style="padding:0;overflow-x:auto"><table><tr><th title="Tích chọn để thao tác hàng loạt">Chọn</th><th>Việc</th><th>Khách</th><th>Nội dung</th><th>Đến hạn</th>${fullView()?'<th>Sale</th>':''}<th></th></tr>${slice}</table>${pagerHTML(count,pg,LIST_PAGE_SIZE,pageFn)}</div>`; };
+  const showB=k=> (k==='upcoming') ? (TASK_BUCKET==='upcoming') : (!TASK_BUCKET || TASK_BUCKET===k);
   const _selKeys=[];
   if(showB('over')){ tOver.forEach(t=>_selKeys.push('t:'+t.id)); foOver.forEach(c=>_selKeys.push('f:'+c.id)); deOver.forEach(c=>_selKeys.push('d:'+c.id)); }
   if(showB('today')){ tToday.forEach(t=>_selKeys.push('t:'+t.id)); foToday.forEach(c=>_selKeys.push('f:'+c.id)); deToday.forEach(c=>_selKeys.push('d:'+c.id)); }
@@ -1934,9 +1974,29 @@ function renderToday(){
   const mucRank=m=>({nong:0,am:1,lanh:2}[m]!==undefined?{nong:0,am:1,lanh:2}[m]:3);
   const custMuc=cid=>{ const cc=DATA.find(x=>String(x.id)===String(cid)); return cc?cc.muc:''; };
   const mkSorted=items=>items.sort((a,b)=>{ const mA=(a.m==null?3:a.m), mB=(b.m==null?3:b.m); if(mA!==mB) return mA-mB; const x=a.d||'9999-99-99',y=b.d||'9999-99-99';return x<y?-1:x>y?1:0;}).map(i=>i.html);
-  const overItems=[].concat(tOver.map(t=>({d:t.han||'',m:mucRank(custMuc(t.customer_id)),html:taskRow(t)})),foOver.map(c=>({d:c.follow||'',m:mucRank(c.muc),html:followRow(c)})),deOver.map(c=>({d:c.ngay_thu_no||'',m:mucRank(c.muc),html:debtRow(c)})));
-  const todayItems=[].concat(tToday.map(t=>({d:t.han||'',m:mucRank(custMuc(t.customer_id)),html:taskRow(t)})),foToday.map(c=>({d:c.follow||'',m:mucRank(c.muc),html:followRow(c)})),deToday.map(c=>({d:c.ngay_thu_no||'',m:mucRank(c.muc),html:debtRow(c)})));
-  const upItems=tUp.map(t=>({d:t.han||'',m:mucRank(custMuc(t.customer_id)),html:taskRow(t)}));
+  const mergedRow=(cid,g)=>{ const c=DATA.find(x=>String(x.id)===String(cid)); const nm=c?c.ten:'(khách)';
+    const taskIds=g.tasks.map(t=>t.id); const taskCSV=taskIds.join(','); const hasF=!!g.follow, hasD=!!g.debt;
+    const pills=[]; if(g.tasks.length)pills.push('<span class="pill" style="background:var(--cream);color:var(--teal-dark)">Việc ×'+g.tasks.length+'</span>'); if(hasF)pills.push('<span class="pill" style="background:#fde9d9;color:#b06a00">Follow</span>'); if(hasD)pills.push('<span class="pill" style="background:#f7dada;color:#a83a3a">Thu nợ</span>');
+    const notes=[]; g.tasks.forEach(t=>notes.push((TASK_LOAI[t.loai]||t.loai)+': '+(t.noi_dung||''))); if(hasF)notes.push('Cần follow'); if(hasD)notes.push('Còn nợ '+fmtCur(g.debt,g.debt.no_goc));
+    const ds=[]; g.tasks.forEach(t=>{if(t.han)ds.push(t.han);}); if(hasF&&g.follow.follow)ds.push(g.follow.follow); if(hasD&&g.debt.ngay_thu_no)ds.push(g.debt.ngay_thu_no); const han=ds.slice().sort()[0]||'—';
+    const allKeys=[]; taskIds.forEach(tid=>allKeys.push('t:'+tid)); if(hasF)allKeys.push('f:'+cid); if(hasD)allKeys.push('d:'+cid); const checked=allKeys.length&&allKeys.every(k=>TASK_SEL.has(k));
+    const doneBtn=(g.tasks.length||hasF)?`<span style="cursor:pointer;color:var(--won);font-weight:700" title="Xong hết việc/follow của khách này" onclick="custDone('${cid}','${taskCSV}',${hasF?1:0})">✓ Xong</span> · `:'';
+    const debtLink=hasD?`<span style="cursor:pointer;color:var(--over)" onclick="openCarePanel('${cid}')">Thu nợ</span> · `:'';
+    return `<tr><td style="width:36px;text-align:center"><input type="checkbox" class="task-sel" style="width:auto;transform:scale(1.3)" ${checked?'checked':''} onchange="toggleCustSel('${cid}','${taskCSV}',${hasF?1:0},${hasD?1:0},this.checked)"></td>
+      <td>${pills.join(' ')}</td>
+      <td><b style="cursor:pointer;color:var(--teal-dark)" title="${c?custTitle(c):''}" onclick="editCustomer('${cid}')">${nm} ✏️</b></td>
+      <td>${notes.join(' · ')}</td><td>${han}</td>${fullView()?`<td>${c?(SALES[c.owner]||'—'):'—'}</td>`:''}
+      <td style="text-align:center;white-space:nowrap">${doneBtn}${debtLink}<span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer('${cid}')">Mở</span></td></tr>`; };
+  const groupBucket=(tA,fA,dA)=>{ const byC={},stand=[];
+    tA.forEach(t=>{ if(t.customer_id){(byC[t.customer_id]=byC[t.customer_id]||{tasks:[],follow:null,debt:null}).tasks.push(t);} else stand.push(t); });
+    fA.forEach(c=>{(byC[c.id]=byC[c.id]||{tasks:[],follow:null,debt:null}).follow=c;});
+    dA.forEach(c=>{(byC[c.id]=byC[c.id]||{tasks:[],follow:null,debt:null}).debt=c;});
+    const items=[]; Object.keys(byC).forEach(cid=>{ const g=byC[cid]; const cc=DATA.find(x=>String(x.id)===String(cid)); const dd=[]; g.tasks.forEach(t=>{if(t.han)dd.push(t.han);}); if(g.follow&&g.follow.follow)dd.push(g.follow.follow); if(g.debt&&g.debt.ngay_thu_no)dd.push(g.debt.ngay_thu_no); items.push({d:dd.slice().sort()[0]||'',m:mucRank(cc?cc.muc:''),html:mergedRow(cid,g)}); });
+    stand.forEach(t=>items.push({d:t.han||'',m:3,html:taskRow(t)})); return items; };
+  const overItems=groupBucket(tOver,foOver,deOver);
+  const todayItems=groupBucket(tToday,foToday,deToday);
+  const upItems=groupBucket(tUp,[],[]);
+  window.__bucketKeys={over:{tasks:tOver.map(t=>t.id),follows:foOver.map(c=>c.id)},today:{tasks:tToday.map(t=>t.id),follows:foToday.map(c=>c.id)},upcoming:{tasks:tUp.map(t=>t.id),follows:[]}};
   if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn (🔥 Nóng ưu tiên)', mkSorted(overItems), 'var(--over)','over','setTodayPageOver');
   if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay (🔥 Nóng ưu tiên)', mkSorted(todayItems), '#b07d00','today','setTodayPageToday');
   if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới (🔥 Nóng ưu tiên)', mkSorted(upItems), 'var(--teal-dark)','upcoming','setTodayPageUpcoming');
