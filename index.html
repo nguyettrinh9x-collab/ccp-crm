@@ -3284,19 +3284,19 @@ function _dgfull(){try{
  w+='<div style=\"font-size:12px;color:#7a8a83;margin-bottom:6px\">Nguồn: sheet doanh số 2026 + CRM. Chỉ admin xem. Snapshot T7.</div>';
  w+=ti('① Xếp hạng chất lượng');
  var GC={A:'#2E7D32','A-':'#4CAF50','B+':'#8BC34A',C:'#F9A825'};
- var RANK=[['Hòe','A','DS cao nhất 711tr, đều 7/7 tháng, AOV cao nhất. Yếu: %đơn mới thấp (38%), T7 chững.'],['Tiên','A-','Acquisition tốt nhất (63% đơn mới), tăng mạnh T6-T7. Yếu: AOV thấp, T5 tụt.'],['Bảo','B+','665tr, AOV cao nhất. Yếu: biến động mạnh, giảm nửa cuối (T6 sụt 29tr).'],['Yến','B+','Mới từ T6, khởi đầu mạnh & đều, %đơn mới cao nhất (79%).'],['Phúc','C','Đều nhưng năng suất thấp nhất nhóm full-time & giảm liên tục → cần kèm.']];
+ var RANK=[['Hòe','A','DS cao nhất 721tr, đều 7/7 tháng, AOV cao nhất. Yếu: %đơn mới còn thấp.'],['Tiên','A-','Acquisition tốt nhất (11/12 đơn T7 là mới), tăng mạnh T6-T7. Yếu: AOV thấp, T5 tụt.'],['Bảo','B+','688tr, AOV cao nhất, T7 hồi phục (93tr). Yếu: biến động mạnh (T6 sụt 29tr).'],['Yến','B+','Mới từ T6, đều 65-67tr, %đơn mới cao.'],['Phúc','C','299tr, T7 cải thiện (66tr) nhưng nửa cuối vẫn thấp → cần kèm nâng năng suất.']];
  w+=tbl(['Sale','Xếp loại','Nhận xét'],RANK.map(function(r){return [{v:r[0],s:'font-weight:700'},{v:r[1],s:'background:'+GC[r[1]]+';color:#fff;font-weight:700'},{v:r[2],s:'text-align:left;font-size:12px'}];}),TE);
  w+=ti('② Doanh số theo tháng (triệu đồng)');
- var MON=[['Hòe',158,82,91,73,105,129,72,711],['Bảo',132,46,172,93,123,29,70,665],['Tiên',31,38,64,111,5,129,109,486],['Phúc',63,25,70,39,20,15,42,275],['Yến',0,0,0,0,0,65,67,132],['Ngàn',0,0,0,0,0,0,15,15]];
+ var MON=[['Hòe',158,82,91,73,105,129,83,721],['Bảo',132,46,172,93,123,29,93,688],['Tiên',31,38,64,111,5,129,109,486],['Phúc',63,25,70,39,20,15,66,299],['Yến',0,0,0,0,0,65,67,132],['Ngàn',0,0,0,0,0,0,15,15]];
  w+=tbl(['Sale','T1','T2','T3','T4','T5','T6','T7','Tổng'],MON.map(function(r){return r.map(function(c,i){return i===0?{v:c,s:'font-weight:700;text-align:left'}:(i===8?{v:c,s:'font-weight:700'}:(c||'-'));});}),TE);
  w+=ti('③ Chỉ số Tháng 7 — Mes · Tương tác · Chốt · Năng suất/ngày công');
  function pc(a,b){return (b&&a!=='')?((a/b*100).toFixed(1)+'%'):'—';}
  function t2(x){return x?((Math.round(x/1e5)/10)+'tr'):'—';}
- var FUN=[['Tiên',403,208,172,11,27,108575000,''],['Hòe','','','','','',72290000,'Chưa map tài khoản CRM'],['Bảo',425,266,135,3,24,70052500,''],['Yến',405,250,136,3,24,66560000,''],['Phúc',436,293,118,5,27,42376500,''],['Ngàn',333,202,121,5,10,14856500,'Khớp channgan']];
+ var FUN=[['Tiên',404,208,173,11,27,108575000,''],['Bảo',441,274,143,4,24,93059000,''],['Hòe','','','','','',83070000,'Chưa map tài khoản CRM'],['Yến',414,252,143,3,24,66560000,''],['Phúc',436,293,118,5,27,66341500,''],['Ngàn',335,202,123,6,10,14856500,'Khớp channgan']];
  w+=tbl(['Sale','Mes nhận','KTT','Tương tác','Tỷ lệ TT','Chốt','Chốt/Mes','Chốt/TT','Ngày công','DT/ngày','Chốt/10 ngày','Ghi chú'],FUN.map(function(r){var sale=r[0],mes=r[1],ktt=r[2],tt=r[3],chot=r[4],ng=r[5],ds=r[6],note=r[7];var wst=note?'background:#FFF3CD;':'';return [{v:sale,s:'font-weight:700;text-align:left;'+wst},{v:mes||'—',s:wst},{v:ktt||'—',s:wst},{v:tt||'—',s:wst},{v:pc(tt,mes),s:wst},{v:chot===''?'—':chot,s:wst},{v:pc(chot,mes),s:wst},{v:pc(chot,tt),s:wst},{v:ng||'—',s:wst},{v:(ds&&ng)?t2(ds/ng):'—',s:wst},{v:(chot!==''&&ng)?(chot/ng*10).toFixed(1):'—',s:wst},{v:note,s:'text-align:left;font-size:11px;color:#b8860b;'+wst}];}),TE);
- w+='<div style=\"font-size:12px;color:#555;margin:-6px 0 10px;line-height:1.5\">🔎 <b>Nút thắt:</b> Phúc 67% khách để KTT (phản hồi chậm) · Bảo/Yến chốt/TT ~2,2% (Tiên 6,4%) → yếu khâu chốt · Hiệu suất/ngày: Tiên 4,0tr dẫn đầu, Phúc 1,6tr thấp nhất.</div>';
+ w+='<div style=\"font-size:12px;color:#555;margin:-6px 0 10px;line-height:1.5\">🔎 <b>Nút thắt:</b> Phúc 67% khách để KTT (phản hồi chậm) · Bảo/Yến chốt/TT ~2-3% (Tiên 6,4%) → yếu khâu chốt · Hiệu suất/ngày: Tiên ~4,0tr dẫn đầu, Phúc ~2,5tr.</div>';
  w+=ti('④ Đánh giá MKT (doanh thu quy về marketer)');
- var MK=[['Nguyệt (organic)',1023,'43,2%',103,'69%'],['Duy',742,'31,3%',70,'39%'],['Việt',352,'14,9%',33,'45%'],['Tuấn (ngưng T4)',253,'10,7%',19,'26%']];
+ var MK=[['Nguyệt (organic)',1046,'43,1%',106,'68%'],['Duy',753,'31,0%',71,'38%'],['Việt',375,'15,5%',35,'46%'],['Tuấn (ngưng T4)',253,'10,4%',19,'26%']];
  w+=tbl(['MKT','Tổng DT (tr)','% đóng góp','Số đơn','% đơn Mới'],MK.map(function(r){return r.map(function(c,i){return i===0?{v:c,s:'font-weight:700;text-align:left'}:c;});}),PU);
  w+='<div style=\"font-size:12px;color:#555;margin-top:-6px;line-height:1.5\">⚠️ 43% doanh thu gắn "Nguyệt/organic" = lỗ hổng attribution. Cần bổ sung chi phí ads để tính ROAS.</div>';
  w+='</div>';
