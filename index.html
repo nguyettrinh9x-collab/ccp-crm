@@ -319,12 +319,12 @@ function renderTaskBulkBar(){
   </div>`;
 }
 async function bulkTaskDone(){ const {tasks,custs}=_splitSel(); const n=tasks.length+custs.length; if(!n)return; if(!confirm('Xử lý XONG '+n+' mục đã chọn? (việc → xong · follow → hẹn lại +3 ngày)'))return;
-  if(tasks.length){ const {error}=await sb.from('tasks').update({xong:true}).in('id',tasks); if(error){alert('Lỗi việc: '+error.message);return;} }
-  if(custs.length){ const {error}=await sb.from('customers').update({follow:D(3), ngay_capnhat:D(0)}).in('id',custs); if(error){alert('Lỗi follow: '+error.message);return;} }
+  if(tasks.length){ const e=await sbUpdIn('tasks',{xong:true},tasks); if(e){alert('Lỗi việc: '+e.message);return;} }
+  if(custs.length){ const e=await sbUpdIn('customers',{follow:D(3), ngay_capnhat:D(0)},custs); if(e){alert('Lỗi follow: '+e.message);return;} }
   TASK_SEL.clear(); await loadAll(); renderAll(); }
 async function bulkTaskAssign(){ const sel=document.getElementById('task-bulk-sale'); const owner=sel?sel.value:''; if(!owner){alert('Chọn sale để giao.');return;} const {tasks,custs}=_splitSel(); const n=tasks.length+custs.length; if(!n)return; if(!confirm('Giao '+n+' mục đã chọn cho '+(SALES[owner]||owner)+'?'))return;
-  if(tasks.length){ const {error}=await sb.from('tasks').update({owner}).in('id',tasks); if(error){alert('Lỗi việc: '+error.message);return;} }
-  if(custs.length){ const {error}=await sb.from('customers').update({owner, ngay_capnhat:D(0)}).in('id',custs); if(error){alert('Lỗi khách: '+error.message);return;} }
+  if(tasks.length){ const e=await sbUpdIn('tasks',{owner},tasks); if(e){alert('Lỗi việc: '+e.message);return;} }
+  if(custs.length){ const e=await sbUpdIn('customers',{owner, ngay_capnhat:D(0)},custs); if(e){alert('Lỗi khách: '+e.message);return;} }
   TASK_SEL.clear(); await loadAll(); renderAll(); }
 let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='';
 function setDoneQ(v){ DONE_Q=v; renderToday(); const el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
@@ -357,15 +357,21 @@ async function custDone(cid, taskCSV, hasFollow){
   await loadAll(); renderAll();
   toastUndo('✓ Đã xử lý khách này', async()=>{ if(taskIds.length) await sb.from('tasks').update({xong:false}).in('id',taskIds); if(hasFollow) await sb.from('customers').update({follow:prevFollow}).eq('id',cid); await loadAll(); renderAll(); });
 }
+async function sbUpdIn(table, patch, ids){ /* cập nhật hàng loạt theo batch 150 để tránh URL quá dài (>1000 ID) */
+  const arr=[...new Set(ids)];
+  for(let i=0;i<arr.length;i+=150){ const { error }=await sb.from(table).update(patch).in('id', arr.slice(i,i+150)); if(error) return error; }
+  return null;
+}
 async function bucketDone(bucket){
   const bk=(window.__bucketKeys||{})[bucket]||{tasks:[],follows:[]};
-  const tasks=(bk.tasks||[]).slice(), follows=[...new Set(bk.follows||[])];
+  const tasks=[...new Set(bk.tasks||[])], follows=[...new Set(bk.follows||[])];
   if(!tasks.length && !follows.length){ toast('Không có việc để xong',false); return; }
   const prev=follows.map(id=>{ const c=findC(id); return {id, follow:c?c.follow:null}; });
-  if(tasks.length){ const { error }=await sb.from('tasks').update({xong:true}).in('id',tasks); if(error){ toast('⚠ Lỗi việc',false); return; } }
-  if(follows.length){ const { error }=await sb.from('customers').update({follow:D(3), ngay_capnhat:D(0)}).in('id',follows); if(error){ toast('⚠ Lỗi follow',false); return; } }
+  if(tasks.length+follows.length>200) toast('Đang xử lý '+(tasks.length+follows.length)+' mục…');
+  if(tasks.length){ const e=await sbUpdIn('tasks',{xong:true},tasks); if(e){ toast('⚠ Lỗi việc: '+e.message,false); return; } }
+  if(follows.length){ const e=await sbUpdIn('customers',{follow:D(3), ngay_capnhat:D(0)},follows); if(e){ toast('⚠ Lỗi follow: '+e.message,false); return; } }
   await loadAll(); renderAll();
-  toastUndo('✓ Đã xong cả nhóm ('+(tasks.length+follows.length)+')', async()=>{ if(tasks.length) await sb.from('tasks').update({xong:false}).in('id',tasks); for(const p of prev){ await sb.from('customers').update({follow:p.follow}).eq('id',p.id); } await loadAll(); renderAll(); });
+  toastUndo('✓ Đã xong cả nhóm ('+(tasks.length+follows.length)+')', async()=>{ if(tasks.length) await sbUpdIn('tasks',{xong:false},tasks); const byDate={}; prev.forEach(p=>{ (byDate[p.follow||'null']=byDate[p.follow||'null']||[]).push(p.id); }); for(const k in byDate){ await sbUpdIn('customers',{follow:(k==='null'?null:k)},byDate[k]); } await loadAll(); renderAll(); });
 }
 function toggleCustSel(cid, taskCSV, hasF, hasD, on){
   const keys=[]; (taskCSV||'').split(',').filter(Boolean).forEach(tid=>keys.push('t:'+tid)); if(hasF)keys.push('f:'+cid); if(hasD)keys.push('d:'+cid);
@@ -2941,8 +2947,8 @@ async function markAllTasksDone(){
   const n=tasks.length+follows.length;
   if(!n){ alert('Không có việc/follow nào đang hiển thị (theo bộ lọc) để tích.'); return; }
   if(!confirm('Xử lý XONG '+n+' mục đang hiển thị theo bộ lọc?\n• Việc → đánh dấu Xong\n• Follow → hẹn lại +3 ngày\n(Thu nợ giữ nguyên)')) return;
-  if(tasks.length){ const { error }=await sb.from('tasks').update({xong:true}).in('id', tasks); if(error){ alert('Lỗi việc: '+error.message); return; } }
-  if(follows.length){ const { error }=await sb.from('customers').update({follow:D(3), ngay_capnhat:D(0)}).in('id',[...new Set(follows)]); if(error){ alert('Lỗi follow: '+error.message); return; } }
+  if(tasks.length){ const e=await sbUpdIn('tasks',{xong:true},tasks); if(e){ alert('Lỗi việc: '+e.message); return; } }
+  if(follows.length){ const e=await sbUpdIn('customers',{follow:D(3), ngay_capnhat:D(0)},follows); if(e){ alert('Lỗi follow: '+e.message); return; } }
   await loadAll(); renderAll();
 }
 async function editTask(id){
