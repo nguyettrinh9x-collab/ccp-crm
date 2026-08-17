@@ -2542,6 +2542,24 @@ function renderTeam(){
   });
   html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td>${TM.total}</td><td></td><td>${TM.won}</td><td></td><td>${$f(TM.dtTong)}</td><td style="color:var(--teal-dark);white-space:nowrap">${Math.round(TM.dtVNDman).toLocaleString('vi-VN')} ₫</td><td style="color:var(--over)">${$f(TM.no)}</td></tr></table></div>`;
 
+  // ----- ☀️ Mes & phản hồi theo Sale (tối ưu marketing) -----
+  const rgm=getRange('team'); const inRg=(d)=>{d=(''+(d||'')).slice(0,10);return d>=rgm.s&&d<=rgm.e;};
+  const ENG=['tuong_tac','web','hen','dang_care','da_chot','chot_nguoi'];
+  const owMes={};
+  DATA.forEach(c=>{ if(!inRg(c.ngay_tao))return; if(TEAM_F.market&&countryGroup(c.quoc_gia)!==TEAM_F.market)return; if(TEAM_F.mkt&&c.mkt!==TEAM_F.mkt)return; if(TEAM_F.sale&&c.owner!==TEAM_F.sale)return; const o=c.owner; if(!o)return; const m=owMes[o]||(owMes[o]={mes:0,ktt:0,tt:0,chot:0}); m.mes++; if(c.tt==='ktt')m.ktt++; if(ENG.includes(c.tt))m.tt++; if(isChot(c.tt))m.chot++; });
+  const owList=Object.keys(owMes).sort((a,b)=>owMes[b].mes-owMes[a].mes);
+  html+=`<h2 class="sec" style="margin-top:24px">☀️ Mes & phản hồi theo Sale <span style="font-weight:400;font-size:13px;color:var(--muted)">(theo kỳ ngày đã chọn — tối ưu marketing)</span></h2>
+   <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Mes nhận = khách vào trong kỳ · <b>KTT = chưa trả lời</b> (cần xử lý gấp, kẻo phí tiền quảng cáo) · Tỷ lệ phản hồi = đã chạm / mes. Chọn "Hôm qua"/"Hôm nay" ở bộ lọc ngày phía trên.</p>
+   <div class="card" style="padding:0;overflow-x:auto"><table>
+   <tr><th>Sale</th><th>Mes nhận</th><th>⚠️ KTT (chưa trả lời)</th><th>Đã tương tác</th><th>Tỷ lệ phản hồi</th><th>Chốt</th><th>Tỷ lệ chốt</th></tr>`;
+  let MTt={mes:0,ktt:0,tt:0,chot:0};
+  owList.forEach(o=>{ const m=owMes[o]; const name=SALES[o]||o; MTt.mes+=m.mes;MTt.ktt+=m.ktt;MTt.tt+=m.tt;MTt.chot+=m.chot;
+    const rrep=m.mes?Math.round((m.mes-m.ktt)/m.mes*100):0; const warn=m.mes&&m.ktt/m.mes>0.5;
+    html+=`<tr><td><b>${name}</b></td><td style="text-align:center">${m.mes}</td><td style="text-align:center;${warn?'color:var(--over);font-weight:700':''}">${m.ktt}</td><td style="text-align:center">${m.tt}</td><td style="text-align:center">${rrep}%</td><td style="text-align:center;${m.chot?'color:var(--won);font-weight:700':''}">${m.chot}</td><td style="text-align:center">${m.mes?Math.round(m.chot/m.mes*100):0}%</td></tr>`; });
+  if(!owList.length) html+=`<tr><td colspan="7" class="empty">Kỳ này chưa có mes nào.</td></tr>`;
+  else html+=`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td><td style="text-align:center">${MTt.mes}</td><td style="text-align:center;color:var(--over)">${MTt.ktt}</td><td style="text-align:center">${MTt.tt}</td><td style="text-align:center">${MTt.mes?Math.round((MTt.mes-MTt.ktt)/MTt.mes*100):0}%</td><td style="text-align:center">${MTt.chot}</td><td style="text-align:center">${MTt.mes?Math.round(MTt.chot/MTt.mes*100):0}%</td></tr>`;
+  html+=`</table></div><p style="color:var(--muted);font-size:12px;margin:8px 0 0">💡 Mỗi sáng chọn kỳ <b>"Hôm qua"</b> → nhìn cột <b>KTT</b>: sale nào KTT cao là đang để mes (tiền ads) bị bỏ phí → nhắc xử lý ngay. Khỏi đếm tay.</p>`;
+
   html+=`<p style="color:var(--muted);font-size:12px;margin-top:10px">Admin có thể thêm/khóa tài khoản sale ở bản thật.</p>`;
   document.getElementById('v-team').innerHTML=html;
 }
@@ -2706,7 +2724,38 @@ function renderDanhGia(){
     <b>Điểm Sale (CRM)</b> = 35% tỷ lệ chốt + 25% chốt/tương tác + 15% tương tác + 15% ít tồn đọng + 10% giữ khách. Cột "Vấn đề" chỉ ra <b>nút thắt lớn nhất kèm số thật</b> + điểm yếu Al đọc từ chat.<br>
     <b>Điểm MKT</b> = 40% ROAS + 30% mes tương tác + 30% chốt/mes. ROAS = doanh thu quy VNĐ ÷ chi phí QC.<br>
     <b>Bảng AI</b> = chấm từ hội thoại thật (tốc độ rep, khai thác nhu cầu, tư vấn SP, tuân thủ health-claim) — phản ánh vấn đề thật kể cả khi CRM chưa cập nhật.</div>`;
+  html += `<h2 class="sec" style="margin-top:26px">📥 Tỷ lệ nhập khách Pancake → CRM</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Khách trên Pancake đã được nhập vào CRM bao nhiêu %. "Chưa nhập" = đang bỏ sót lead (phí tiền quảng cáo). Bấm từng nhóm để xem TÊN khách còn thiếu.</p><div id="pk-recon" class="card" style="padding:14px"><span style="color:var(--muted);font-size:13px">⏳ Đang tải đối chiếu Pancake…</span></div>`;
   el.innerHTML=html;
+  loadPkRecon();
+}
+async function loadPkRecon(){
+  const el=document.getElementById('pk-recon'); if(!el) return;
+  try{
+    const rows=await fetchAllRows('pancake_leads','conv_inserted_at',false);
+    const SK=['Tiên','Phúc','Bảo','Yến','Ngàn','Mai','Hoè','Hạnh'];
+    const saleOf=(s)=>{ s=(''+(s||'')).trim(); if(!s) return '(chưa gán)'; const p=s.split('/').map(x=>x.trim()); const h=p.find(x=>SK.includes(x)); return h||p[p.length-1]||'(chưa gán)'; };
+    const agg={}; const miss={};
+    (rows||[]).forEach((r)=>{ if(r.status==='ignored') return; const sale=saleOf(r.sale); const a=agg[sale]||(agg[sale]={tong:0,nhap:0}); a.tong++; const entered=(r.status==='added'||r.in_crm===true); if(entered) a.nhap++; else (miss[sale]=miss[sale]||[]).push(r.ten||'(không tên)'); });
+    const list=Object.keys(agg).sort((a,b)=>(agg[a].nhap/agg[a].tong)-(agg[b].nhap/agg[b].tong));
+    let tT=0,tN=0;
+    let h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#1F6F54;color:#fff">'+['Sale','Tổng Pancake','Đã nhập','Chưa nhập','Tỷ lệ nhập'].map(x=>'<th style="padding:6px;border:1px solid #cfe0d8">'+x+'</th>').join('')+'</tr>';
+    list.forEach((s)=>{ const a=agg[s]; const chua=a.tong-a.nhap; tT+=a.tong; tN+=a.nhap; const pct=a.tong?Math.round(a.nhap/a.tong*100):0; const warn=pct<50;
+      h+='<tr style="text-align:center"><td style="padding:6px;border:1px solid #e3ece7;text-align:left;font-weight:700">'+s+'</td><td style="padding:6px;border:1px solid #e3ece7">'+a.tong+'</td><td style="padding:6px;border:1px solid #e3ece7;color:#2f9e6e">'+a.nhap+'</td><td style="padding:6px;border:1px solid #e3ece7;color:'+(chua?'#c0392b':'#999')+';font-weight:'+(chua?700:400)+'">'+chua+'</td><td style="padding:6px;border:1px solid #e3ece7;font-weight:700;color:'+(warn?'#c0392b':'#2f9e6e')+'">'+pct+'%</td></tr>'; });
+    const pctT=tT?Math.round(tN/tT*100):0;
+    h+='<tr style="text-align:center;background:#D9E7E1;font-weight:700"><td style="padding:6px;border:1px solid #e3ece7;text-align:left">TỔNG</td><td style="padding:6px;border:1px solid #e3ece7">'+tT+'</td><td style="padding:6px;border:1px solid #e3ece7">'+tN+'</td><td style="padding:6px;border:1px solid #e3ece7;color:#c0392b">'+(tT-tN)+'</td><td style="padding:6px;border:1px solid #e3ece7">'+pctT+'%</td></tr></table></div>';
+    h+='<div style="margin-top:12px;font-weight:700;color:#1F6F54">📋 Khách CHƯA nhập (bấm từng sale để xem tên):</div>';
+    list.forEach((s)=>{ const m=miss[s]||[]; if(!m.length) return; const show=m.slice(0,100); h+='<details style="margin:6px 0"><summary style="cursor:pointer">'+s+' — <b style="color:#c0392b">'+m.length+' khách</b> chưa nhập</summary><div style="font-size:12px;color:#444;padding:6px 0 6px 14px;line-height:1.7">'+show.map(function(x){return escapeHtml(x);}).join(' · ')+(m.length>100?' … và '+(m.length-100)+' khách khác':'')+'</div></details>'; });
+    const noted=[];
+    (rows||[]).forEach((r)=>{ if(r.status!=='new') return; const nt=(''+(r.note||'')).trim(); if(!nt || nt.indexOf('[auto:')>=0) return; noted.push({sale:saleOf(r.sale),ten:r.ten||'(không tên)',note:nt,page:r.page_name||'',ngay:(''+(r.conv_inserted_at||'')).slice(0,10),phone:r.phone||''}); });
+    noted.sort((a,b)=> a.sale<b.sale?-1:(a.sale>b.sale?1:(a.ten<b.ten?-1:1)));
+    if(noted.length){
+      h+='<h2 class="sec" style="margin-top:22px;color:#6A3FA0">📝 Khách sale ĐÃ tư vấn nhưng CHƯA nhập CRM — '+noted.length+' khách</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Khách ẤM: sale đang chăm trên Pancake mà chưa lên CRM → ưu tiên nhập bù gấp, kẻo rơi khách đang tư vấn.</p>';
+      h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#6A3FA0;color:#fff">'+['Tên khách','Sale','Ghi chú tư vấn (Pancake)','Page','Ngày'].map(function(x){return '<th style="padding:6px;border:1px solid #d3c9e3">'+x+'</th>';}).join('')+'</tr>';
+      noted.forEach(function(r){ h+='<tr><td style="padding:6px;border:1px solid #e3ece7;font-weight:700">'+escapeHtml(r.ten)+(r.phone?' <span style="color:#999;font-weight:400;font-size:11px">'+escapeHtml(r.phone)+'</span>':'')+'</td><td style="padding:6px;border:1px solid #e3ece7;white-space:nowrap">'+escapeHtml(r.sale)+'</td><td style="padding:6px;border:1px solid #e3ece7;font-size:12px;color:#555">'+escapeHtml((r.note||'').slice(0,130))+'</td><td style="padding:6px;border:1px solid #e3ece7;font-size:12px">'+escapeHtml(r.page)+'</td><td style="padding:6px;border:1px solid #e3ece7;font-size:12px;white-space:nowrap">'+escapeHtml(r.ngay||'—')+'</td></tr>'; });
+      h+='</table></div>';
+    }
+    el.innerHTML=h;
+  }catch(e){ el.innerHTML='<span style="color:#c0392b">Lỗi tải đối chiếu Pancake: '+(e&&e.message||e)+'</span>'; }
 }
 
 function canManage(){ return (PERMS[ME.uname]||[]).includes('perms'); }
@@ -3295,12 +3344,16 @@ function _dgfull(){try{
  w+=ti('② Doanh số theo tháng (triệu đồng)');
  var MON=[['Hòe',158,82,91,73,105,129,83,721],['Bảo',132,46,172,93,123,29,93,688],['Tiên',31,38,64,111,5,129,109,486],['Phúc',63,25,70,39,20,15,66,299],['Yến',0,0,0,0,0,65,67,132],['Ngàn',0,0,0,0,0,0,15,15]];
  w+=tbl(['Sale','T1','T2','T3','T4','T5','T6','T7','Tổng'],MON.map(function(r){return r.map(function(c,i){return i===0?{v:c,s:'font-weight:700;text-align:left'}:(i===8?{v:c,s:'font-weight:700'}:(c||'-'));});}),TE);
- w+=ti('③ Chỉ số Tháng 7 — Mes · Tương tác · Chốt · Năng suất/ngày công');
+ w+=ti('③ Chỉ số Tháng 7 (tháng đủ dữ liệu) — Mes · Tương tác · Chốt · Năng suất/ngày công');
  function pc(a,b){return (b&&a!=='')?((a/b*100).toFixed(1)+'%'):'—';}
  function t2(x){return x?((Math.round(x/1e5)/10)+'tr'):'—';}
  var FUN=[['Tiên',404,208,173,11,27,108575000,''],['Bảo',441,274,143,4,24,93059000,''],['Hòe','','','','','',83070000,'Chưa map tài khoản CRM'],['Yến',414,252,143,3,24,66560000,''],['Phúc',436,293,118,5,27,66341500,''],['Ngàn',335,202,123,6,10,14856500,'Khớp channgan']];
  w+=tbl(['Sale','Mes nhận','KTT','Tương tác','Tỷ lệ TT','Chốt','Chốt/Mes','Chốt/TT','Ngày công','DT/ngày','Chốt/10 ngày','Ghi chú'],FUN.map(function(r){var sale=r[0],mes=r[1],ktt=r[2],tt=r[3],chot=r[4],ng=r[5],ds=r[6],note=r[7];var wst=note?'background:#FFF3CD;':'';return [{v:sale,s:'font-weight:700;text-align:left;'+wst},{v:mes||'—',s:wst},{v:ktt||'—',s:wst},{v:tt||'—',s:wst},{v:pc(tt,mes),s:wst},{v:chot===''?'—':chot,s:wst},{v:pc(chot,mes),s:wst},{v:pc(chot,tt),s:wst},{v:ng||'—',s:wst},{v:(ds&&ng)?t2(ds/ng):'—',s:wst},{v:(chot!==''&&ng)?(chot/ng*10).toFixed(1):'—',s:wst},{v:note,s:'text-align:left;font-size:11px;color:#b8860b;'+wst}];}),TE);
  w+='<div style=\"font-size:12px;color:#555;margin:-6px 0 10px;line-height:1.5\">🔎 <b>Nút thắt:</b> Phúc 67% khách để KTT (phản hồi chậm) · Bảo/Yến chốt/TT ~2-3% (Tiên 6,4%) → yếu khâu chốt · Hiệu suất/ngày: Tiên ~4,0tr dẫn đầu, Phúc ~2,5tr.</div>';
+ w+=ti('③b Chỉ số THÁNG 8 — đầu tháng đến 17/08 (mới nhất)');
+ var FUN8=[['Yến',264,142,114,5],['Bảo',225,152,68,2],['Sale mới',66,31,32,2],['Hoàng',221,99,116,1],['Phúc',211,141,60,0],['Tiên',206,128,67,0],['Ngàn',54,35,17,0]];
+ w+=tbl(['Sale (CRM)','Mes nhận','KTT','Tương tác','Tỷ lệ TT','Chốt','Tỷ lệ chốt'],FUN8.map(function(r){var s=r[0],mes=r[1],ktt=r[2],tt=r[3],chot=r[4];return [{v:s,s:'font-weight:700;text-align:left'},{v:mes},{v:ktt},{v:tt},{v:pc(tt,mes)},{v:chot},{v:pc(chot,mes)}];}),'#2E8B6F');
+ w+='<div style=\"font-size:12px;color:#555;margin:-6px 0 12px;line-height:1.5\">📌 <b>Chốt T8 (CRM, đến 17/08):</b> Yến 5 · Bảo 2 · Sale mới 2 · Hoàng 1 = <b>tổng 10 chốt</b>. <b>Doanh số (sheet):</b> Yến 39tr · Bảo 26 · Hoè 24 · Tiên 17 · Ngàn 7 = 113tr — ⚠️ sheet cập nhật CHẬM hơn CRM, còn thiếu vài đơn mới, sale cần nhập bù. <b>MKT:</b> Nguyệt 78% · Duy 15% · Việt 7% (lệch mạnh về organic). ⚠️ <b>Yến dẫn đầu</b>; <b>Tiên & Phúc vẫn CHƯA có chốt sau 17 ngày</b> — cần nhắc gấp.</div>';
  w+=ti('④ Đánh giá MKT (doanh thu quy về marketer)');
  var MK=[['Nguyệt (organic)',1046,'43,1%',106,'68%'],['Duy',753,'31,0%',71,'38%'],['Việt',375,'15,5%',35,'46%'],['Tuấn (ngưng T4)',253,'10,4%',19,'26%']];
  w+=tbl(['MKT','Tổng DT (tr)','% đóng góp','Số đơn','% đơn Mới'],MK.map(function(r){return r.map(function(c,i){return i===0?{v:c,s:'font-weight:700;text-align:left'}:c;});}),PU);
