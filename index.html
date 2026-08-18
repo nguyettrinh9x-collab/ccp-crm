@@ -1298,7 +1298,8 @@ function renderDash(){
   </div>
   <p style="margin-top:12px"><button class="btn ghost" onclick="go('today')">→ Mở "Việc cần làm hôm nay"</button></p>`;
 
-  document.getElementById('v-dashboard').innerHTML=html;
+  document.getElementById('v-dashboard').innerHTML='<div id="my-pk-recon"></div>'+html;
+  loadMyPkRecon();
 }
 function countBy(field,map){const m={};DATA.forEach(c=>m[c[field]]=(m[c[field]]||0)+1);
   return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[map[k]||k,v]);}
@@ -2756,6 +2757,28 @@ async function loadPkRecon(){
     }
     el.innerHTML=h;
   }catch(e){ el.innerHTML='<span style="color:#c0392b">Lỗi tải đối chiếu Pancake: '+(e&&e.message||e)+'</span>'; }
+}
+
+/* ==== Mỗi SALE tự thấy khách của MÌNH cần nhập bù (hiện trên Dashboard, không lộ khách người khác) ==== */
+async function loadMyPkRecon(){
+  var el=document.getElementById('my-pk-recon'); if(!el) return; el.innerHTML='';
+  try{
+    if(isAdmin()||canPancake()) return; /* Admin/Nguyệt đã có bản đầy đủ ở tab Đánh giá */
+    var SK=['Tiên','Phúc','Bảo','Yến','Ngàn','Mai','Hoè','Hạnh'];
+    var myName=SK.find(function(k){ return (''+(ME.name||'')).indexOf(k)>=0; });
+    if(!myName) return; /* không phải sale trong danh sách */
+    var saleOf=function(s){ s=(''+(s||'')).trim(); if(!s) return ''; var p=s.split('/').map(function(x){return x.trim();}); var h=p.find(function(x){return SK.includes(x);}); return h||''; };
+    var rows=await fetchAllRows('pancake_leads','conv_inserted_at',false);
+    var mine=[];
+    (rows||[]).forEach(function(r){ if(r.status!=='new') return; if(saleOf(r.sale)!==myName) return; var nt=(''+(r.note||'')).trim(); if(!nt||nt.indexOf('[auto:')>=0) return; mine.push({ten:r.ten||'(không tên)',note:nt,page:r.page_name||'',ngay:(''+(r.conv_inserted_at||'')).slice(0,10),phone:r.phone||''}); });
+    if(!mine.length){ el.innerHTML='<div class="card" style="border-left:4px solid #2f9e6e;background:#eefaf3"><b style="color:#1F6F54">📥 Khách cần nhập bù</b><div style="color:#2f9e6e;margin-top:4px">✅ Bạn đã nhập đủ khách đã tư vấn trên Pancake. Giỏi lắm!</div></div>'; return; }
+    mine.sort(function(a,b){ return a.ngay<b.ngay?1:-1; });
+    var h='<div class="card" style="border-left:4px solid #c0392b"><b style="color:#c0392b;font-size:15px">📥 '+escapeHtml(myName)+' ơi — bạn có '+mine.length+' khách đã tư vấn trên Pancake mà CHƯA nhập CRM</b><div style="color:var(--muted);font-size:12px;margin:4px 0 10px">Khách bạn đang chăm mà chưa lên CRM → nhập bù gấp kẻo rơi khách. Bấm ➕ Thêm khách để nhập.</div>';
+    h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#c0392b;color:#fff">'+['Tên khách','Ghi chú tư vấn (Pancake)','Page','Ngày'].map(function(x){return '<th style="padding:6px;border:1px solid #e6c9c9">'+x+'</th>';}).join('')+'</tr>';
+    mine.forEach(function(r){ h+='<tr><td style="padding:6px;border:1px solid #eee;font-weight:700">'+escapeHtml(r.ten)+(r.phone?' <span style="color:#999;font-weight:400;font-size:11px">'+escapeHtml(r.phone)+'</span>':'')+'</td><td style="padding:6px;border:1px solid #eee;font-size:12px;color:#555">'+escapeHtml((r.note||'').slice(0,140))+'</td><td style="padding:6px;border:1px solid #eee;font-size:12px">'+escapeHtml(r.page)+'</td><td style="padding:6px;border:1px solid #eee;font-size:12px;white-space:nowrap">'+escapeHtml(r.ngay||'—')+'</td></tr>'; });
+    h+='</table></div></div>';
+    el.innerHTML=h;
+  }catch(e){ el.innerHTML=''; }
 }
 
 function canManage(){ return (PERMS[ME.uname]||[]).includes('perms'); }
