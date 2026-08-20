@@ -227,11 +227,11 @@ function addSpPick(){ const p=document.getElementById('f-sppick'); const q=docum
 const ALL_MODULES = [
   ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
   ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
-  ['marketing','BC Marketing'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['pancake','Khách mới (Pancake)'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
+  ['marketing','BC Marketing'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['lichlam_log','Lịch sử đăng ký lịch'],['pancake','Khách mới (Pancake)'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
 ];
 // Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
 const DEFAULT_PERMS = {
-  admin:['dashboard','care','add','list','today','report','marketing','team','lichlam','settings','perms','trash'],
+  admin:['dashboard','care','add','list','today','report','marketing','team','lichlam','lichlam_log','settings','perms','trash'],
   sale: ['dashboard','care','add','list','today','lichlam'],
   marketing:['dashboard','care','list','marketing','lichlam'],
 };
@@ -973,11 +973,20 @@ function navLLMonth(d){ const [y,m]=LL_YM.split('-').map(Number); const dt=new D
 function setLLYM(v){ if(v){ LL_YM=v; renderLichLam(); } }
 async function setLLCell(day,staff,val){
   if(!isAdmin()){ const [yy,mm]=LL_YM.split('-').map(Number); if(llWeekLocked(llMondayKey(yy,mm,day))){ alert('🔒 Tuần này đã được Admin khoá. Liên hệ Admin để chỉnh.'); renderLichLam(); return; } }
-  const d=llData(); d[day]=d[day]||{}; if(val) d[day][staff]=val; else delete d[day][staff];
+  const d=llData(); const prev=(d[day]&&d[day][staff])||''; d[day]=d[day]||{}; if(val) d[day][staff]=val; else delete d[day][staff];
   const key='lichlam:'+LL_YM; const data=JSON.stringify(d); IMAGES[key]=data;
   if(window.sb){ const {error}=await sb.from('app_images').upsert({key,data,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi lưu lịch: '+error.message+'\\n(Kiểm tra bảng app_images trên Supabase)'); } }
+  /* Ghi lịch sử: ai/mail đăng ký ca nào — chỉ Admin/Lead-được-cấp xem */
+  try{
+    var lg=llLog(); lg.push({d:day,s:staff,v:val||'',old:prev,by:(ME&&ME.name)||'',mail:(ME&&ME.mail)||'',at:new Date().toISOString()});
+    if(lg.length>3000) lg=lg.slice(lg.length-3000);
+    var lk='lichlam_log:'+LL_YM; var ld=JSON.stringify(lg); IMAGES[lk]=ld;
+    if(window.sb){ await sb.from('app_images').upsert({key:lk,data:ld,updated_at:new Date().toISOString()}); }
+  }catch(e){}
   renderLichLam();
 }
+function llLog(){ try{ var a=JSON.parse(IMAGES['lichlam_log:'+LL_YM]||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function canSeeLLLog(){ return isAdmin() || (PERMS[ME&&ME.uname]||[]).includes('lichlam_log'); }
 function renderLichLam(){
   const el=document.getElementById('v-lichlam'); if(!el) return;
   const [y,m]=LL_YM.split('-').map(Number); const dim=new Date(y,m,0).getDate(); const D2=llData();
@@ -1021,7 +1030,27 @@ function renderLichLam(){
   h+=`<div style="${FS};left:0;z-index:9;grid-column:1/span 2;justify-content:flex-end;text-align:right;padding-right:8px">TỔNG CÔNG</div>`;
   STAFF.forEach(s=>{let t=0;for(let d=1;d<=dim;d++)t+=llCong((D2[d]&&D2[d][s])||'');h+=`<div style="${FS};color:var(--teal-dark)">${llFmt(t)}</div>`;});
   h+=`</div></div><p style="color:var(--muted);font-size:12px;margin-top:10px">Mỗi ô chọn ca làm — tự lưu, cả team đều thấy. Số công = số ca × 0,5 (S-Đ = 1 công). Admin có thể sửa/thêm tên nhân viên và khoá/mở từng tuần — tuần đã khoá thì chỉ Admin sửa.</p>`;
+  if(canSeeLLLog()) h+=renderLLLog();
   el.innerHTML=h;
+}
+/* Lịch sử đăng ký ca — ai / mail nào đăng ký. CHỈ Admin hoặc tài khoản được cấp quyền "Lịch sử đăng ký lịch" mới thấy. */
+function renderLLLog(){
+  const lg=llLog().slice().reverse(); /* mới nhất lên đầu */
+  let h=`<div class="card" style="margin-top:16px;border-left:4px solid #6A3FA0">
+    <div style="font-weight:800;color:#6A3FA0;font-size:15px">📜 Lịch sử đăng ký ca — tháng ${LL_YM.split('-')[1]}/${LL_YM.split('-')[0]}</div>
+    <div style="color:var(--muted);font-size:12px;margin:4px 0 10px">Chỉ Admin và tài khoản được cấp quyền <b>“Lịch sử đăng ký lịch”</b> xem được. Ghi lại ai (tài khoản/email) đăng ký hoặc sửa mỗi ca. Lịch sử bắt đầu ghi từ khi bật tính năng.</div>`;
+  if(!lg.length){ h+=`<div style="color:var(--muted);font-size:13px">Chưa có lượt đăng ký/sửa nào trong tháng này.</div></div>`; return h; }
+  h+=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#6A3FA0;color:#fff">`+
+     ['Thời gian','Ngày','Nhân viên','Ca đăng ký','Người đăng ký','Email đăng nhập'].map(x=>`<th style="padding:6px;border:1px solid #d3c9e3;white-space:nowrap">${x}</th>`).join('')+`</tr>`;
+  lg.forEach(r=>{
+    const at=r.at?new Date(r.at):null;
+    const ts=at?(String(at.getDate()).padStart(2,'0')+'/'+String(at.getMonth()+1).padStart(2,'0')+' '+String(at.getHours()).padStart(2,'0')+':'+String(at.getMinutes()).padStart(2,'0')):'—';
+    const ca=r.v?escapeHtml(r.v):'<span style="color:#c0392b">Xoá ca</span>'+(r.old?` <span style="color:#999">(bỏ ${escapeHtml(r.old)})</span>`:'');
+    const chg=(r.old&&r.v&&r.old!==r.v)?` <span style="color:#999;font-size:11px">(từ ${escapeHtml(r.old)})</span>`:'';
+    h+=`<tr><td style="padding:6px;border:1px solid #e3ece7;white-space:nowrap">${ts}</td><td style="padding:6px;border:1px solid #e3ece7;text-align:center">${r.d||'—'}</td><td style="padding:6px;border:1px solid #e3ece7;font-weight:700">${escapeHtml(r.s||'')}</td><td style="padding:6px;border:1px solid #e3ece7;text-align:center">${ca}${chg}</td><td style="padding:6px;border:1px solid #e3ece7">${escapeHtml(r.by||'—')}</td><td style="padding:6px;border:1px solid #e3ece7;font-size:12px;color:#555">${escapeHtml(r.mail||'—')}</td></tr>`;
+  });
+  h+=`</table></div><div style="color:var(--muted);font-size:11px;margin-top:8px">Tổng ${lg.length} lượt trong tháng.</div></div>`;
+  return h;
 }
 
 /* ============ RENDER ============ */
@@ -2986,7 +3015,7 @@ async function loadAll(){
     if(p.role==='marketing'||p.role==='admin'||p.role==='owner') MKT[p.id]=p.ten;
   });
   const myp = (profs||[]).find(p=>p.id===user.id) || {id:user.id, ten:user.email, role:'sale', quyen:[]};
-  ME = {id:user.id, name:myp.ten, role:myp.role, uname:user.id, quyen:myp.quyen||PERMS[user.id]||[]};
+  ME = {id:user.id, name:myp.ten, role:myp.role, uname:user.id, mail:user.email||'', quyen:myp.quyen||PERMS[user.id]||[]};
   const cs = await fetchAllRows('customers','ngay_tao',false);
   const allc = (cs||[]).map(c=>({ ...c,
     follow:c.follow||'', ngay_tao:(c.ngay_tao||'').slice(0,10),
