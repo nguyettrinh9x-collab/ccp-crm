@@ -1718,18 +1718,18 @@ function checkDupAdd(){
   var w=document.getElementById('dup-warn'); if(!w) return;
   var tenEl=document.getElementById('f-ten'), phEl=document.getElementById('f-phone'), emEl=document.getElementById('f-email');
   var ten=_normName(tenEl&&tenEl.value);
-  var ph=((phEl&&phEl.value)||'').replace(/\D/g,'');
+  var ph=((phEl&&phEl.value)||'').replace(/\D/g,''); var phN=ph.length>=9?ph.slice(-9):'';
   var em=((emEl&&emEl.value)||'').trim().toLowerCase();
   if(ten.length<2 && ph.length<8 && !em){ w.style.display='none'; w.innerHTML=''; return; }
   var m=(DATA||[]).filter(function(c){ if(c.da_xoa) return false;
-    var cn=_normName(c.ten), cp=(''+(c.phone||'')).replace(/\D/g,''), ce=(''+(c.email||'')).trim().toLowerCase();
+    var cn=_normName(c.ten), cp=_pkNormPhone(c.phone), ce=(''+(c.email||'')).trim().toLowerCase();
     var nameHit = ten.length>=2 && (cn===ten || (ten.length>=5 && cn.length>=5 && (cn.indexOf(ten)>=0 || ten.indexOf(cn)>=0)));
-    return nameHit || (ph.length>=8&&cp===ph) || (em&&ce===em); });
+    return nameHit || (phN&&cp===phN) || (em&&ce===em); });
   if(!m.length){ w.style.display='none'; w.innerHTML=''; return; }
   var E=function(s){ return (''+(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   var lines=m.slice(0,8).map(function(c){
-    var cn=_normName(c.ten), cp=(''+(c.phone||'')).replace(/\D/g,'');
-    var by=(cn===ten||(ten.length>=5&&cn.length>=5&&(cn.indexOf(ten)>=0||ten.indexOf(cn)>=0)))?'trùng TÊN':((ph.length>=8&&cp===ph)?'trùng SĐT':'trùng email');
+    var cn=_normName(c.ten), cp=_pkNormPhone(c.phone);
+    var by=(cn===ten||(ten.length>=5&&cn.length>=5&&(cn.indexOf(ten)>=0||ten.indexOf(cn)>=0)))?'trùng TÊN':((phN&&cp===phN)?'trùng SĐT':'trùng email');
     var sl=(typeof SALES!=='undefined'&&SALES[c.owner])?SALES[c.owner]:'?';
     var st=(typeof STATUS!=='undefined'&&STATUS[c.tt])?STATUS[c.tt]:(c.tt||'');
     var n=(typeof soLanMua==='function')?soLanMua(c):'';
@@ -2892,9 +2892,9 @@ async function loadPkRecon(){
     const pkrSales=[...new Set(noted.map(function(n){return n.sale;}))].sort();
     /* Lọc trùng: đánh dấu khách đã có trong CRM hoặc trùng trong danh sách — xét CẢ SĐT (≥8 số) LẪN tên */
     const _crmPh={}, _crmNm={};
-    (DATA||[]).forEach(function(c){ var ph=(''+(c.phone||'')).replace(/\D/g,''); if(ph.length>=8&&!_crmPh[ph])_crmPh[ph]=c.id; var nm=_normName(c.ten); if(nm.length>=4&&!_crmNm[nm])_crmNm[nm]=c.id; });
+    (DATA||[]).forEach(function(c){ var ph=_pkNormPhone(c.phone); if(ph&&!_crmPh[ph])_crmPh[ph]=c.id; var nm=_normName(c.ten); if(nm.length>=4&&!_crmNm[nm])_crmNm[nm]=c.id; });
     const _seenPh=new Set(), _seenNm=new Set();
-    noted.forEach(function(r){ var ph=(''+(r.phone||'')).replace(/\D/g,''); var nm=_normName(r.ten); var crmId=(ph.length>=8&&_crmPh[ph])||(nm.length>=4&&_crmNm[nm])||''; var inCrm=!!crmId; var inList=(ph.length>=8&&_seenPh.has(ph))||(nm.length>=4&&_seenNm.has(nm)); if(ph.length>=8)_seenPh.add(ph); if(nm.length>=4)_seenNm.add(nm); r._dup=inCrm||inList; r._crmId=crmId; r._dupWhy=inCrm?'đã có trong CRM':(inList?'trùng trong danh sách':''); });
+    noted.forEach(function(r){ var ph=_pkNormPhone(r.phone); var nm=_normName(r.ten); var crmId=(ph&&_crmPh[ph])||(nm.length>=4&&_crmNm[nm])||''; var inCrm=!!crmId; var inList=(ph&&_seenPh.has(ph))||(nm.length>=4&&_seenNm.has(nm)); if(ph)_seenPh.add(ph); if(nm.length>=4)_seenNm.add(nm); r._dup=inCrm||inList; r._crmId=crmId; r._dupWhy=inCrm?'đã có trong CRM':(inList?'trùng trong danh sách':''); });
     const _dupTotal=noted.filter(function(r){return r._dup;}).length;
     window.PKR_DUP_CIDS=noted.filter(function(r){return r._dup && r.cid;}).map(function(r){return r.cid;});
     let notedF=PKR_SALE?noted.filter(function(n){return n.sale===PKR_SALE;}):noted;
