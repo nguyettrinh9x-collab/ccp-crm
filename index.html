@@ -2873,8 +2873,11 @@ async function loadPkRecon(){
     if(_rg&&_rg.s&&_rg.e) rows=(rows||[]).filter(function(r){ var d=(''+(r.conv_inserted_at||'')).slice(0,10); return d&&d>=_rg.s&&d<=_rg.e; });
     const SK=['Tiên','Phúc','Bảo','Yến','Ngàn','Mai','Hoè','Hạnh'];
     const saleOf=(s)=>{ s=(''+(s||'')).trim(); if(!s) return '(chưa gán)'; const p=s.split('/').map(x=>x.trim()); const h=p.find(x=>SK.includes(x)); return h||p[p.length-1]||'(chưa gán)'; };
+    const _aPh={}, _aNm={};
+    (DATA||[]).forEach(function(c){ var p=_pkNormPhone(c.phone); if(p)_aPh[p]=1; var n=_normName(c.ten); if(n.length>=4)_aNm[n]=1; });
+    const _inCrm=function(r){ var p=_pkNormPhone(r.phone); var n=_normName(r.ten); return !!((p&&_aPh[p])||(n.length>=4&&_aNm[n])); };
     const agg={}; const miss={};
-    (rows||[]).forEach((r)=>{ if(r.status==='ignored') return; const sale=saleOf(r.sale); const a=agg[sale]||(agg[sale]={tong:0,nhap:0}); a.tong++; const entered=(r.status==='added'||r.in_crm===true); if(entered) a.nhap++; else (miss[sale]=miss[sale]||[]).push(r.ten||'(không tên)'); });
+    (rows||[]).forEach((r)=>{ if(r.status==='ignored') return; const sale=saleOf(r.sale); const a=agg[sale]||(agg[sale]={tong:0,nhap:0}); a.tong++; const entered=(r.status==='added'||r.in_crm===true||_inCrm(r)); if(entered) a.nhap++; else (miss[sale]=miss[sale]||[]).push(r.ten||'(không tên)'); });
     const list=Object.keys(agg).sort((a,b)=>(agg[a].nhap/agg[a].tong)-(agg[b].nhap/agg[b].tong));
     let tT=0,tN=0;
     let h='<div style="margin-bottom:12px"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">🔎 Tìm nhanh khách trong CRM (kiểm tra đã nhập chưa — khỏi qua tab khác):</label><input id="pkr-q" value="'+escapeHtml(PKR_SEARCH)+'" oninput="pkrSearch(this.value)" placeholder="Gõ tên hoặc SĐT khách..." style="width:100%;max-width:440px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px"></div><div id="pkr-search-res">'+pkrSearchHTML(PKR_SEARCH)+'</div>';
