@@ -2854,7 +2854,9 @@ async function pkReconIgnore(cid){
 async function loadPkRecon(){
   const el=document.getElementById('pk-recon'); if(!el) return;
   try{
-    const rows=await fetchAllRows('pancake_leads','conv_inserted_at',false);
+    let rows=await fetchAllRows('pancake_leads','conv_inserted_at',false);
+    var _rg=(typeof getRange==='function')?getRange('danhgia'):null;
+    if(_rg&&_rg.s&&_rg.e) rows=(rows||[]).filter(function(r){ var d=(''+(r.conv_inserted_at||'')).slice(0,10); return d&&d>=_rg.s&&d<=_rg.e; });
     const SK=['Tiên','Phúc','Bảo','Yến','Ngàn','Mai','Hoè','Hạnh'];
     const saleOf=(s)=>{ s=(''+(s||'')).trim(); if(!s) return '(chưa gán)'; const p=s.split('/').map(x=>x.trim()); const h=p.find(x=>SK.includes(x)); return h||p[p.length-1]||'(chưa gán)'; };
     const agg={}; const miss={};
@@ -2862,6 +2864,7 @@ async function loadPkRecon(){
     const list=Object.keys(agg).sort((a,b)=>(agg[a].nhap/agg[a].tong)-(agg[b].nhap/agg[b].tong));
     let tT=0,tN=0;
     let h='<div style="margin-bottom:12px"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">🔎 Tìm nhanh khách trong CRM (kiểm tra đã nhập chưa — khỏi qua tab khác):</label><input id="pkr-q" value="'+escapeHtml(PKR_SEARCH)+'" oninput="pkrSearch(this.value)" placeholder="Gõ tên hoặc SĐT khách..." style="width:100%;max-width:440px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px"></div><div id="pkr-search-res">'+pkrSearchHTML(PKR_SEARCH)+'</div>';
+    h+='<div style="font-size:12px;color:var(--muted);margin:2px 0 8px">📅 Chỉ tính khách Pancake có ngày trong kỳ đã chọn: <b>'+((_rg&&_rg.s)||'—')+' → '+((_rg&&_rg.e)||'—')+'</b> · đổi kỳ ở bộ lọc đầu tab.</div>';
     h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#1F6F54;color:#fff">'+['Sale','Tổng Pancake','Đã nhập','Chưa nhập','Tỷ lệ nhập'].map(x=>'<th style="padding:6px;border:1px solid #cfe0d8">'+x+'</th>').join('')+'</tr>';
     list.forEach((s)=>{ const a=agg[s]; const chua=a.tong-a.nhap; tT+=a.tong; tN+=a.nhap; const pct=a.tong?Math.round(a.nhap/a.tong*100):0; const warn=pct<50;
       h+='<tr style="text-align:center"><td style="padding:6px;border:1px solid #e3ece7;text-align:left;font-weight:700">'+s+'</td><td style="padding:6px;border:1px solid #e3ece7">'+a.tong+'</td><td style="padding:6px;border:1px solid #e3ece7;color:#2f9e6e">'+a.nhap+'</td><td style="padding:6px;border:1px solid #e3ece7;color:'+(chua?'#c0392b':'#999')+';font-weight:'+(chua?700:400)+'">'+chua+'</td><td style="padding:6px;border:1px solid #e3ece7;font-weight:700;color:'+(warn?'#c0392b':'#2f9e6e')+'">'+pct+'%</td></tr>'; });
