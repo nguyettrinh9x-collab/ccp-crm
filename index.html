@@ -2873,11 +2873,11 @@ async function loadPkRecon(){
     (rows||[]).forEach((r)=>{ if(r.status!=='new') return; const nt=(''+(r.note||'')).trim(); if(!nt || nt.indexOf('[auto:')>=0) return; noted.push({sale:saleOf(r.sale),ten:r.ten||'(không tên)',note:nt,page:r.page_name||'',ngay:(''+(r.conv_inserted_at||'')).slice(0,10),phone:r.phone||'',cid:r.conv_id}); });
     noted.sort((a,b)=> a.sale<b.sale?-1:(a.sale>b.sale?1:(a.ten<b.ten?-1:1)));
     const pkrSales=[...new Set(noted.map(function(n){return n.sale;}))].sort();
-    /* Lọc trùng: đánh dấu khách đã có trong CRM (khớp SĐT ≥8 số hoặc tên) hoặc trùng trong danh sách */
+    /* Lọc trùng: đánh dấu khách đã có trong CRM hoặc trùng trong danh sách — xét CẢ SĐT (≥8 số) LẪN tên */
     const _crmPh={}, _crmNm={};
     (DATA||[]).forEach(function(c){ var ph=(''+(c.phone||'')).replace(/\D/g,''); if(ph.length>=8&&!_crmPh[ph])_crmPh[ph]=c.id; var nm=_normName(c.ten); if(nm.length>=4&&!_crmNm[nm])_crmNm[nm]=c.id; });
-    const _seen=new Set();
-    noted.forEach(function(r){ var ph=(''+(r.phone||'')).replace(/\D/g,''); var nm=_normName(r.ten); var crmId=(ph.length>=8&&_crmPh[ph])||(nm.length>=4&&_crmNm[nm])||''; var inCrm=!!crmId; var key=ph.length>=8?('p:'+ph):(nm.length>=4?('n:'+nm):('c:'+r.cid)); var inList=_seen.has(key); if(!inList)_seen.add(key); r._dup=inCrm||inList; r._crmId=crmId; r._dupWhy=inCrm?'đã có trong CRM':(inList?'trùng trong danh sách':''); });
+    const _seenPh=new Set(), _seenNm=new Set();
+    noted.forEach(function(r){ var ph=(''+(r.phone||'')).replace(/\D/g,''); var nm=_normName(r.ten); var crmId=(ph.length>=8&&_crmPh[ph])||(nm.length>=4&&_crmNm[nm])||''; var inCrm=!!crmId; var inList=(ph.length>=8&&_seenPh.has(ph))||(nm.length>=4&&_seenNm.has(nm)); if(ph.length>=8)_seenPh.add(ph); if(nm.length>=4)_seenNm.add(nm); r._dup=inCrm||inList; r._crmId=crmId; r._dupWhy=inCrm?'đã có trong CRM':(inList?'trùng trong danh sách':''); });
     const _dupTotal=noted.filter(function(r){return r._dup;}).length;
     window.PKR_DUP_CIDS=noted.filter(function(r){return r._dup && r.cid;}).map(function(r){return r.cid;});
     let notedF=PKR_SALE?noted.filter(function(n){return n.sale===PKR_SALE;}):noted;
