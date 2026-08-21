@@ -2820,6 +2820,17 @@ let PKR_SALE='';
 let PKR_HIDE_DUP=true; /* mặc định ẩn khách trùng (đã có trong CRM / đã note trước) */
 function setPkrSale(v){ PKR_SALE=v; loadPkRecon(); }
 function togglePkrDup(on){ PKR_HIDE_DUP=on; loadPkRecon(); }
+let PKR_SEARCH='';
+function pkrSearch(v){ PKR_SEARCH=v; var el=document.getElementById('pkr-search-res'); if(el) el.innerHTML=pkrSearchHTML(v); var q=document.getElementById('pkr-q'); if(q){ q.focus(); try{q.setSelectionRange(v.length,v.length);}catch(e){} } }
+function pkrSearchHTML(q){
+  q=(''+(q||'')).trim(); if(!q) return '';
+  var ql=q.toLowerCase(); var qd=q.replace(/\D/g,'');
+  var res=(DATA||[]).filter(function(c){ var nm=(''+(c.ten||'')).toLowerCase(); var ph=(''+(c.phone||'')).replace(/\D/g,''); var em=(''+(c.email||'')).toLowerCase(); return nm.indexOf(ql)>=0 || (qd.length>=4&&ph.indexOf(qd)>=0) || (em&&em.indexOf(ql)>=0); }).slice(0,15);
+  if(!res.length) return '<div style="margin:6px 0;padding:8px 12px;background:#fdeeee;border:1px solid #f0c9c9;border-radius:8px;color:#c0392b;font-size:13px">✗ Chưa thấy "'+escapeHtml(q)+'" trong CRM — có thể khách chưa được nhập.</div>';
+  var h='<div style="margin:6px 0;padding:8px 12px;background:#eefaf3;border:1px solid #bfe6d2;border-radius:8px"><div style="font-size:12px;color:#1F6F54;font-weight:700;margin-bottom:6px">✓ Có '+res.length+' khách khớp trong CRM (đã nhập):</div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">';
+  res.forEach(function(c){ h+='<tr style="border-bottom:1px solid #d6ecdf"><td style="padding:4px 6px;font-weight:700">'+escapeHtml(c.ten||'')+'</td><td style="padding:4px 6px;font-size:12px;color:#555">'+escapeHtml(c.phone||'')+'</td><td style="padding:4px 6px;font-size:12px">'+escapeHtml((typeof STATUS!=='undefined'&&STATUS[c.tt])||c.tt||'')+'</td><td style="padding:4px 6px;font-size:12px">'+escapeHtml((typeof SALES!=='undefined'&&SALES[c.owner])||'')+'</td><td style="padding:4px 6px;text-align:right;white-space:nowrap"><span style="cursor:pointer;color:#1F6F54;font-weight:700;text-decoration:underline" onclick="editCustomer(\''+c.id+'\')">Mở 🔎</span></td></tr>'; });
+  h+='</table></div></div>'; return h;
+}
 async function pkReconIgnoreDup(){
   if(!window.sb){ alert('Chưa kết nối dữ liệu, tải lại trang giúp em.'); return; }
   var ids=(window.PKR_DUP_CIDS||[]).filter(Boolean);
@@ -2840,7 +2851,8 @@ async function loadPkRecon(){
     (rows||[]).forEach((r)=>{ if(r.status==='ignored') return; const sale=saleOf(r.sale); const a=agg[sale]||(agg[sale]={tong:0,nhap:0}); a.tong++; const entered=(r.status==='added'||r.in_crm===true); if(entered) a.nhap++; else (miss[sale]=miss[sale]||[]).push(r.ten||'(không tên)'); });
     const list=Object.keys(agg).sort((a,b)=>(agg[a].nhap/agg[a].tong)-(agg[b].nhap/agg[b].tong));
     let tT=0,tN=0;
-    let h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#1F6F54;color:#fff">'+['Sale','Tổng Pancake','Đã nhập','Chưa nhập','Tỷ lệ nhập'].map(x=>'<th style="padding:6px;border:1px solid #cfe0d8">'+x+'</th>').join('')+'</tr>';
+    let h='<div style="margin-bottom:12px"><label style="font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">🔎 Tìm nhanh khách trong CRM (kiểm tra đã nhập chưa — khỏi qua tab khác):</label><input id="pkr-q" value="'+escapeHtml(PKR_SEARCH)+'" oninput="pkrSearch(this.value)" placeholder="Gõ tên hoặc SĐT khách..." style="width:100%;max-width:440px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px"></div><div id="pkr-search-res">'+pkrSearchHTML(PKR_SEARCH)+'</div>';
+    h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#1F6F54;color:#fff">'+['Sale','Tổng Pancake','Đã nhập','Chưa nhập','Tỷ lệ nhập'].map(x=>'<th style="padding:6px;border:1px solid #cfe0d8">'+x+'</th>').join('')+'</tr>';
     list.forEach((s)=>{ const a=agg[s]; const chua=a.tong-a.nhap; tT+=a.tong; tN+=a.nhap; const pct=a.tong?Math.round(a.nhap/a.tong*100):0; const warn=pct<50;
       h+='<tr style="text-align:center"><td style="padding:6px;border:1px solid #e3ece7;text-align:left;font-weight:700">'+s+'</td><td style="padding:6px;border:1px solid #e3ece7">'+a.tong+'</td><td style="padding:6px;border:1px solid #e3ece7;color:#2f9e6e">'+a.nhap+'</td><td style="padding:6px;border:1px solid #e3ece7;color:'+(chua?'#c0392b':'#999')+';font-weight:'+(chua?700:400)+'">'+chua+'</td><td style="padding:6px;border:1px solid #e3ece7;font-weight:700;color:'+(warn?'#c0392b':'#2f9e6e')+'">'+pct+'%</td></tr>'; });
     const pctT=tT?Math.round(tN/tT*100):0;
