@@ -373,11 +373,58 @@ async function bucketDone(bucket){
   await loadAll(); renderAll();
   toastUndo('✓ Đã xong cả nhóm ('+(tasks.length+follows.length)+')', async()=>{ if(tasks.length) await sbUpdIn('tasks',{xong:false},tasks); const byDate={}; prev.forEach(p=>{ (byDate[p.follow||'null']=byDate[p.follow||'null']||[]).push(p.id); }); for(const k in byDate){ await sbUpdIn('customers',{follow:(k==='null'?null:k)},byDate[k]); } await loadAll(); renderAll(); });
 }
+/* ==== Việc cần làm — Hoãn nhanh, Dọn lead lạnh, Ưu tiên theo điểm, Chế độ tập trung ==== */
+const MUC_W_TTD={nong:3,am:2,lanh:1};
+function ttdScore(muc,dateStr){ const w=MUC_W_TTD[muc]||1; let late=1; if(dateStr){ const diff=Math.round((new Date(D(0)).getTime()-new Date(dateStr).getTime())/86400000); late=Math.max(1,diff); } return w*late; }
+async function snoozeFollow(cid,n){ const c=findC(cid); const prev=c?c.follow:null; const {error}=await sb.from('customers').update({follow:D(n),ngay_capnhat:D(0)}).eq('id',cid); if(error){ toast('⚠ Lỗi, thử lại',false); return; } await loadAll(); renderAll(); toastUndo('✓ Hoãn follow '+n+' ngày', async()=>{ await sb.from('customers').update({follow:prev}).eq('id',cid); await loadAll(); renderAll(); }); }
+async function snoozeTask(tid,n){ const t=TASKS.find(x=>String(x.id)===String(tid)); const prev=t?t.han:null; const {error}=await sb.from('tasks').update({han:D(n)}).eq('id',tid); if(error){ toast('⚠ Lỗi, thử lại',false); return; } await loadAll(); renderAll(); toastUndo('✓ Hoãn việc '+n+' ngày', async()=>{ await sb.from('tasks').update({han:prev}).eq('id',tid); await loadAll(); renderAll(); }); }
+async function snoozeCust(cid,taskCSV,hasF,n){ const ids=(taskCSV||'').split(',').filter(Boolean); if(hasF){ await sb.from('customers').update({follow:D(n),ngay_capnhat:D(0)}).eq('id',cid); } if(ids.length){ await sbUpdIn('tasks',{han:D(n)},ids); } await loadAll(); renderAll(); toast('✓ Đã hoãn '+n+' ngày'); }
+async function snoozeColdLeads(){ const d=(ME.role==='sale')?DATA.filter(c=>c.owner===ME.id):myData(); const cold=d.filter(c=>flag(c)==='over' && !isChot(c.tt) && (c.muc==='lanh'||!c.muc)); if(!cold.length){ toast('Không có lead lạnh/không phân loại nào đang quá hạn.',false); return; } if(!confirm('Hoãn follow +30 ngày cho '+cold.length+' lead lạnh/không phân loại đang quá hạn?\nChúng tạm ẩn khỏi Việc cần làm và tự quay lại sau 30 ngày. (Có nút Hoàn tác)')) return; const prev=cold.map(c=>({id:c.id,follow:c.follow})); const e=await sbUpdIn('customers',{follow:D(30),ngay_capnhat:D(0)},cold.map(c=>c.id)); if(e){ toast('⚠ Lỗi: '+e.message,false); return; } await loadAll(); renderAll(); toastUndo('✓ Đã hoãn '+cold.length+' lead lạnh (+30 ngày)', async()=>{ const byDate={}; prev.forEach(p=>{ (byDate[p.follow||'null']=byDate[p.follow||'null']||[]).push(p.id); }); for(const k in byDate){ await sbUpdIn('customers',{follow:(k==='null'?null:k)},byDate[k]); } await loadAll(); renderAll(); }); }
+function snz(kind,arg){ return '<span style="white-space:nowrap;color:#b07d00" title="Hoãn nhắc lại (ngày)">⏳ '+[1,3,7].map(n=>'<a style="cursor:pointer;text-decoration:underline" onclick="'+(kind==='f'?('snoozeFollow(\''+arg+'\','+n+')'):('snoozeTask(\''+arg+'\','+n+')'))+'">'+n+'</a>').join('·')+'</span>'; }
+function snzCust(cid,taskCSV,hasF){ return '<span style="white-space:nowrap;color:#b07d00" title="Hoãn cả follow + việc của khách (ngày)">⏳ '+[1,3,7].map(n=>'<a style="cursor:pointer;text-decoration:underline" onclick="snoozeCust(\''+cid+'\',\''+(taskCSV||'')+'\','+(hasF?1:0)+','+n+')">'+n+'</a>').join('·')+'</span>'; }
+function toggleFocus(){ FOCUS_MODE=!FOCUS_MODE; FOCUS_IDX=0; renderToday(); }
+function focusNext(){ FOCUS_IDX++; renderToday(); }
+function focusPrev(){ if(FOCUS_IDX>0)FOCUS_IDX--; renderToday(); }
+function focusPanel(prio){
+  let h='<div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 8px"><h2 class="sec" style="margin:0;color:var(--teal-dark)">🎯 Chế độ tập trung</h2><button class="btn ghost" type="button" onclick="toggleFocus()" style="padding:5px 12px;font-size:13px">✕ Thoát</button></div>';
+  if(!prio.length) return h+'<div class="card empty">🎉 Hết việc ưu tiên hôm nay!</div>';
+  if(FOCUS_IDX>=prio.length)FOCUS_IDX=prio.length-1; if(FOCUS_IDX<0)FOCUS_IDX=0;
+  const p=prio[FOCUS_IDX]; const c=findC(p.cid);
+  const wa=p.phone?('https://wa.me/'+String(p.phone).replace(/[^0-9]/g,'')):'';
+  const tel=p.phone?('tel:'+String(p.phone).replace(/[^0-9+]/g,'')):'';
+  h+='<div class="card" style="border-left:5px solid var(--over);max-width:520px;margin:0 auto">'
+   +'<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;color:var(--muted)">Khách '+(FOCUS_IDX+1)+'/'+prio.length+'</div><div style="font-size:12px;color:var(--muted)">Điểm ưu tiên: <b style="color:var(--over)">'+p.score+'</b></div></div>'
+   +'<div style="font-size:20px;font-weight:800;color:var(--teal-dark);margin:6px 0">'+escapeHtml(p.name||'(khách)')+'</div>'
+   +'<div style="margin-bottom:8px">'+(p.muc?mucPill(p.muc):'')+(c?' '+ttPill(c.tt):'')+'</div>'
+   +(p.phone?'<div style="font-size:14px;margin-bottom:4px">📱 '+escapeHtml(p.phone)+'</div>':'<div style="font-size:13px;color:var(--over);margin-bottom:4px">⚠ Chưa có SĐT</div>')
+   +(p.note?'<div style="font-size:13px;color:#555;margin-bottom:6px">'+escapeHtml((''+p.note).slice(0,160))+'</div>':'')
+   +'<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Hẹn follow: '+escapeHtml(p.follow||'—')+'</div>'
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+   +(tel?'<a class="btn" href="'+tel+'" style="background:#2f9e6e;border-color:#2f9e6e;color:#fff;text-decoration:none;padding:8px 14px">📞 Gọi</a>':'')
+   +(wa?'<a class="btn" href="'+wa+'" target="_blank" rel="noopener" style="background:#25D366;border-color:#25D366;color:#fff;text-decoration:none;padding:8px 14px">💬 WhatsApp</a>':'')
+   +'<button class="btn ghost" type="button" onclick="editCustomer(\''+p.cid+'\')" style="padding:8px 14px">✏️ Mở khách</button>'
+   +'<button class="btn" type="button" onclick="followDone(\''+p.cid+'\')" style="background:var(--won);border-color:var(--won);color:#fff;padding:8px 14px">✓ Đã follow</button>'
+   +'</div>'
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:13px"><span style="color:#b07d00">Hoãn:</span>'+[1,3,7].map(n=>'<button class="btn ghost" type="button" onclick="snoozeFollow(\''+p.cid+'\','+n+')" style="padding:5px 10px;font-size:12px">+'+n+'n</button>').join('')+'<button class="btn ghost" type="button" onclick="focusNext()" style="margin-left:auto;padding:8px 14px">⏭ Bỏ qua</button></div>'
+   +'</div>'
+   +'<div style="display:flex;justify-content:center;gap:12px;margin-top:12px"><button class="btn ghost" type="button" onclick="focusPrev()" '+(FOCUS_IDX<=0?'disabled':'')+' style="padding:6px 16px">‹ Trước</button><button class="btn ghost" type="button" onclick="focusNext()" '+(FOCUS_IDX>=prio.length-1?'disabled':'')+' style="padding:6px 16px">Sau ›</button></div>';
+  return h;
+}
+function topPrioCard(prio){
+  const top=prio.slice(0,5);
+  let h='<div class="card" style="background:linear-gradient(135deg,#fff6ec,#fdeee6);border:1px solid #f0d3b8;margin:14px 0"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:800;color:#b5651d;font-size:15px">⭐ Top ưu tiên hôm nay</div><button class="btn" type="button" onclick="toggleFocus()" style="padding:5px 12px;font-size:13px;background:var(--teal-dark);border-color:var(--teal-dark);color:#fff">🎯 Vào chế độ tập trung</button></div><div style="font-size:12px;color:var(--muted);margin:4px 0 8px">Xếp theo điểm = mức độ × số ngày trễ. Làm từ trên xuống.</div>';
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">';
+  top.forEach((p,i)=>{ const wa=p.phone?('https://wa.me/'+String(p.phone).replace(/[^0-9]/g,'')):''; const tel=p.phone?('tel:'+String(p.phone).replace(/[^0-9+]/g,'')):'';
+    h+='<tr style="border-bottom:1px solid #f0e0d0"><td style="padding:6px;font-weight:800;color:#b5651d;width:26px">'+(i+1)+'</td><td style="padding:6px;font-weight:700"><span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer(\''+p.cid+'\')">'+escapeHtml(p.name||'(khách)')+'</span> '+(p.muc?mucPill(p.muc):'')+'</td><td style="padding:6px;font-size:12px;color:var(--muted);white-space:nowrap">'+escapeHtml(p.follow||'—')+'</td><td style="padding:6px;text-align:right;white-space:nowrap">'+(tel?'<a href="'+tel+'" style="text-decoration:none;margin-right:8px" title="Gọi">📞</a>':'')+(wa?'<a href="'+wa+'" target="_blank" rel="noopener" style="text-decoration:none;margin-right:8px" title="WhatsApp">💬</a>':'')+'<span style="cursor:pointer;color:var(--won);font-weight:700" title="Đã follow → hẹn lại" onclick="followDone(\''+p.cid+'\')">✓</span></td></tr>'; });
+  h+='</table></div></div>';
+  return h;
+}
 function toggleCustSel(cid, taskCSV, hasF, hasD, on){
   const keys=[]; (taskCSV||'').split(',').filter(Boolean).forEach(tid=>keys.push('t:'+tid)); if(hasF)keys.push('f:'+cid); if(hasD)keys.push('d:'+cid);
   keys.forEach(k=>{ if(on)TASK_SEL.add(k); else TASK_SEL.delete(k); }); renderTaskBulkBar();
 }
 let TASK_BUCKET='', TASK_PANEL_OPEN=false, CARE_TODAY_OPEN=false; // lọc nhanh nhóm việc + thu gọn form & bảng chăm
+let FOCUS_MODE=false, FOCUS_IDX=0; // chế độ tập trung: 1 khách/lần (mobile)
 function setTaskBucket(v){ TASK_BUCKET=v; renderToday(); }
 function toggleTaskPanel(){ TASK_PANEL_OPEN=!TASK_PANEL_OPEN; renderToday(); }
 function toggleCareToday(){ CARE_TODAY_OPEN=!CARE_TODAY_OPEN; renderToday(); }
@@ -1953,6 +2000,8 @@ function renderToday(){
     <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn ghost" type="button" onclick="selectAllShownTasks()" title="Chọn tất cả việc đang hiển thị để thao tác hàng loạt" style="padding:6px 14px;font-size:13px">☑ Chọn tất cả hiển thị</button>
     ${isAdmin()?`<button class="btn" type="button" onclick="markAllTasksDone()" title="Chỉ Admin — tích Xong tất cả VIỆC + hẹn lại FOLLOW đang hiển thị (theo bộ lọc/nhóm hiện tại)" style="padding:6px 14px;font-size:13px;background:var(--won);border-color:var(--won);color:#fff">✓ Xong tất cả (đang lọc)</button>`:''}
+    <button class="btn ${FOCUS_MODE?'':'ghost'}" type="button" onclick="toggleFocus()" title="Chế độ tập trung: xem 1 khách/lần, nút Gọi/WhatsApp to — tối ưu cho điện thoại" style="padding:6px 14px;font-size:13px">🎯 Tập trung</button>
+    <button class="btn ghost" type="button" onclick="snoozeColdLeads()" title="Hoãn follow +30 ngày cho lead lạnh/không phân loại đang quá hạn để làm sạch danh sách" style="padding:6px 14px;font-size:13px">🧹 Dọn lead lạnh</button>
     <button class="btn ghost" type="button" onclick="toggleTaskPanel()" style="padding:6px 14px;font-size:13px">${TASK_PANEL_OPEN?'✕ Đóng':'➕ Thêm việc / Bộ lọc'}${((TASK_Q||TASK_SALE||TASK_TT||TASK_FROM||TASK_TO)&&!TASK_PANEL_OPEN)?' 🔵':''}</button>
     </div>
   </div>`;
@@ -1983,12 +2032,12 @@ function renderToday(){
     <td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td>
     <td>${khachCell}</td>
     <td>${t.noi_dung||''}</td><td>${t.han||'—'}</td>${fullView()?`<td>${SALES[t.owner]||'—'}</td>`:''}
-    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--won);font-weight:700" onclick="taskDoneQuick('${t.id}')">✓ Xong</span> · <span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span></td></tr>`; };
+    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--won);font-weight:700" onclick="taskDoneQuick('${t.id}')">✓ Xong</span> · <span style="cursor:pointer;color:var(--teal-dark)" onclick="editTask('${t.id}')">Sửa</span> · <span style="cursor:pointer;color:var(--over)" onclick="delTask('${t.id}')">Xoá</span> · ${snz('t',t.id)}</td></tr>`; };
   const followRow=c=>`<tr style="background:#fff8f0"><td style="width:36px;text-align:center"><input type="checkbox" class="task-sel" style="width:auto;transform:scale(1.3)" title="Chọn để thao tác hàng loạt" ${TASK_SEL.has('f:'+c.id)?'checked':''} onchange="toggleTaskSel('f:${c.id}',this.checked)"></td>
     <td><span class="pill" style="background:#fde9d9;color:#b06a00">Follow</span></td>
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(c)}" onclick="editCustomer('${c.id}')">${c.ten} ✏️</b></td>
     <td>${ttPill(c.tt)} <span style="color:var(--muted);font-size:11px">${c.phone||''}</span></td><td>${c.follow||'—'}</td>${fullView()?`<td>${SALES[c.owner]||'—'}</td>`:''}
-    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--won);font-weight:700" title="Đã follow → hẹn lại +3 ngày" onclick="followDone('${c.id}')">✓ Đã follow</span> · <span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer('${c.id}')">Mở khách</span></td></tr>`;
+    <td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--won);font-weight:700" title="Đã follow → hẹn lại +3 ngày" onclick="followDone('${c.id}')">✓ Đã follow</span> · <span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer('${c.id}')">Mở khách</span> · ${snz('f',c.id)}</td></tr>`;
   const debtRow=c=>`<tr style="background:#fdf3f3"><td style="width:36px;text-align:center"><input type="checkbox" class="task-sel" style="width:auto;transform:scale(1.3)" title="Chọn để thao tác hàng loạt" ${TASK_SEL.has('d:'+c.id)?'checked':''} onchange="toggleTaskSel('d:${c.id}',this.checked)"></td>
     <td><span class="pill" style="background:#f7dada;color:#a83a3a">Thu nợ</span></td>
     <td><b style="cursor:pointer;color:var(--teal-dark)" title="Mở chăm sóc" onclick="openCarePanel('${c.id}')">${c.ten} 🩺</b></td>
@@ -2022,7 +2071,7 @@ function renderToday(){
       <td>${pills.join(' ')}</td>
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="${c?custTitle(c):''}" onclick="editCustomer('${cid}')">${nm} ✏️</b></td>
       <td>${notes.join(' · ')}</td><td>${han}</td>${fullView()?`<td>${c?(SALES[c.owner]||'—'):'—'}</td>`:''}
-      <td style="text-align:center;white-space:nowrap">${doneBtn}${debtLink}<span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer('${cid}')">Mở</span></td></tr>`; };
+      <td style="text-align:center;white-space:nowrap">${doneBtn}${debtLink}<span style="cursor:pointer;color:var(--teal-dark)" onclick="editCustomer('${cid}')">Mở</span> · ${snzCust(cid,taskCSV,hasF)}</td></tr>`; };
   const groupBucket=(tA,fA,dA)=>{ const byC={},stand=[];
     tA.forEach(t=>{ if(t.customer_id){(byC[t.customer_id]=byC[t.customer_id]||{tasks:[],follow:null,debt:null}).tasks.push(t);} else stand.push(t); });
     fA.forEach(c=>{(byC[c.id]=byC[c.id]||{tasks:[],follow:null,debt:null}).follow=c;});
@@ -2033,6 +2082,14 @@ function renderToday(){
   const todayItems=groupBucket(tToday,foToday,deToday);
   const upItems=groupBucket(tUp,[],[]);
   window.__bucketKeys={over:{tasks:tOver.map(t=>t.id),follows:foOver.map(c=>c.id)},today:{tasks:tToday.map(t=>t.id),follows:foToday.map(c=>c.id)},upcoming:{tasks:tUp.map(t=>t.id),follows:[]}};
+  /* ==== Ưu tiên theo điểm (mức độ × ngày trễ) + Chế độ tập trung ==== */
+  const _prioMap={};
+  const _addP=(cid,dateStr)=>{ const c=DATA.find(x=>String(x.id)===String(cid)); if(!c)return; const s=ttdScore(c.muc,dateStr); if(!_prioMap[cid]||s>_prioMap[cid].score) _prioMap[cid]={cid:String(cid),name:c.ten,phone:c.phone||'',muc:c.muc||'',score:s,follow:c.follow||'',note:c.benh_list||''}; };
+  foOver.forEach(c=>_addP(c.id,c.follow)); foToday.forEach(c=>_addP(c.id,c.follow));
+  tOver.forEach(t=>{ if(t.customer_id)_addP(t.customer_id,t.han); }); tToday.forEach(t=>{ if(t.customer_id)_addP(t.customer_id,t.han); });
+  const prio=Object.keys(_prioMap).map(k=>_prioMap[k]).sort((a,b)=>b.score-a.score);
+  if(FOCUS_MODE){ html+=focusPanel(prio); document.getElementById('v-today').innerHTML=html; return; }
+  if(prio.length) html+=topPrioCard(prio);
   if(showB('over')) html+=bucketTable('🔴 Việc · follow · thu nợ quá hạn (🔥 Nóng ưu tiên)', mkSorted(overItems), 'var(--over)','over','setTodayPageOver');
   if(showB('today')) html+=bucketTable('🟡 Việc · follow · thu nợ hôm nay (🔥 Nóng ưu tiên)', mkSorted(todayItems), '#b07d00','today','setTodayPageToday');
   if(showB('upcoming')) html+=bucketTable('🟢 Việc sắp tới (🔥 Nóng ưu tiên)', mkSorted(upItems), 'var(--teal-dark)','upcoming','setTodayPageUpcoming');
