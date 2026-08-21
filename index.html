@@ -475,7 +475,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-08-22-a';
+const APP_VERSION='2026-08-22-b';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -836,7 +836,7 @@ function go(v){
   if(view==='list') renderList();
   else if(view==='care') renderCare();
   else if(view==='today') renderToday();
-  else if(view==='lichlam') renderLichLam();
+  else if(view==='lichlam') llReloadRender();
   else if(view==='pancake') renderPancake();
   else if(view==='danhgia') renderDanhGia();
 }
@@ -1033,21 +1033,23 @@ async function llAddStaff(){ if(!isAdmin()){alert('Chỉ Admin');return;} const 
 async function llRenameStaff(i){ if(!isAdmin()){alert('Chỉ Admin');return;} const a=llStaff().slice(); const n=prompt('Sửa tên nhân viên:',a[i]); if(n===null)return; if(!n.trim()){alert('Tên không được trống');return;} a[i]=n.trim(); await saveLLStaff(a); }
 async function llRemoveStaff(i){ if(!isAdmin()){alert('Chỉ Admin');return;} const a=llStaff().slice(); if(!confirm('Xoá nhân viên "'+a[i]+'" khỏi lịch? (dữ liệu ca đã nhập của tên này sẽ không hiển thị nữa)'))return; a.splice(i,1); await saveLLStaff(a); }
 function llLocked(){ return IMAGES['lichlam_lock:'+LL_YM]==='1'; }
-async function toggleLLLock(){ if(!isAdmin()){alert('Chỉ Admin mới khoá/mở lịch');return;} const key='lichlam_lock:'+LL_YM; const v=llLocked()?'0':'1'; IMAGES[key]=v; if(window.sb){ const {error}=await sb.from('app_images').upsert({key,data:v,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi: '+error.message); } } renderLichLam(); }
+async function toggleLLLock(){ if(!isAdmin()){alert('Chỉ Admin mới khoá/mở lịch');return;} const key='lichlam_lock:'+LL_YM; const v=llLocked()?'0':'1'; IMAGES[key]=v; if(window.sb){ const {error}=await sb.from('app_images').upsert({key,data:v,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi: '+error.message); } } await llReload(); renderLichLam(); }
 function llMondayKey(y,m,d){ const dt=new Date(y,m-1,d); const off=(dt.getDay()+6)%7; const mon=new Date(y,m-1,d-off); return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0'); }
 function llWeekLocked(mk){ return IMAGES['lichlam_wlock:'+mk]==='1'; }
-async function toggleWeekLock(mk){ if(!isAdmin()){alert('Chỉ Admin mới khoá/mở tuần');return;} const key='lichlam_wlock:'+mk; const v=llWeekLocked(mk)?'0':'1'; IMAGES[key]=v; if(window.sb){ const {error}=await sb.from('app_images').upsert({key,data:v,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi: '+error.message); } } renderLichLam(); }
+async function toggleWeekLock(mk){ if(!isAdmin()){alert('Chỉ Admin mới khoá/mở tuần');return;} const key='lichlam_wlock:'+mk; const v=llWeekLocked(mk)?'0':'1'; IMAGES[key]=v; if(window.sb){ const {error}=await sb.from('app_images').upsert({key,data:v,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi: '+error.message); } } await llReload(); renderLichLam(); }
 const LL_ZOOM_DEFAULT={url:'https://us06web.zoom.us/j/86301205198?pwd=sDIVTlHcm8BCVcfHQuJHdBNPba1dRl.1#success',id:'86301205198',pass:'1234'};
 function llZoom(){ try{ const z=JSON.parse(IMAGES['lichlam_zoom']||'null'); return (z&&z.url)?z:LL_ZOOM_DEFAULT; }catch(e){ return LL_ZOOM_DEFAULT; } }
-async function editZoom(){ if(!isAdmin()){alert('Chỉ Admin mới sửa link Zoom');return;} const z=llZoom(); const url=prompt('Link Zoom:',z.url); if(url===null)return; const id=prompt('ID phòng:',z.id); if(id===null)return; const pass=prompt('Mã (passcode):',z.pass); if(pass===null)return; const data=JSON.stringify({url:url.trim(),id:id.trim(),pass:pass.trim()}); IMAGES['lichlam_zoom']=data; if(window.sb){ const {error}=await sb.from('app_images').upsert({key:'lichlam_zoom',data,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi: '+error.message); } } renderLichLam(); }
+async function editZoom(){ if(!isAdmin()){alert('Chỉ Admin mới sửa link Zoom');return;} const z=llZoom(); const url=prompt('Link Zoom:',z.url); if(url===null)return; const id=prompt('ID phòng:',z.id); if(id===null)return; const pass=prompt('Mã (passcode):',z.pass); if(pass===null)return; const data=JSON.stringify({url:url.trim(),id:id.trim(),pass:pass.trim()}); IMAGES['lichlam_zoom']=data; if(window.sb){ const {error}=await sb.from('app_images').upsert({key:'lichlam_zoom',data,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi: '+error.message); } } await llReload(); renderLichLam(); }
 const LL_OPTS=['','S','T','Đ','S-T','T-Đ','S-Đ','S-T-Đ'];
 const LL_THU=['Chủ Nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
 const LL_CLR={'S-T':'background:#fde3dd;color:#a23b34','S-T-Đ':'background:#d9f0d9;color:#2f7d34','T-Đ':'background:#8c2f2a;color:#fff','S-Đ':'background:#f7e9a0;color:#7a5b00','S':'background:#eef0ee;color:#555','T':'background:#eef0ee;color:#555','Đ':'background:#eef0ee;color:#555'};
 function llCong(code){ if(!code) return 0; return code.split(/[-:]/).filter(Boolean).length*0.5; }
 function llFmt(n){ return Number.isInteger(n)?n:n.toFixed(1).replace('.',','); }
 function llData(){ try{ return JSON.parse(IMAGES['lichlam:'+LL_YM]||'{}'); }catch(e){ return {}; } }
-function navLLMonth(d){ const [y,m]=LL_YM.split('-').map(Number); const dt=new Date(y,m-1+d,1); LL_YM=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0'); renderLichLam(); }
-function setLLYM(v){ if(v){ LL_YM=v; renderLichLam(); } }
+async function llReload(){ if(!window.sb) return; try{ const {data}=await sb.from('app_images').select('key,data').like('key','lichlam%'); (data||[]).forEach(function(r){ IMAGES[r.key]=r.data; }); }catch(e){} }
+async function llReloadRender(){ await llReload(); renderLichLam(); }
+function navLLMonth(d){ const [y,m]=LL_YM.split('-').map(Number); const dt=new Date(y,m-1+d,1); LL_YM=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0'); llReloadRender(); }
+function setLLYM(v){ if(v){ LL_YM=v; llReloadRender(); } }
 async function setLLCell(day,staff,val){
   if(!isAdmin()){ const [yy,mm]=LL_YM.split('-').map(Number); if(llWeekLocked(llMondayKey(yy,mm,day))){ alert('🔒 Tuần này đã được Admin khoá. Liên hệ Admin để chỉnh.'); renderLichLam(); return; } }
   const key='lichlam:'+LL_YM;
