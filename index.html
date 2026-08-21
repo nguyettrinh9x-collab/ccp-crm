@@ -889,6 +889,8 @@ function renderPancake(){
     h+=`<span style="font-size:12px;color:var(--muted);font-weight:700">Hàng loạt (${rows.length} đang lọc):</span>`;
     h+=`<button class="btn" type="button" onclick="pancakeBulkAdd()" ${PK_BUSY?'disabled':''} style="padding:5px 12px">➕ Thêm tất cả vào CRM</button>`;
     h+=`<button class="btn ghost" type="button" onclick="pancakeBulkIgnore()" ${PK_BUSY?'disabled':''} style="padding:5px 12px;color:#b3261e;border-color:#f0b4ad">🗑 Bỏ tất cả</button>`;
+    const _dupN=rows.filter(r=>r._crm).length;
+    if(_dupN) h+=`<button class="btn ghost" type="button" onclick="pancakeIgnoreDup()" ${PK_BUSY?'disabled':''} title="Chỉ bỏ các khách ĐÃ CÓ trong CRM (trùng) khỏi danh sách chờ duyệt" style="padding:5px 12px;color:#8a5b00;border-color:#f0d19a">🚫 Bỏ khách trùng (${_dupN})</button>`;
     h+='</div>';
   }
   h+='<div style="color:var(--muted);font-size:12px;margin-top:8px">Khách mới đổ về đây để chị duyệt — bấm <b>Thêm CRM</b> để chuyển thành khách chính thức, hoặc <b>Bỏ</b>. Bấm <b>🔎</b> xem chi tiết + ghi chú tư vấn. (Chỉ chị thấy mục này.)</div></div>';
@@ -969,6 +971,17 @@ function pkLeadToRec(r){
   return { ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
     ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
     follow:D(1), ngay_tao:D(0), ngay_capnhat:D(0) };
+}
+async function pancakeIgnoreDup(){
+  if(!window.sb) return;
+  const rows=pkFilteredRows().filter(r=>r._crm);
+  if(!rows.length){ alert('Không có khách trùng CRM nào đang lọc.'); return; }
+  if(!confirm('Bỏ '+rows.length+' khách TRÙNG CRM (đã có trong CRM)?\nChúng sẽ biến khỏi danh sách chờ duyệt, không nhắc lại nữa.')) return;
+  PK_BUSY=true; renderPancake();
+  const ids=rows.map(r=>r.conv_id);
+  for(let i=0;i<ids.length;i+=200){ const chunk=ids.slice(i,i+200); const {error}=await sb.from('pancake_leads').update({status:'ignored'}).in('conv_id',chunk); if(error){ alert('Lỗi: '+error.message); break; } }
+  PLEADS=PLEADS.filter(x=>!ids.includes(x.conv_id));
+  PK_BUSY=false; toast('✓ Đã bỏ '+ids.length+' khách trùng'); renderPancake();
 }
 async function pancakeBulkIgnore(){
   if(!window.sb) return;
