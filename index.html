@@ -474,6 +474,23 @@ function applyMenu(){
   });
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
+/* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
+const APP_VERSION='2026-08-22-a';
+async function checkAppVersion(){
+  try{
+    if(!window.sb) return;
+    const {data}=await sb.from('app_images').select('data').eq('key','app_version').maybeSingle();
+    const latest=data&&data.data;
+    if(latest && latest!==APP_VERSION && !document.getElementById('ver-banner')){
+      var b=document.createElement('div'); b.id='ver-banner';
+      b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:100000;background:#1F6F54;color:#fff;padding:10px 16px;text-align:center;font-size:14px;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.25)';
+      b.innerHTML='🔄 Có bản CRM mới — hãy tải lại để cập nhật (tránh mất dữ liệu khi sửa lịch/khách). <button onclick="location.reload()" style="margin-left:10px;background:#fff;color:#1F6F54;border:0;border-radius:6px;padding:5px 14px;font-weight:800;cursor:pointer">Tải lại ngay</button>';
+      document.body.appendChild(b);
+      setTimeout(function(){ try{ if(document.getElementById('ver-banner')) location.reload(); }catch(e){} }, 45000);
+    }
+  }catch(e){}
+}
+try{ setInterval(checkAppVersion, 150000); window.addEventListener('focus', checkAppVersion); setTimeout(checkAppVersion, 12000); }catch(e){}
 function toggleSidebar(){ document.getElementById('app').classList.toggle('navopen'); }
 function hideGuide(){ try{localStorage.setItem('ccp_guide_hidden','1');}catch(e){} renderToday(); }
 function showGuide(){ try{localStorage.removeItem('ccp_guide_hidden');}catch(e){} renderToday(); }
