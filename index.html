@@ -475,7 +475,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-08-22-b';
+const APP_VERSION='2026-09-03-a';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3132,8 +3132,8 @@ const sb = (window.supabase && SUPABASE_URL.startsWith('http'))
 window.sb = sb; /* để mọi nơi dùng window.sb đều hoạt động (sửa lỗi không lưu được dữ liệu) */
 /* ===== Bảo mật đăng nhập: tự đăng xuất sau 30 phút không dùng ===== */
 let __idleTimer=null;
-async function __idleLogout(){ try{ if(sb) await sb.auth.signOut(); }catch(e){} alert('🔒 Đã tự đăng xuất do không hoạt động 30 phút. Vui lòng đăng nhập lại.'); location.reload(); }
-function resetIdle(){ if(!sb||!ME) return; clearTimeout(__idleTimer); __idleTimer=setTimeout(__idleLogout, 30*60*1000); }
+async function __idleLogout(){ try{ if(sb) await sb.auth.signOut(); }catch(e){} alert('🔒 Đã tự đăng xuất do không hoạt động 8 giờ. Vui lòng đăng nhập lại.'); location.reload(); }
+function resetIdle(){ if(!sb||!ME) return; clearTimeout(__idleTimer); __idleTimer=setTimeout(__idleLogout, 8*60*60*1000); }
 function startIdle(){ ['click','keydown','mousemove','touchstart','scroll'].forEach(ev=>document.addEventListener(ev, resetIdle, {passive:true})); resetIdle(); }
 
 /* ---- Tải toàn bộ dữ liệu từ Supabase vào app ---- */
@@ -3292,8 +3292,19 @@ async function login(){
   if(!sb){ alert('Chưa cấu hình Supabase. Hãy điền SUPABASE_URL và SUPABASE_ANON_KEY trong file.'); return; }
   const email=document.getElementById('u').value.trim();
   const pass=document.getElementById('p').value;
+  const _btn=document.querySelector('#login button');
+  if(_btn){ _btn.disabled=true; _btn.dataset._t=_btn.textContent; _btn.textContent='Đang đăng nhập...'; }
+  const _reset=()=>{ if(_btn){ _btn.disabled=false; _btn.textContent=_btn.dataset._t||'Đăng nhập'; } };
   const { error } = await sb.auth.signInWithPassword({ email, password:pass });
-  if(error){ alert('Đăng nhập lỗi: '+error.message); return; }
+  if(error){
+    if(error.status===429 || /rate limit|too many/i.test(error.message||'')){
+      alert('⚠️ Hệ thống đang bận (nhiều người đăng nhập cùng lúc trên chung một mạng).\nVui lòng đợi khoảng 30 giây rồi thử lại — hoặc dùng 4G điện thoại để vào ngay.');
+      if(_btn){ _btn.disabled=true; _btn.textContent='Đợi 30s...'; setTimeout(_reset, 30000); }
+      return;
+    }
+    _reset(); alert('Đăng nhập lỗi: '+error.message); return;
+  }
+  _reset();
   if(!await ensureMFA()){ await sb.auth.signOut(); return; }
   await afterLogin();
 }
@@ -3547,7 +3558,7 @@ async function adminResetPass(u){
 window.addEventListener('DOMContentLoaded', ()=>{
   const u=document.getElementById('u'); if(u) u.placeholder='Email';
   if(sb){ sb.auth.getSession().then(async ({data})=>{ if(data.session){
-    if(!sessionStorage.getItem('ccp_active')){ await sb.auth.signOut(); return; } /* tab/trình duyệt mới -> bắt đăng nhập lại */
+    /* Có phiên hợp lệ -> tự nối lại, KHÔNG bắt đăng nhập lại mỗi tab (giảm gọi /token gây lỗi 429 khi cả team chung 1 IP). Bảo mật vẫn giữ: 2FA + tự đăng xuất khi rảnh 8h. */
     if(await ensureMFA()){ afterLogin(); } else { await sb.auth.signOut(); }
   } }); }
 });
