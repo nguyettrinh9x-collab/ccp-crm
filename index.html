@@ -145,6 +145,7 @@
       <a data-v="dashboard">Tổng quan</a>
       <a data-v="report">Báo cáo</a>
       <a data-v="marketing">Marketing</a>
+      <a data-v="tongbill">Tổng Bill</a>
       <a data-v="team">Sale team</a>
       <a data-v="danhgia">📊 Đánh giá Sale/MKT</a>
       <a data-v="lichlam">Đăng ký lịch làm</a>
@@ -181,6 +182,7 @@
     <div class="view" id="v-report"></div>
     <!-- MARKETING -->
     <div class="view" id="v-marketing"></div>
+    <div class="view" id="v-tongbill"></div>
     <!-- TEAM -->
     <div class="view" id="v-team"></div>
     <div class="view" id="v-danhgia"></div>
@@ -227,7 +229,7 @@ function addSpPick(){ const p=document.getElementById('f-sppick'); const q=docum
 const ALL_MODULES = [
   ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
   ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
-  ['marketing','BC Marketing'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['lichlam_log','Lịch sử đăng ký lịch'],['pancake','Khách mới (Pancake)'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
+  ['marketing','BC Marketing'],['tongbill','Tổng Bill'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['lichlam_log','Lịch sử đăng ký lịch'],['pancake','Khách mới (Pancake)'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
 ];
 // Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
 const DEFAULT_PERMS = {
@@ -788,7 +790,7 @@ function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)==
 /* ============ NAV ============ */
 const TITLES={dashboard:'Tổng quan',care:'Chăm sóc khách',add:'Thêm khách',list:'Khách hàng',
   list_all:'Tất cả khách',list_chot:'Khách hàng đã chốt',list_chua:'Khách hàng chưa chốt',
-  today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',team:'Sale team',danhgia:'📊 Đánh giá năng lực Sale & MKT',lichlam:'Đăng ký lịch làm',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác',pancake:'Khách mới từ Pancake'};
+  today:'Việc cần làm',report:'Báo cáo',marketing:'Marketing',tongbill:'Tổng Bill',team:'Sale team',danhgia:'📊 Đánh giá năng lực Sale & MKT',lichlam:'Đăng ký lịch làm',settings:'Cài đặt',perms:'Tài khoản',trash:'Thùng rác',pancake:'Khách mới từ Pancake'};
 let LIST_MODE='all'; let LIST_ROWS=[]; let LIST_PAGE=1; let LIST_PAGE_SIZE=50;
 function setListPage(n){ LIST_PAGE=n; renderList(); const el=document.getElementById('list-table'); if(el){ el.scrollIntoView({behavior:'smooth',block:'start'}); } }
 function setListSize(v){ LIST_PAGE_SIZE = v==='all'?1000000:(Number(v)||50); LIST_PAGE=1; CARE_PAGE=1; try{localStorage.setItem('ccp_page_size',v);}catch(e){} renderList(); }
@@ -836,6 +838,7 @@ function go(v){
   if(view==='list') renderList();
   else if(view==='care') renderCare();
   else if(view==='today') renderToday();
+  else if(view==='tongbill') renderTongBill();
   else if(view==='lichlam') llReloadRender();
   else if(view==='pancake') renderPancake();
   else if(view==='danhgia') renderDanhGia();
@@ -1141,7 +1144,7 @@ function renderLLLog(){
 }
 
 /* ============ RENDER ============ */
-function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTeam();renderDanhGia();renderLichLam();renderSettings();renderPerms();renderTrash();renderPancake(); }
+function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTongBill();renderTeam();renderDanhGia();renderLichLam();renderSettings();renderPerms();renderTrash();renderPancake(); }
 
 function renderAlert(){
   const due=myData().filter(c=>flag(c)==='warn').length;
@@ -2280,6 +2283,73 @@ function renderReport(){
   document.getElementById('v-report').innerHTML=html;
 }
 
+try{if(typeof PERMS!=='undefined'&&PERMS['owner']&&PERMS['owner'].indexOf('tongbill')<0)PERMS['owner'].push('tongbill');}catch(e){}
+/* ============ TỔNG BILL (dòng tiền theo khách đã chốt) ============ */
+let BILL_MONTH=(new Date()).toISOString().slice(0,7); // YYYY-MM đang xem
+function setBillMonth(v){ BILL_MONTH=v; renderTongBill(); }
+/* Tỷ giá theo quốc gia (chị sửa số ở đây nếu tỷ giá thay đổi) */
+function tyGiaBill(c){
+  const q=((c&&c.quoc_gia)||'').toUpperCase().replace(/[.\s]/g,'');
+  if(['US','USA','MY','MỸ','UNITEDSTATES'].includes(q)) return 23500;      // USD
+  if(['CA','CAD','CAN','CANADA'].includes(q)) return 16000;                 // CAD
+  if(['UK','GB','ANH','UNITEDKINGDOM'].includes(q)) return 28000;           // GBP
+  if(['AU','AUS','AUD','ÚC','UC','AUSTRALIA'].includes(q)) return 16800;    // AUD
+  const g=countryGroup(c&&c.quoc_gia);
+  if(g==='US') return 23500; if(g==='Canada') return 16000; if(g==='Euro') return 24500; // EUR
+  return 0;
+}
+function renderTongBill(){
+  const el=document.getElementById('v-tongbill'); if(!el) return;
+  const money=n=>(Math.round(Number(n)||0)).toLocaleString('vi-VN')+' đ';
+  const inMonth=c=>((c.ngay_chot||c.ngay_tao||'').slice(0,7)===BILL_MONTH);
+  const rows=DATA.filter(c=>isChot(c.tt)&&inMonth(c));
+  const calc=c=>{ const tg=tyGiaBill(c); const vnd=(Number(c.dt)||0)*tg; const noVnd=(Number(c.no_goc)||0)*tg; return {tg,vnd,noVnd,dathu:vnd-noVnd}; };
+  const loaiDon=c=>c.loai_don==='upsell'?'Chăm Sóc':'Chốt Mới';
+
+  let html=`<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span style="font-weight:700">📅 Chọn tháng:</span>
+    <input type="month" value="${BILL_MONTH}" onchange="setBillMonth(this.value)" style="width:auto;padding:7px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px">
+    <span style="font-size:12px;color:var(--muted)">Tỷ giá: US 23.500 · EU 24.500 · UK 28.000 · AU 16.800 · CAD 16.000</span></div>`;
+
+  // ----- Bảng bill chi tiết -----
+  html+=`<h2 class="sec">📄 Bill chi tiết — khách đã chốt tháng ${BILL_MONTH}</h2>
+    <div class="card" style="padding:0;overflow-x:auto"><table>
+    <tr><th>Ngày</th><th>MKT</th><th>Sale</th><th>Khách</th><th>Nước</th><th>Tỷ giá</th><th>DT (USD)</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th><th>Nợ gốc (VNĐ)</th><th>Đã thu (VNĐ)</th><th>Loại đơn</th></tr>`;
+  let T={vnd:0,noVnd:0,dathu:0};
+  rows.slice().sort((a,b)=>(''+(b.ngay_chot||'')).localeCompare(''+(a.ngay_chot||''))).forEach(c=>{
+    const x=calc(c); T.vnd+=x.vnd; T.noVnd+=x.noVnd; T.dathu+=x.dathu;
+    html+=`<tr><td>${(c.ngay_chot||c.ngay_tao||'—').slice(0,10)}</td><td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>
+      <td><b style="cursor:pointer;color:var(--teal-dark)" title="Sửa khách" onclick="editCustomer('${c.id}')">${c.ten}</b></td>
+      <td>${c.quoc_gia||'—'}</td><td>${x.tg?money(x.tg):'⚠ thiếu nước'}</td><td>${Number(c.dt)||0}</td>
+      <td><b>${money(x.vnd)}</b></td><td>${Number(c.no_goc)?curSym(c)+(Number(c.no_goc)).toLocaleString('en-US'):'—'}</td>
+      <td style="color:${x.noVnd?'var(--over)':'inherit'}">${money(x.noVnd)}</td>
+      <td style="font-weight:700;color:var(--won)">${money(x.dathu)}</td><td>${loaiDon(c)}</td></tr>`;
+  });
+  if(!rows.length) html+=`<tr><td colspan="12" class="empty">Chưa có khách chốt trong tháng ${BILL_MONTH}.</td></tr>`;
+  else html+=`<tr style="background:var(--cream);font-weight:800"><td colspan="7">TỔNG (${rows.length} đơn)</td><td>${money(T.vnd)}</td><td></td><td>${money(T.noVnd)}</td><td>${money(T.dathu)}</td><td></td></tr>`;
+  html+=`</table></div>`;
+
+  // ----- Tổng hợp theo Sale / MKT -----
+  const summary=(mapObj,field,label,headColor)=>{
+    let h=`<h2 class="sec" style="margin-top:22px">📊 ổng hợp theo ${label} — tháng ${BILL_MONTH}</h2>
+      <div class="card" style="padding:0;overflow-x:auto"><table>
+      <tr><th>${label}</th><th>Doanh số (VNĐ)</th><th>Nợ (VNĐ)</th><th>Đã thu (VNĐ)</th><th>Số đơn Chốt Mới</th><th>Số đơn Chăm Sóc</th><th>Tổng đơn</th></tr>`;
+    let G={vnd:0,no:0,dt:0,cm:0,cs:0};
+    Object.entries(mapObj).forEach(([id,nm])=>{
+      const g=rows.filter(c=>c[field]===id); if(!g.length) return;
+      let vnd=0,no=0,dt=0,cm=0,cs=0;
+      g.forEach(c=>{const x=calc(c); vnd+=x.vnd;no+=x.noVnd;dt+=x.dathu; if(c.loai_don==='upsell')cs++;else cm++;});
+      G.vnd+=vnd;G.no+=no;G.dt+=dt;G.cm+=cm;G.cs+=cs;
+      h+=`<tr><td><b>${nm}</b></td><td>${money(vnd)}</td><td style="color:${no?'var(--over)':'inherit'}">${money(no)}</td><td style="color:var(--won);font-weight:700">${money(dt)}</td><td style="text-align:center">${cm}</td><td style="text-align:center">${cs}</td><td style="text-align:center"><b>${cm+cs}</b></td></tr>`;
+    });
+    h+=`<tr style="background:var(--cream);font-weight:800"><td>TỔNG</td><td>${money(G.vnd)}</td><td>${money(G.no)}</td><td>${money(G.dt)}</td><td style="text-align:center">${G.cm}</td><td style="text-align:center">${G.cs}</td><td style="text-align:center">${G.cm+G.cs}</td></tr></table></div>`;
+    return h;
+  };
+  html+=summary(SALES,'owner','Sale');
+  html+=summary(MKT,'mkt','MKT');
+  html+=`<p style="color:var(--muted);font-size:12px;margin-top:10px">Doanh số VNĐ = DT (USD) × tỷ giá theo nước · Nợ gốc VNĐ = Nợ gốc × tỷ giá · Đã thu = Doanh số − Nợ gốc VNĐ. Sửa tỷ giá trong hàm <b>tyGiaBill</b> nếu thay đổi.</p>`;
+  el.innerHTML=html;
+}
 let MKT_DETAIL_DATE='';
 function setMktDetailDate(v){ MKT_DETAIL_DATE=v; renderMarketing(); }
 let MKT_FORM_OPEN=false;
