@@ -2336,7 +2336,7 @@ function renderTongBill(){
   {
     let h=`<h2 class="sec" style="margin-top:22px">📊 Tổng hợp theo Sale — tháng ${BILL_MONTH}</h2>
       <div class="card" style="padding:0;overflow-x:auto"><table>
-      <tr><th>Sale</th><th>Tổng $</th><th>Doanh số (VNĐ)</th><th>Nợ tiền Việt</th><th>DS sau nợ</th><th>Số đơn CM</th><th>Số đơn CS</th><th>Tổng đơn</th><th>DS CM</th><th>DS CS</th><th>Tỷ lệ CM/CS</th><th>Tỷ lệ HTM</th><th>Mục tiêu</th></tr>`;
+      <tr><th>SALE</th><th>Tổng $</th><th>Doanh số</th><th>Nợ tiền Việt</th><th>DS sau nợ</th><th>Số đơn CM</th><th>Số đơn CS</th><th>Tổng đơn</th><th>DS CM</th><th>DS CS</th><th>Tỷ lệ CM/CS</th><th>Tỷ lệ HTM</th><th>Mục tiêu</th></tr>`;
     let G={u:0,ds:0,no:0,cm:0,cs:0,dcm:0,dcs:0};
     Object.entries(SALES).forEach(([id,nm])=>{
       const g=rows.filter(c=>c.owner===id); if(!g.length) return;
@@ -2352,7 +2352,7 @@ function renderTongBill(){
   {
     let h=`<h2 class="sec" style="margin-top:22px">📊 Tổng hợp theo MKT — tháng ${BILL_MONTH}</h2>
       <div class="card" style="padding:0;overflow-x:auto"><table>
-      <tr><th>MKT</th><th>Chi phí ads</th><th>Số đơn CM</th><th>Số đơn CS</th><th>Tổng đơn</th><th>DS CM</th><th>DS CS</th><th>DS tổng</th><th>GTTB CM</th><th>GTTB CS</th><th>Nợ</th><th>Tổng $</th><th>Tổng trừ nợ</th></tr>`;
+      <tr><th>MKT</th><th>Chi phí ads</th><th>Số đơn CM</th><th>Số đơn CS</th><th>Tổng đơn</th><th>DS CM</th><th>DS CS</th><th>DS tổng</th><th>GTTB CM</th><th>GTTB CS</th><th>Nợ</th><th>Tổng $</th><th>Tổng trừ nợ</th><th>COST CM</th><th>COST tổng</th></tr>`;
     let G={cm:0,cs:0,dcm:0,dcs:0,no:0,u:0};
     Object.entries(MKT).forEach(([id,nm])=>{
       const g=rows.filter(c=>c.mkt===id); if(!g.length) return;
@@ -2360,10 +2360,10 @@ function renderTongBill(){
       g.forEach(c=>{const x=calc(c); u+=Number(c.dt)||0; no+=x.noVnd; if(c.loai_don==='upsell'){cs++;dcs+=x.vnd;}else{cm++;dcm+=x.vnd;}});
       G.cm+=cm;G.cs+=cs;G.dcm+=dcm;G.dcs+=dcs;G.no+=no;G.u+=u;
       const dsTong=dcm+dcs;
-      h+=`<tr><td><b>${nm}</b></td><td style="text-align:center">—</td><td style="text-align:center">${cm}</td><td style="text-align:center">${cs}</td><td style="text-align:center"><b>${cm+cs}</b></td><td>${money(dcm)}</td><td>${money(dcs)}</td><td><b>${money(dsTong)}</b></td><td>${cm?money(dcm/cm):'—'}</td><td>${cs?money(dcs/cs):'—'}</td><td style="color:${no?'var(--over)':'inherit'}">${money(no)}</td><td style="text-align:center">${num(u)}</td><td style="color:var(--won);font-weight:700">${money(dsTong-no)}</td></tr>`;
+      h+=`<tr><td><b>${nm}</b></td><td style="text-align:center">—</td><td style="text-align:center">${cm}</td><td style="text-align:center">${cs}</td><td style="text-align:center"><b>${cm+cs}</b></td><td>${money(dcm)}</td><td>${money(dcs)}</td><td><b>${money(dsTong)}</b></td><td>${cm?money(dcm/cm):'—'}</td><td>${cs?money(dcs/cs):'—'}</td><td style="color:${no?'var(--over)':'inherit'}">${money(no)}</td><td style="text-align:center">${num(u)}</td><td style="color:var(--won);font-weight:700">${money(dsTong-no)}</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr>`;
     });
     const gTong=G.dcm+G.dcs;
-    h+=`<tr style="background:var(--cream);font-weight:800"><td>TỔNG</td><td style="text-align:center">—</td><td style="text-align:center">${G.cm}</td><td style="text-align:center">${G.cs}</td><td style="text-align:center">${G.cm+G.cs}</td><td>${money(G.dcm)}</td><td>${money(G.dcs)}</td><td>${money(gTong)}</td><td></td><td></td><td>${money(G.no)}</td><td style="text-align:center">${num(G.u)}</td><td>${money(gTong-G.no)}</td></tr></table></div>`;
+    h+=`<tr style="background:var(--cream);font-weight:800"><td>TỔNG</td><td style="text-align:center">—</td><td style="text-align:center">${G.cm}</td><td style="text-align:center">${G.cs}</td><td style="text-align:center">${G.cm+G.cs}</td><td>${money(G.dcm)}</td><td>${money(G.dcs)}</td><td>${money(gTong)}</td><td></td><td></td><td>${money(G.no)}</td><td style="text-align:center">${num(G.u)}</td><td>${money(gTong-G.no)}</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr></table></div>`;
     html+=h;
   }
   html+=`<p style="color:var(--muted);font-size:12px;margin-top:10px">Doanh số VNĐ = DT (USD) × tỷ giá theo nước · Nợ tiền Việt = Nợ gốc × tỷ giá · DS sau nợ = Doanh số − Nợ tiền Việt · GTTB = DS ÷ số đơn. Cột "Chi phí ads / Mục tiêu / Tỷ lệ HTM" cần nhập tay (CRM chưa có dữ liệu chi phí quảng cáo & mục tiêu).</p>`;
