@@ -2327,7 +2327,7 @@ function renderTongBill(){
     <div class="card" style="padding:0;overflow-x:auto"><table>
     <tr><th>Ngày</th><th>MKT</th><th>Sale</th><th>Khách</th><th>Nước</th><th>Tỷ giá</th><th>DT (USD)</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th><th>Nợ gốc (VNĐ)</th><th>Đã thu (VNĐ)</th><th>Thu đợt 1</th><th>Ngày TH 1</th><th>Thu đợt 2</th><th>Ngày TH 2</th><th>Thu đợt 3</th><th>Ngày TH 3</th><th>Mã tracking</th><th>Mã web</th><th>Loại đơn</th><th>Sửa</th></tr>`;
   let T={vnd:0,noVnd:0,dathu:0};
-  rows.slice().sort((a,b)=>(''+(b.ngay_chot||'')).localeCompare(''+(a.ngay_chot||''))).forEach(c=>{
+  rows.slice().sort((a,b)=>(''+(a.ngay_chot||a.ngay_tao||'')).localeCompare(''+(b.ngay_chot||b.ngay_tao||''))).forEach(c=>{
     const x=calc(c); T.vnd+=x.vnd; T.noVnd+=x.noVnd; T.dathu+=x.dathu;
     html+=`<tr data-s="${((c.ten||'')+' '+(c.phone||'')).toLowerCase().replace(/["<>]/g,'')}"><td>${(c.ngay_chot||c.ngay_tao||'—').slice(0,10)}</td><td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="Sửa khách" onclick="editCustomer('${c.id}')">${c.ten}</b></td>
