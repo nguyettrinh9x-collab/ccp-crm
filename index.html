@@ -672,6 +672,7 @@ function editCustomer(id){
       <div><label>💰 Tiền gốc (${curSym(c)})</label><input id="e-tiengoc" type="number" value="${Number(c.tien_goc)||0}"></div>
       <div><label>💸 Nợ gốc (${curSym(c)})</label><input id="e-nogoc" type="number" value="${Number(c.no_goc)||0}"></div>
       <div><label>📅 Ngày thu hồi nợ</label><input id="e-thuno" type="date" value="${c.ngay_thu_no||''}"></div>
+      <div><label>🧾 Mã đơn</label><input id="e-madon" type="text" value="${c.ma_don||''}"></div>
       <div class="full"><label>📦 Mã tracking</label><input id="e-matracking" type="text" value="${c.ma_tracking||''}"></div>
       <div class="full"><label>🌐 Mã web</label><input id="e-maweb" type="text" value="${c.ma_web||''}"></div>
       <div><label>💵 Thu đợt 1</label><input id="e-thu1" type="number" value="${c.thu_dot1||''}"></div>
@@ -790,7 +791,7 @@ function collectEdit(){ const g=x=>document.getElementById(x).value;
   return { ten:g('e-ten'), phone:g('e-phone'), has_wa:document.getElementById('e-wa').checked, email:g('e-email'),
     quoc_gia:g('e-qg'), dia_chi:g('e-diachi')||null, nguon:g('e-nguon'), mkt:g('e-mkt')||null, owner:g('e-owner'), muc:g('e-muc'), tt:g('e-tt'),
     follow:g('e-follow')||null, benh:'khac', benh_list:(g('e-benh')||'').trim(), dt:Number(g('e-dt'))||0, dt_vnd:Number(g('e-dtvnd'))||0, ngay_chot:g('e-ngaychot')||null, sp:g('e-sp'), ghi:g('e-ghi'),
-    tien_goc:Number(g('e-tiengoc'))||0, no_goc:Number(g('e-nogoc'))||0, ngay_thu_no:g('e-thuno')||null, ma_tracking:g('e-matracking')||null, ma_web:g('e-maweb')||null, thu_dot1:Number(g('e-thu1'))||0, ngay_thu1:g('e-ngaythu1')||null, thu_dot2:Number(g('e-thu2'))||0, ngay_thu2:g('e-ngaythu2')||null, thu_dot3:Number(g('e-thu3'))||0, ngay_thu3:g('e-ngaythu3')||null, ngay_capnhat:D(0) }; }
+    tien_goc:Number(g('e-tiengoc'))||0, no_goc:Number(g('e-nogoc'))||0, ngay_thu_no:g('e-thuno')||null, ma_don:g('e-madon')||null, ma_tracking:g('e-matracking')||null, ma_web:g('e-maweb')||null, thu_dot1:Number(g('e-thu1'))||0, ngay_thu1:g('e-ngaythu1')||null, thu_dot2:Number(g('e-thu2'))||0, ngay_thu2:g('e-ngaythu2')||null, thu_dot3:Number(g('e-thu3'))||0, ngay_thu3:g('e-ngaythu3')||null, ngay_capnhat:D(0) }; }
 function saveEdit(e,id){ e.preventDefault(); const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
   Object.assign(c, collectEdit()); if(isChot(c.tt)&&!c.loai_don)c.loai_don=c.khach_cu?'upsell':'moi';
   closeEdit(); alert('✅ Đã lưu thay đổi'); renderAll(); }
@@ -2325,11 +2326,11 @@ function renderTongBill(){
   // ----- Bảng bill chi tiết -----
   html+=`<h2 class="sec">📄 Bill chi tiết — khách đã chốt tháng ${BILL_MONTH}</h2>
     <div class="card" style="padding:0;overflow-x:auto"><table>
-    <tr><th>Ngày</th><th>MKT</th><th>Sale</th><th>Khách</th><th>Nước</th><th>Tỷ giá</th><th>DT (USD)</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th><th>Nợ gốc (VNĐ)</th><th>Đã thu (VNĐ)</th><th>Thu đợt 1</th><th>Ngày TH 1</th><th>Thu đợt 2</th><th>Ngày TH 2</th><th>Thu đợt 3</th><th>Ngày TH 3</th><th>Mã tracking</th><th>Mã web</th><th>Loại đơn</th><th>Sửa</th></tr>`;
+    <tr><th>Ngày</th><th>Mã đơn</th><th>MKT</th><th>Sale</th><th>Khách</th><th>Nước</th><th>Tỷ giá</th><th>DT (USD)</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th><th>Nợ gốc (VNĐ)</th><th>Đã thu (VNĐ)</th><th>Thu đợt 1</th><th>Ngày TH 1</th><th>Thu đợt 2</th><th>Ngày TH 2</th><th>Thu đợt 3</th><th>Ngày TH 3</th><th>Mã tracking</th><th>Mã web</th><th>Loại đơn</th><th>Sửa</th></tr>`;
   let T={vnd:0,noVnd:0,dathu:0};
   rows.slice().sort((a,b)=>(''+(a.ngay_chot||a.ngay_tao||'')).localeCompare(''+(b.ngay_chot||b.ngay_tao||''))).forEach(c=>{
     const x=calc(c); T.vnd+=x.vnd; T.noVnd+=x.noVnd; T.dathu+=x.dathu;
-    html+=`<tr data-s="${((c.ten||'')+' '+(c.phone||'')).toLowerCase().replace(/["<>]/g,'')}"><td>${(c.ngay_chot||c.ngay_tao||'—').slice(0,10)}</td><td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>
+    html+=`<tr data-s="${((c.ten||'')+' '+(c.phone||'')).toLowerCase().replace(/["<>]/g,'')}"><td>${(c.ngay_chot||c.ngay_tao||'—').slice(0,10)}</td><td>${c.ma_don||'—'}</td><td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>
       <td><b style="cursor:pointer;color:var(--teal-dark)" title="Sửa khách" onclick="editCustomer('${c.id}')">${c.ten}</b></td>
       <td>${c.quoc_gia||'—'}</td><td>${x.tg?money(x.tg):'⚠ thiếu nước'}</td><td>$${Number(c.dt)||0}</td>
       <td><b>${money(x.vnd)}</b></td><td>${Number(c.no_goc)?curSym(c)+(Number(c.no_goc)).toLocaleString('en-US'):'—'}</td>
@@ -2342,8 +2343,8 @@ function renderTongBill(){
       <td>${loaiDon(c)}</td>
       <td><button onclick="editCustomer('${c.id}')" style="padding:4px 10px;border:none;border-radius:8px;background:var(--teal);color:#fff;cursor:pointer;font-size:12px">✏️ Sửa</button></td></tr>`;
   });
-  if(!rows.length) html+=`<tr><td colspan="21" class="empty">Chưa có khách chốt trong tháng ${BILL_MONTH}.</td></tr>`;
-  else html+=`<tr style="background:var(--cream);font-weight:800"><td colspan="7">TỔNG (${rows.length} đơn)</td><td>${money(T.vnd)}</td><td></td><td>${money(T.noVnd)}</td><td>${money(T.dathu)}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  if(!rows.length) html+=`<tr><td colspan="22" class="empty">Chưa có khách chốt trong tháng ${BILL_MONTH}.</td></tr>`;
+  else html+=`<tr style="background:var(--cream);font-weight:800"><td colspan="8">TỔNG (${rows.length} đơn)</td><td>${money(T.vnd)}</td><td></td><td>${money(T.noVnd)}</td><td>${money(T.dathu)}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   html+=`</table></div>`;
 
   // ----- Tổng hợp theo Sale / MKT -----
