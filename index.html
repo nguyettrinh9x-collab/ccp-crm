@@ -477,7 +477,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-09-03-a';
+const APP_VERSION='2026-09-15-a';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -643,7 +643,7 @@ function editCustomer(id){
   const c=DATA.find(x=>String(x.id)===String(id)); if(!c){alert('Không tìm thấy khách.');return;}
   if(!canEdit(c)){ alert('Bạn không có quyền sửa khách này.'); return; }
   const esc=s=>(''+(s||'')).replace(/"/g,'&quot;');
-  const opt=(o,sel)=>Object.entries(o).map(([k,v])=>`<option value="${k}" ${k===sel?'selected':''}>${v}</option>`).join('');
+  const opt=(o,sel)=>{let _e=Object.entries(o); if(sel && !o[sel] && typeof USERS!=='undefined' && USERS[sel]) _e=[[sel,USERS[sel].name]].concat(_e); /* giữ người phụ trách hiện tại (kể cả đã khoá) để form sửa không tự đổi sale */ return _e.map(([k,v])=>`<option value="${k}" ${k===sel?'selected':''}>${v}</option>`).join('');};
   let ov=document.getElementById('edit-overlay');
   if(!ov){ ov=document.createElement('div'); ov.id='edit-overlay';
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px';
@@ -2836,6 +2836,7 @@ function renderDanhGia(){
     return {n:a.n, tot:Math.round(a.tot/a.n), speed:Math.round(a.speed/a.n), needs:Math.round(a.needs/a.n), product:Math.round(a.product/a.n), viol:a.viol, weak:a.weak, weakItems:items, worst:a.worst}; };
   const saleData=[];
   Object.entries(SALES).forEach(([id,name])=>{
+    if(USERS[id] && USERS[id].active===false) return; /* ẩn người đã khoá/nghỉ khỏi bảng đánh giá */
     const sd=DATA.filter(c=>c.owner===id);
     const x=saleStats(sd,rg);
     const sdR=sd.filter(c=>inR(c.ngay_chot||c.ngay_tao));
@@ -2886,6 +2887,7 @@ function renderDanhGia(){
    <tr><th>MKT</th><th title="Chi phí quảng cáo trong kỳ">Chi phí</th><th>Mes</th><th title="Comment">Cmt</th><th title="Mes có tương tác / tổng mes">TL tương tác</th><th title="Khách thực chốt (theo CRM)">Khách chốt</th><th title="Khách chốt / mes">Chốt/Mes</th><th>DT (USD)</th><th title="Chi phí / mes">CP/Mes</th><th title="Chi phí / khách chốt">CP/Chốt</th><th title="Doanh thu quy VNĐ / chi phí">ROAS</th><th>Xếp loại</th><th>⚠ Vấn đề &amp; 💡 Giải pháp</th></tr>`;
   const mktData=[];
   Object.entries(MKT).forEach(([id,name])=>{
+    if(USERS[id] && USERS[id].active===false) return; /* ẩn người đã khoá/nghỉ khỏi bảng đánh giá */
     const rep=MKTREP.filter(r=>r.owner===id && inR(r.ngay));
     const chiphi=rep.reduce((s,r)=>s+r.tien,0);
     const mes=rep.reduce((s,r)=>s+r.sl_mes,0);
@@ -2926,7 +2928,7 @@ function renderDanhGia(){
   html+=`</table></div>`;
 
   /* ---- BẢNG 3: AI CHẤM CHẤT LƯỢNG TƯ VẤN (đọc chat Pancake thật) ---- */
-  const aiRows=Object.entries(SALES).map(([id,name])=>({name,ai:aiOf(name)})).filter(r=>r.ai);
+  const aiRows=Object.entries(SALES).filter(([id])=>!(USERS[id]&&USERS[id].active===false)).map(([id,name])=>({name,ai:aiOf(name)})).filter(r=>r.ai);
   html += `<h2 class="sec" style="margin-top:26px">🤖 Chất lượng tư vấn — AI đọc chat Pancake thật${aiWeek?` <span style="font-size:12px;color:var(--muted);font-weight:400">(tuần ${aiWeek})</span>`:''}</h2>
     <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Bot đọc hội thoại thật của từng sale trên Pancake, chấm theo rubric 100đ. Đây là "vấn đề thật" — không phụ thuộc việc sale có cập nhật CRM hay không.</p>`;
   if(!aiRows.length) html+=`<div class="card empty">Chưa có dữ liệu chấm AI tuần này. Bot sale-score chạy tự động mỗi Thứ 2. Muốn chấm ngay, nhắn em "chấm điểm sale tuần này".</div>`;
@@ -3269,8 +3271,9 @@ async function loadAll(){
   (profs||[]).forEach(p=>{
     USERS[p.id] = {name:p.ten, role:p.role, id:p.id, active:p.active!==false, uname:p.id};
     PERMS[p.id] = p.quyen || [];
-    if(p.role==='sale'||p.role==='admin'||p.role==='owner') SALES[p.id]=p.ten;
-    if(p.role==='marketing'||p.role==='admin'||p.role==='owner') MKT[p.id]=p.ten;
+    const _act=(p.active!==false); /* tài khoản đã khoá -> KHÔNG đưa vào danh sách sale/MKT => ẩn khỏi mọi bảng, dropdown, báo cáo */
+    if(_act && (p.role==='sale'||p.role==='admin'||p.role==='owner')) SALES[p.id]=p.ten;
+    if(_act && (p.role==='marketing'||p.role==='admin'||p.role==='owner')) MKT[p.id]=p.ten;
   });
   const myp = (profs||[]).find(p=>p.id===user.id) || {id:user.id, ten:user.email, role:'sale', quyen:[]};
   ME = {id:user.id, name:myp.ten, role:myp.role, uname:user.id, mail:user.email||'', quyen:myp.quyen||PERMS[user.id]||[]};
