@@ -477,7 +477,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-09-15-a';
+const APP_VERSION='2026-09-16-a';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1153,7 +1153,7 @@ function renderLLLog(){
 }
 
 /* ============ RENDER ============ */
-function renderAll(){ renderAlert();renderDash();renderCare();renderAdd();renderList();renderToday();renderReport();renderMarketing();renderTongBill();renderTeam();renderDanhGia();renderLichLam();renderSettings();renderPerms();renderTrash();renderPancake(); }
+function renderAll(){ renderAlert(); if(!window.__goWrapped && typeof go==='function'){ window.__goWrapped=1; var _g=go; var GR={list:1,care:1,today:1,tongbill:1,pancake:1,danhgia:1,lichlam:1}; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(!GR[v]) renderAll(); }catch(e){} return r; }; } var R={dashboard:renderDash,care:renderCare,add:renderAdd,pancake:renderPancake,list:renderList,today:renderToday,report:renderReport,marketing:renderMarketing,tongbill:renderTongBill,team:renderTeam,danhgia:renderDanhGia,lichlam:renderLichLam,settings:renderSettings,perms:renderPerms,trash:renderTrash}; var ids=Object.keys(R), cur=''; try{ for(var ii=0;ii<ids.length;ii++){ var el=document.getElementById('v-'+ids[ii]); if(el && el.offsetParent!==null){ cur=ids[ii]; break; } } }catch(e){} if(cur && R[cur]){ try{ R[cur](); }catch(e){} } else { for(var k in R){ try{ R[k](); }catch(e){} } } }
 
 function renderAlert(){
   const due=myData().filter(c=>flag(c)==='warn').length;
