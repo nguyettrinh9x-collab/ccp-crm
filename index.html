@@ -334,7 +334,7 @@ function setDoneSale(v){ DONE_SALE=v; renderToday(); }
 function setDoneFrom(v){ DONE_FROM=v; renderToday(); }
 function setDoneTo(v){ DONE_TO=v; renderToday(); }
 function clearDoneFilters(){ DONE_Q=''; DONE_SALE=''; DONE_FROM=''; DONE_TO=''; renderToday(); }
-async function followDone(id){ const c=findC(id); if(!c) return; const { error }=await sb.from('customers').update({ follow:D(3), ngay_capnhat:D(0) }).eq('id', id); if(error){ alert(error.message); return; } await loadAll(); renderToday(); }
+async function followDone(id){ const c=findC(id); if(!c) return; const { error }=await sb.from('customers').update({ follow:D(3), ngay_capnhat:D(0) }).eq('id', id); if(error){ alert(error.message); return; } await reloadCustomer(id); renderToday(); }
 /* ===== Việc cần làm: thao tác 1 chạm + Hoàn tác (tối ưu bớt tích tay) ===== */
 function toastUndo(msg, undoFn){
   let t=document.getElementById('cpp-toast-undo');
@@ -348,8 +348,8 @@ function toastUndo(msg, undoFn){
 async function taskDoneQuick(id){
   const { error }=await sb.from('tasks').update({xong:true}).eq('id',id);
   if(error){ toast('⚠ Lỗi, thử lại',false); return; }
-  await loadAll(); renderAll();
-  toastUndo('✓ Đã xong việc', async()=>{ await sb.from('tasks').update({xong:false}).eq('id',id); await loadAll(); renderAll(); });
+  await reloadTasks(); renderAll();
+  toastUndo('✓ Đã xong việc', async()=>{ await sb.from('tasks').update({xong:false}).eq('id',id); await reloadTasks(); renderAll(); });
 }
 async function custDone(cid, taskCSV, hasFollow){
   const taskIds=(taskCSV||'').split(',').filter(Boolean);
@@ -378,9 +378,9 @@ async function bucketDone(bucket){
 /* ==== Việc cần làm — Hoãn nhanh, Dọn lead lạnh, Ưu tiên theo điểm, Chế độ tập trung ==== */
 const MUC_W_TTD={nong:3,am:2,lanh:1};
 function ttdScore(muc,dateStr){ const w=MUC_W_TTD[muc]||1; let late=1; if(dateStr){ const diff=Math.round((new Date(D(0)).getTime()-new Date(dateStr).getTime())/86400000); late=Math.max(1,diff); } return w*late; }
-async function snoozeFollow(cid,n){ const c=findC(cid); const prev=c?c.follow:null; const {error}=await sb.from('customers').update({follow:D(n),ngay_capnhat:D(0)}).eq('id',cid); if(error){ toast('⚠ Lỗi, thử lại',false); return; } await loadAll(); renderAll(); toastUndo('✓ Hoãn follow '+n+' ngày', async()=>{ await sb.from('customers').update({follow:prev}).eq('id',cid); await loadAll(); renderAll(); }); }
-async function snoozeTask(tid,n){ const t=TASKS.find(x=>String(x.id)===String(tid)); const prev=t?t.han:null; const {error}=await sb.from('tasks').update({han:D(n)}).eq('id',tid); if(error){ toast('⚠ Lỗi, thử lại',false); return; } await loadAll(); renderAll(); toastUndo('✓ Hoãn việc '+n+' ngày', async()=>{ await sb.from('tasks').update({han:prev}).eq('id',tid); await loadAll(); renderAll(); }); }
-async function snoozeCust(cid,taskCSV,hasF,n){ const ids=(taskCSV||'').split(',').filter(Boolean); if(hasF){ await sb.from('customers').update({follow:D(n),ngay_capnhat:D(0)}).eq('id',cid); } if(ids.length){ await sbUpdIn('tasks',{han:D(n)},ids); } await loadAll(); renderAll(); toast('✓ Đã hoãn '+n+' ngày'); }
+async function snoozeFollow(cid,n){ const c=findC(cid); const prev=c?c.follow:null; const {error}=await sb.from('customers').update({follow:D(n),ngay_capnhat:D(0)}).eq('id',cid); if(error){ toast('⚠ Lỗi, thử lại',false); return; } await reloadCustomer(cid); renderAll(); toastUndo('✓ Hoãn follow '+n+' ngày', async()=>{ await sb.from('customers').update({follow:prev}).eq('id',cid); await reloadCustomer(cid); renderAll(); }); }
+async function snoozeTask(tid,n){ const t=TASKS.find(x=>String(x.id)===String(tid)); const prev=t?t.han:null; const {error}=await sb.from('tasks').update({han:D(n)}).eq('id',tid); if(error){ toast('⚠ Lỗi, thử lại',false); return; } await reloadTasks(); renderAll(); toastUndo('✓ Hoãn việc '+n+' ngày', async()=>{ await sb.from('tasks').update({han:prev}).eq('id',tid); await reloadTasks(); renderAll(); }); }
+async function snoozeCust(cid,taskCSV,hasF,n){ const ids=(taskCSV||'').split(',').filter(Boolean); if(hasF){ await sb.from('customers').update({follow:D(n),ngay_capnhat:D(0)}).eq('id',cid); } if(ids.length){ await sbUpdIn('tasks',{han:D(n)},ids); } await reloadCustomer(cid); await reloadTasks(); renderAll(); toast('✓ Đã hoãn '+n+' ngày'); }
 async function snoozeColdLeads(){ const d=(ME.role==='sale')?DATA.filter(c=>c.owner===ME.id):myData(); const cold=d.filter(c=>flag(c)==='over' && !isChot(c.tt) && (c.muc==='lanh'||!c.muc)); if(!cold.length){ toast('Không có lead lạnh/không phân loại nào đang quá hạn.',false); return; } if(!confirm('Hoãn follow +30 ngày cho '+cold.length+' lead lạnh/không phân loại đang quá hạn?\nChúng tạm ẩn khỏi Việc cần làm và tự quay lại sau 30 ngày. (Có nút Hoàn tác)')) return; const prev=cold.map(c=>({id:c.id,follow:c.follow})); const e=await sbUpdIn('customers',{follow:D(30),ngay_capnhat:D(0)},cold.map(c=>c.id)); if(e){ toast('⚠ Lỗi: '+e.message,false); return; } await loadAll(); renderAll(); toastUndo('✓ Đã hoãn '+cold.length+' lead lạnh (+30 ngày)', async()=>{ const byDate={}; prev.forEach(p=>{ (byDate[p.follow||'null']=byDate[p.follow||'null']||[]).push(p.id); }); for(const k in byDate){ await sbUpdIn('customers',{follow:(k==='null'?null:k)},byDate[k]); } await loadAll(); renderAll(); }); }
 function snz(kind,arg){ return '<span style="white-space:nowrap;color:#b07d00" title="Hoãn nhắc lại (ngày)">⏳ '+[1,3,7].map(n=>'<a style="cursor:pointer;text-decoration:underline" onclick="'+(kind==='f'?('snoozeFollow(\''+arg+'\','+n+')'):('snoozeTask(\''+arg+'\','+n+')'))+'">'+n+'</a>').join('·')+'</span>'; }
 function snzCust(cid,taskCSV,hasF){ return '<span style="white-space:nowrap;color:#b07d00" title="Hoãn cả follow + việc của khách (ngày)">⏳ '+[1,3,7].map(n=>'<a style="cursor:pointer;text-decoration:underline" onclick="snoozeCust(\''+cid+'\',\''+(taskCSV||'')+'\','+(hasF?1:0)+','+n+')">'+n+'</a>').join('·')+'</span>'; }
@@ -477,7 +477,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-09-17-a';
+const APP_VERSION='2026-09-17-b';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1153,7 +1153,7 @@ function renderLLLog(){
 }
 
 /* ============ RENDER ============ */
-function renderAll(){ renderAlert(); if(!window.__goWrapped && typeof go==='function'){ window.__goWrapped=1; var _g=go; var GR={list:1,care:1,today:1,tongbill:1,pancake:1,danhgia:1,lichlam:1}; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(!GR[v]) renderAll(); }catch(e){} return r; }; } if(!window.__trashInit){ window.__trashInit=1; window.purgeAllTrash=async function(){ if(!window.sb) return; var nc=(typeof TRASH!=='undefined'&&TRASH)?TRASH.length:0; var nm=(typeof MTRASH!=='undefined'&&MTRASH)?MTRASH.length:0; if(!nc&&!nm){ alert('Thùng rác trống.'); return; } if(!confirm('XOÁ VĨNH VIỄN '+nc+' khách + '+nm+' báo cáo MKT trong thùng rác?\nKhông khôi phục được.')) return; try{ if(nc){ var e1=await sb.from('customers').delete().eq('da_xoa',true); if(e1&&e1.error){ alert('Lỗi xoá khách: '+e1.error.message); return; } } if(nm){ var e2=await sb.from('mkt_reports').delete().eq('da_xoa',true); if(e2&&e2.error){ alert('Lỗi xoá báo cáo MKT: '+e2.error.message); return; } } }catch(err){ alert('Lỗi: '+err.message); return; } if(typeof loadAll==='function'){ await loadAll(); } if(typeof renderAll==='function') renderAll(); alert('✅ Đã dọn sạch thùng rác.'); }; if(typeof renderTrash==='function'){ var _rt=renderTrash; window.renderTrash=function(){ var r=_rt.apply(this,arguments); try{ var adm=(typeof isAdmin==='function')?isAdmin():true; var host=document.getElementById('v-trash'); if(adm && host && !document.getElementById('purge-all-trash-btn')){ var b=document.createElement('button'); b.id='purge-all-trash-btn'; b.type='button'; b.className='btn'; b.textContent='🗑 Xoá tất cả thùng rác'; b.style.cssText='background:#e23d3d;border-color:#e23d3d;color:#fff;margin:0 0 10px'; b.onclick=function(){ purgeAllTrash(); }; host.insertBefore(b, host.firstChild); } }catch(e){} return r; }; } } var R={dashboard:renderDash,care:renderCare,add:renderAdd,pancake:renderPancake,list:renderList,today:renderToday,report:renderReport,marketing:renderMarketing,tongbill:renderTongBill,team:renderTeam,danhgia:renderDanhGia,lichlam:renderLichLam,settings:renderSettings,perms:renderPerms,trash:renderTrash}; var ids=Object.keys(R), cur=''; try{ for(var ii=0;ii<ids.length;ii++){ var el=document.getElementById('v-'+ids[ii]); if(el && el.offsetParent!==null){ cur=ids[ii]; break; } } }catch(e){} if(cur && R[cur]){ try{ R[cur](); }catch(e){} } else { for(var k in R){ try{ R[k](); }catch(e){} } } }
+function renderAll(){ renderAlert(); if(!window.__goWrapped && typeof go==='function'){ window.__goWrapped=1; var _g=go; var GR={list:1,care:1,today:1,tongbill:1,pancake:1,danhgia:1,lichlam:1}; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(!GR[v]) renderAll(); }catch(e){} return r; }; } if(!window.__trashInit){ window.__trashInit=1; window.purgeAllTrash=async function(){ if(!window.sb) return; var nc=(typeof TRASH!=='undefined'&&TRASH)?TRASH.length:0; var nm=(typeof MTRASH!=='undefined'&&MTRASH)?MTRASH.length:0; if(!nc&&!nm){ alert('Thùng rác trống.'); return; } if(!confirm('XOÁ VĨNH VIỄN '+nc+' khách + '+nm+' báo cáo MKT trong thùng rác?\nKhông khôi phục được.')) return; try{ if(nc){ var e1=await sb.from('customers').delete().eq('da_xoa',true); if(e1&&e1.error){ alert('Lỗi xoá khách: '+e1.error.message); return; } } if(nm){ var e2=await sb.from('mkt_reports').delete().eq('da_xoa',true); if(e2&&e2.error){ alert('Lỗi xoá báo cáo MKT: '+e2.error.message); return; } } }catch(err){ alert('Lỗi: '+err.message); return; } if(typeof loadAll==='function'){ await loadAll(); } if(typeof renderAll==='function') renderAll(); alert('✅ Đã dọn sạch thùng rác.'); }; if(typeof renderTrash==='function'){ var _rt=renderTrash; window.renderTrash=function(){ var r=_rt.apply(this,arguments); try{ var adm=(typeof isAdmin==='function')?isAdmin():true; var host=document.getElementById('v-trash'); if(adm && host && !document.getElementById('purge-all-trash-btn')){ var b=document.createElement('button'); b.id='purge-all-trash-btn'; b.type='button'; b.className='btn'; b.textContent='🗑 Xoá tất cả thùng rác'; b.style.cssText='background:#e23d3d;border-color:#e23d3d;color:#fff;margin:0 0 10px'; b.onclick=function(){ purgeAllTrash(); }; host.insertBefore(b, host.firstChild); } }catch(e){} return r; }; } } if(!window.__refreshFab){ window.__refreshFab=1; try{ var fb=document.createElement('button'); fb.id='refresh-fab'; fb.type='button'; fb.title='Làm mới dữ liệu (lấy thay đổi mới nhất)'; fb.textContent='🔄'; fb.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9998;width:44px;height:44px;border-radius:50%;border:none;background:#1F6F54;color:#fff;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer'; fb.onclick=async function(){ fb.disabled=true; var o=fb.textContent; fb.textContent='⏳'; try{ if(typeof loadAll==='function'){ await loadAll(); } if(typeof renderAll==='function') renderAll(); }catch(e){} fb.textContent=o; fb.disabled=false; }; document.body.appendChild(fb); }catch(e){} } var R={dashboard:renderDash,care:renderCare,add:renderAdd,pancake:renderPancake,list:renderList,today:renderToday,report:renderReport,marketing:renderMarketing,tongbill:renderTongBill,team:renderTeam,danhgia:renderDanhGia,lichlam:renderLichLam,settings:renderSettings,perms:renderPerms,trash:renderTrash}; var ids=Object.keys(R), cur=''; try{ for(var ii=0;ii<ids.length;ii++){ var el=document.getElementById('v-'+ids[ii]); if(el && el.offsetParent!==null){ cur=ids[ii]; break; } } }catch(e){} if(cur && R[cur]){ try{ R[cur](); }catch(e){} } else { for(var k in R){ try{ R[k](); }catch(e){} } } }
 
 function renderAlert(){
   const due=myData().filter(c=>flag(c)==='warn').length;
@@ -3259,6 +3259,23 @@ async function fetchAllRows(tbl, orderCol, asc){ // phân trang lấy HẾT (Sup
   }
   return out;
 }
+/* Chuẩn hoá 1 dòng khách (dùng chung loadAll + reloadCustomer) */
+function normCust(c){ return { ...c,
+  follow:c.follow||'', ngay_tao:(c.ngay_tao||'').slice(0,10),
+  ngay_capnhat:(c.ngay_capnhat||c.ngay_tao||'').slice(0,10), ngay_upsale:c.ngay_upsale||'',
+  dt:Number(c.dt)||0, dt_vnd:Number(c.dt_vnd)||0, benh_list:c.benh_list||'', has_wa:!!c.has_wa, khach_cu:!!c.khach_cu, da_xoa:!!c.da_xoa,
+  phan_hoi:c.phan_hoi||'', cham_kq:c.cham_kq||'', su_dung:c.su_dung||'' }; }
+/* Nạp lại ĐÚNG 1 khách vừa sửa (thay vì tải lại toàn bộ 6000 khách -> nhanh, hết đơ/lỗi note) */
+async function reloadCustomer(id){ if(!window.sb||id==null) return; try{
+  const { data }=await sb.from('customers').select('*').eq('id',id).maybeSingle();
+  const di=DATA.findIndex(c=>String(c.id)===String(id)); const ti=TRASH.findIndex(c=>String(c.id)===String(id));
+  if(!data){ if(di>=0)DATA.splice(di,1); if(ti>=0)TRASH.splice(ti,1); return; }
+  const nc=normCust(data);
+  if(di>=0)DATA.splice(di,1); if(ti>=0)TRASH.splice(ti,1);
+  if(nc.da_xoa) TRASH.unshift(nc); else if(di>=0) DATA.splice(di,0,nc); else DATA.unshift(nc);
+}catch(e){} }
+/* Nạp lại danh sách việc (nhẹ) */
+async function reloadTasks(){ if(!window.sb) return; try{ const { data:tk }=await sb.from('tasks').select('*'); TASKS=(tk||[]).map(t=>({id:t.id, owner:t.owner, customer_id:t.customer_id, loai:t.loai, noi_dung:t.noi_dung, han:(t.han||'').slice(0,10), xong:!!t.xong})); }catch(e){} }
 async function loadAll(){
   const { data:{ user } } = await sb.auth.getUser();
   if(!user) return false;
@@ -3278,16 +3295,12 @@ async function loadAll(){
   const myp = (profs||[]).find(p=>p.id===user.id) || {id:user.id, ten:user.email, role:'sale', quyen:[]};
   ME = {id:user.id, name:myp.ten, role:myp.role, uname:user.id, mail:user.email||'', quyen:myp.quyen||PERMS[user.id]||[]};
   const cs = await fetchAllRows('customers','ngay_tao',false);
-  const allc = (cs||[]).map(c=>({ ...c,
-    follow:c.follow||'', ngay_tao:(c.ngay_tao||'').slice(0,10),
-    ngay_capnhat:(c.ngay_capnhat||c.ngay_tao||'').slice(0,10), ngay_upsale:c.ngay_upsale||'',
-    dt:Number(c.dt)||0, dt_vnd:Number(c.dt_vnd)||0, benh_list:c.benh_list||'', has_wa:!!c.has_wa, khach_cu:!!c.khach_cu, da_xoa:!!c.da_xoa,
-    phan_hoi:c.phan_hoi||'', cham_kq:c.cham_kq||'', su_dung:c.su_dung||'' }));
+  const allc = (cs||[]).map(normCust);
   DATA = allc.filter(c=>!c.da_xoa);
   TRASH = allc.filter(c=>c.da_xoa);
   const { data:spd } = await sb.from('marketing_spend').select('*');
   SPEND = (spd||[]).map(s=>({ngay:(s.ngay||'').slice(0,10), nguon:s.nguon, mkt:s.mkt, chi_phi:Number(s.chi_phi)||0}));
-  try{ const mr = await fetchAllRows('mkt_reports'); MKTREP = (mr||[]).filter(r=>!r.da_xoa).map(r=>({owner:r.owner, ngay:(r.ngay||'').slice(0,10), tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0})); }catch(e){ MKTREP=[]; }
+  MKTREP=[]; /* sẽ suy ra từ MREPORTS bên dưới -> bỏ query mkt_reports lặp 2 lần */
   try{ if(canPancake()){ const ss = await fetchAllRows('sale_scores'); SCORES = (ss||[]).map(r=>({sale:r.sale, week_start:(r.week_start||'').slice(0,10), score_total:Number(r.score_total)||0, s_speed:Number(r.s_speed)||0, s_needs:Number(r.s_needs)||0, s_product:Number(r.s_product)||0, compliance_flag:!!r.compliance_flag, weaknesses:r.weaknesses||'', worst_quote:r.worst_quote||'', strengths:r.strengths||''})); } }catch(e){ SCORES=[]; }
   try{ const { data:imgs } = await sb.from('app_images').select('*'); IMAGES={}; (imgs||[]).forEach(r=>IMAGES[r.key]=r.data); }catch(e){ IMAGES=IMAGES||{}; }
   ORDERS = {};
@@ -3304,6 +3317,7 @@ async function loadAll(){
   const _mall=(mr||[]).map(r=>({id:r.id, owner:r.owner, ngay:(r.ngay||'').slice(0,10), ten_page:r.ten_page, camp:r.camp,
     tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0, da_xoa:!!r.da_xoa}));
   MREPORTS=_mall.filter(r=>!r.da_xoa); MTRASH=_mall.filter(r=>r.da_xoa);
+  MKTREP = MREPORTS.map(r=>({owner:r.owner, ngay:r.ngay, tien:r.tien, sl_mes:r.sl_mes, so_cmt:r.so_cmt, mes_tt:r.mes_tt, sd_chot:r.sd_chot}));
   PLEADS=[];
   try{ const { data:pl } = await sb.from('pancake_leads').select('*').eq('status','new').order('conv_inserted_at',{ascending:false}); PLEADS=pl||[]; }catch(e){ PLEADS=[]; }
   return true;
@@ -3524,14 +3538,14 @@ async function markCared(id){ const c=findC(id); if(!c)return;
   const upd={follow:D(3), ngay_capnhat:D(0)};
   if(c.tt==='moi_vao')upd.tt='da_tu_van'; if(c.khach_cu&&c.ngay_upsale)upd.ngay_upsale=D(30);
   const { error }=await sb.from('customers').update(upd).eq('id',id);
-  if(error){ alert(error.message); return; } await loadAll(); renderAll();
+  if(error){ alert(error.message); return; } await reloadCustomer(id); renderAll();
   alert('✅ Đã ghi nhận chăm "'+c.ten+'"');
 }
 async function quickClose(id){ const c=findC(id); if(!c)return;
   const v=prompt('Nhập doanh thu chốt (USD) cho "'+c.ten+'":','0'); if(v===null)return;
   const upd={tt:'da_chot', dt:Number(v)||0, loai_don:c.khach_cu?'upsell':'moi', follow:null, ngay_chot:(c.ngay_chot||D(0)), ngay_capnhat:D(0)};
   const { error }=await sb.from('customers').update(upd).eq('id',id);
-  if(error){ alert(error.message); return; } await loadAll(); renderAll();
+  if(error){ alert(error.message); return; } await reloadCustomer(id); renderAll();
   alert('🎉 Đã chốt "'+c.ten+'" — $'+(Number(v)||0));
 }
 async function saveSpend(e){ e.preventDefault(); const g=id=>document.getElementById(id).value;
@@ -3547,7 +3561,7 @@ async function saveEdit(e,id){ e.preventDefault();
   const { error }=await sb.from('customers').update(upd).eq('id', id);
   if(error){ alert('Lưu lỗi: '+error.message); return; }
   if(('tt' in upd)||('follow' in upd)){ try{ const t0=D(0); const open=(TASKS||[]).filter(t=>!t.xong && t.customer_id!=null && String(t.customer_id)===String(id) && t.han && (''+t.han).slice(0,10)<=t0).map(t=>t.id); if(open.length) await sb.from('tasks').update({xong:true}).in('id',open); }catch(e){} }
-  closeEdit(); alert('✅ Đã lưu thay đổi'); await loadAll(); renderAll();
+  closeEdit(); alert('✅ Đã lưu thay đổi'); await reloadCustomer(id); await reloadTasks(); renderAll();
 }
 async function deleteCustomer(id){
   const c=DATA.find(x=>String(x.id)===String(id)); if(!c)return;
@@ -3556,13 +3570,13 @@ async function deleteCustomer(id){
   const { error }=await sb.from('customers').update({da_xoa:true}).eq('id', id);
   if(error){ alert('Lỗi: '+error.message); return; }
   try{ await sb.from('tasks').delete().eq('customer_id',id).eq('xong',false); }catch(e){} /* dọn việc chưa xong của khách bị xoá */
-  alert('🗑️ Đã chuyển "'+c.ten+'" vào thùng rác'); await loadAll(); renderAll();
+  alert('🗑️ Đã chuyển "'+c.ten+'" vào thùng rác'); await reloadCustomer(id); await reloadTasks(); renderAll();
 }
 async function restoreCustomer(id){
   if(!(ME.role==='owner'||ME.role==='admin')){ alert('Chỉ Admin mới khôi phục được.'); return; }
   const { error }=await sb.from('customers').update({da_xoa:false}).eq('id', id);
   if(error){ alert('Lỗi: '+error.message); return; }
-  alert('♻️ Đã khôi phục khách'); await loadAll(); renderAll();
+  alert('♻️ Đã khôi phục khách'); await reloadCustomer(id); renderAll();
 }
 async function purgeCustomer(id){
   if(!(ME.role==='owner'||ME.role==='admin')){ alert('Chỉ Admin mới xoá vĩnh viễn được.'); return; }
