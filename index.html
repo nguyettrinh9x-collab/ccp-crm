@@ -477,7 +477,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-09-17-b';
+const APP_VERSION='2026-10-07-a';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -2481,7 +2481,7 @@ function renderMarketing(){
     const odI=c=>(c.ngay_chot||c.ngay_tao||'').slice(0,10);
     const custI=DATA.filter(c=>{const x=odI(c); return (!rg.s||x>=rg.s)&&(!rg.e||x<=rg.e);});
     const SK=['kcnc','ktt','tuong_tac','web','khach_chan','da_chot','chot_nguoi','dang_care','hen'];
-    const ENGAGED=['ktt','tuong_tac','dang_care','hen','da_chot','chot_nguoi'];
+    const ENGAGED=['tuong_tac','web','da_chot','dang_care','hen']; /* % tương tác = (Tương tác+Web+Chốt nóng+Đang care+Hẹn)/Tổng */
     const blank=()=>{const o={tong:0,eng:0}; SK.forEach(k=>o[k]=0); return o;};
     const stat={}; let GT=blank();
     custI.forEach(c=>{
@@ -2501,7 +2501,7 @@ function renderMarketing(){
     const totRow=GT.tong?`<tr style="background:var(--cream);font-weight:700"><td>TỔNG</td>${SK.map(k=>`<td style="text-align:center">${GT[k]||'—'}</td>`).join('')}<td style="text-align:center">${GT.tong}</td>${rateCell(GT.eng,GT.tong)}</tr>`:'';
     html+=`<h2 class="sec" style="margin-top:24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">📈 Tỷ lệ Marketing tương tác theo tệp khách<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;font-weight:600" onclick="var b=document.getElementById('box-ttmkt');var h=b.style.display==='none';b.style.display=h?'':'none';this.textContent=h?'▼ Thu gọn':'▶ Mở rộng'">▼ Thu gọn</button></h2>
       <div id="box-ttmkt">
-      <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Mỗi MKT: tệp khách thực tế (sale note) chia theo trạng thái. <b>% Tương tác</b> = khách đã có phản hồi (KTT + Tương tác + Đang care + Hẹn + Chốt) ÷ tổng khách — cao là tệp chất lượng, thấp là cần xem lại nguồn/nội dung.</p>
+      <p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Mỗi MKT: tệp khách thực tế (sale note) chia theo trạng thái. <b>% Tương tác</b> = (Tương tác + Web + Chốt nóng + Đang care + Hẹn) ÷ tổng khách — cao là tệp chất lượng, thấp là cần xem lại nguồn/nội dung.</p>
       <div class="card" style="padding:0;overflow-x:auto"><table>
         ${header}
         ${rows||'<tr><td colspan="'+(SK.length+3)+'" class="empty">Chưa có dữ liệu trong kỳ.</td></tr>'}
