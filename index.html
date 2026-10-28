@@ -490,7 +490,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-c';
+const APP_VERSION='2026-10-28-d';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3808,9 +3808,9 @@ function renderPay(){ var el=document.getElementById('v-pay'); if(!el) return;
   +_mvTable(['Nhân viên','Cơ bản','Ngày công','HH doanh số','Thưởng HH (đ)','Tạm tính (đ)'],rows.length?rows:[['—','','','','','']])
   +_mvNote('Doanh số lấy từ khách đã chốt trong CRM. Hiển thị rõ thành phần + kỳ dữ liệu; sẽ phân quyền khi chốt công thức.')+'</div>';
 }
-var _CHAT_CONVS=[], _CHAT_PAGE='', _CHAT_Q='', _CHAT_TIMER=null, _CHAT_OPEN=null;
+var _CHAT_CONVS=[], _CHAT_PAGE='', _CHAT_Q='', _CHAT_TIMER=null, _CHAT_OPEN=null, _CHAT_SIG='';
 function _chatIcon(p){ return /whats/i.test(p||'')?'🟢':(/face/i.test(p||'')?'💬':'📄'); }
-async function _chatLoad(){ try{ var r=await sb.from('pancake_leads').select('conv_id,page_id,page_name,platform,ten,snippet,conv_inserted_at,sale').order('conv_inserted_at',{ascending:false}).limit(200); _CHAT_CONVS=r.data||[]; }catch(e){} }
+async function _chatLoad(){ try{ var r=await sb.from('pancake_leads').select('conv_id,page_id,page_name,platform,ten,snippet,conv_inserted_at,sale').order('conv_inserted_at',{ascending:false}).limit(200); _CHAT_CONVS=r.data||[]; _CHAT_SIG=(_CHAT_CONVS.length)+'|'+((_CHAT_CONVS[0]||{}).conv_id||'')+'|'+((_CHAT_CONVS[0]||{}).snippet||''); }catch(e){} }
 function _chatSetPage(p){ _CHAT_PAGE=p; _chatPaintList(); }
 function _chatChips(){ var pages=[]; _CHAT_CONVS.forEach(function(c){ if(c.page_name&&pages.indexOf(c.page_name)<0)pages.push(c.page_name); });
  var h='<span onclick="_chatSetPage(\'\')" class="pill" style="cursor:pointer;'+(!_CHAT_PAGE?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">Tất cả ('+_CHAT_CONVS.length+')</span>';
@@ -3847,7 +3847,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
  }
  await _chatLoad(); _chatPaintList();
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
- _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null) return; await _chatLoad(); _chatPaintList(); }, 45000);
+ _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
 async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComponent(pid); _CHAT_OPEN={cid:cid,pid:pid}; _chatPaintList(); var box=document.getElementById('chat-thread'); if(!box)return; box.innerHTML='<div style="color:#9aa8a3;text-align:center;margin-top:40px">⏳ Đang tải tin nhắn…</div>';
  try{ var res=await sb.functions.invoke('pancake-thread',{body:{page_id:pid,conv_id:cid}}); var d=(res&&res.data)||{};
