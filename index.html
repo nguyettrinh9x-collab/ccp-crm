@@ -498,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-n';
+const APP_VERSION='2026-10-28-o';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3843,8 +3843,8 @@ async function chatAddCrm(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; var ld
 }
 function _chatSetPage(p){ _CHAT_PAGE=p; _chatPaintList(); }
 function _chatChips(){ var pages=[]; _CHAT_CONVS.forEach(function(c){ if(c.page_name&&pages.indexOf(c.page_name)<0)pages.push(c.page_name); });
- var h='<span onclick="_chatSetPage(\'\')" class="pill" style="cursor:pointer;'+(!_CHAT_PAGE?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">Tất cả ('+_CHAT_CONVS.length+')</span>';
- pages.forEach(function(p){ var pe=p.replace(/'/g,"\\'"); h+=' <span onclick="_chatSetPage(\''+pe+'\')" class="pill" style="cursor:pointer;'+(_CHAT_PAGE===p?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">'+_mvEsc(p)+'</span>'; });
+ var h='<span onclick="_chatSetPage(\'\')" class="pill" style="cursor:pointer;'+(!_CHAT_PAGE?'background:#3b4ba8;color:#fff':'background:#eef2f0;color:#555')+'">Tất cả ('+_CHAT_CONVS.length+')</span>';
+ pages.forEach(function(p){ var pe=p.replace(/'/g,"\\'"); h+=' <span onclick="_chatSetPage(\''+pe+'\')" class="pill" style="cursor:pointer;'+(_CHAT_PAGE===p?'background:#3b4ba8;color:#fff':'background:#eef2f0;color:#555')+'">'+_mvEsc(p)+'</span>'; });
  return h; }
 function _chatAva(name,plat){ var n=(name||'?').trim(); var c=n?n[0].toUpperCase():'?'; var cl=['#1F6F54','#2d7dd2','#c0587e','#d98e32','#7a5cc0','#3a9e8c','#c94f4f']; var i=0; for(var k=0;k<n.length;k++)i=(i+n.charCodeAt(k))%cl.length; var b=/whats/i.test(plat||'')?'🟢':(/face/i.test(plat||'')?'💬':''); return '<div style="position:relative;flex:0 0 40px;width:40px;height:40px;border-radius:50%;background:'+cl[i]+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px">'+_mvEsc(c)+(b?'<span style="position:absolute;right:-3px;bottom:-3px;font-size:13px">'+b+'</span>':'')+'</div>'; }
 function _chatTagColor(t){ var s=(t||'').trim().toLowerCase();
@@ -3875,7 +3875,7 @@ function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=
 async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) return;
  if(!document.getElementById('chat-list')){
   el.innerHTML='<div class="card" style="padding:0;overflow:hidden">'
-   +'<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #e9efec;background:#1F6F54;color:#fff"><span style="font-size:17px;font-weight:700">💬 Hội thoại</span><span style="font-size:12px;opacity:.85">Gộp mọi page Pancake · tự làm mới ~45s</span></div>'
+   +'<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #e9efec;background:#3b4ba8;color:#fff"><span style="font-size:17px;font-weight:700">💬 Hội thoại</span><span style="font-size:12px;opacity:.85">Gộp mọi page Pancake · tự làm mới ~45s</span></div>'
    +'<div style="display:flex;height:600px;max-height:72vh">'
    +'<div style="flex:0 0 340px;max-width:44%;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
      +'<div style="padding:10px 12px 6px"><input id="chat-q" oninput="_CHAT_Q=this.value;_chatPaintList()" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
@@ -3892,7 +3892,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
  _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
-var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_SHOWTR=false, _CHAT_AUTOTR=(function(){try{return localStorage.getItem('chat_autotr')!=='0';}catch(e){return true;}})();
+var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_TRN={}, _CHAT_SHOWTR=false, _CHAT_AUTOTR=(function(){try{return localStorage.getItem('chat_autotr')!=='0';}catch(e){return true;}})();
 function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if(!box||!_CHAT_CUR)return; var d=_CHAT_CUR; var cid=d.cid, pid=d.pid; var tr=_CHAT_TR[cid]||null; var on=_CHAT_SHOWTR&&tr;
  var btn='<span onclick="chatTranslate()" style="cursor:pointer;color:#1F6F54;font-size:12px;margin-right:14px">'+(on?'🌐 Tắt dịch':'🌐 Dịch tiếng Việt')+'</span>';
  var h='<div style="font-weight:700;margin-bottom:12px;position:sticky;top:-14px;background:#f7faf8;padding:4px 0;border-bottom:1px solid #e9efec">'+_mvEsc(d.page||'')+' <span style="font-weight:400;color:#9aa8a3;font-size:12px">· '+d.count+' tin</span> <span style="float:right">'+btn+'<span onclick="chatOpen(\''+encodeURIComponent(cid)+'\',\''+encodeURIComponent(pid)+'\')" style="cursor:pointer;color:#1F6F54;font-size:12px">🔄 Làm mới</span></span></div>';
@@ -3909,16 +3909,18 @@ function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if
 }
 async function chatTranslate(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; if(_CHAT_TR[cid]){ _CHAT_SHOWTR=!_CHAT_SHOWTR; _CHAT_AUTOTR=_CHAT_SHOWTR; try{localStorage.setItem('chat_autotr',_CHAT_AUTOTR?'1':'0');}catch(e){} _chatRenderThread(); return; }
  var box=document.getElementById('chat-thread'); if(box){ var old=box.innerHTML; box.insertAdjacentHTML('afterbegin','<div id="chat-tr-load" style="color:#1F6F54;font-size:12px;text-align:center;padding:4px">⏳ Đang dịch…</div>'); }
- try{ var texts=(_CHAT_CUR.messages||[]).map(function(m){return String(m.text||'');});
+ try{ var msgs=_CHAT_CUR.messages||[]; var idxs=[],texts=[]; msgs.forEach(function(m,i){ if(!m.from_page && String(m.text||'').trim()){ idxs.push(i); texts.push(String(m.text)); } });
+  if(!texts.length){ _CHAT_TR[cid]=msgs.map(function(){return '';}); _CHAT_TRN[cid]=msgs.length; _CHAT_SHOWTR=true; _chatRenderThread(); return; }
   var res=await sb.functions.invoke('translate',{body:{texts:texts}}); var d=(res&&res.data)||{};
-  if(d.ok&&Array.isArray(d.vi)){ _CHAT_TR[cid]=d.vi; _CHAT_SHOWTR=true; _chatRenderThread(); }
+  if(d.ok&&Array.isArray(d.vi)){ var full=msgs.map(function(){return '';}); d.vi.forEach(function(v,k){ if(idxs[k]!=null)full[idxs[k]]=v; }); _CHAT_TR[cid]=full; _CHAT_TRN[cid]=msgs.length; _CHAT_SHOWTR=true; _chatRenderThread(); }
   else { var l=document.getElementById('chat-tr-load'); if(l)l.remove(); alert('Chưa dịch được, thử lại sau.'); }
  }catch(e){ var l2=document.getElementById('chat-tr-load'); if(l2)l2.remove(); alert('Lỗi dịch: '+((e&&e.message)||e)); }
 }
-async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComponent(pid); _CHAT_OPEN={cid:cid,pid:pid}; _CHAT_SHOWTR=false; delete _CHAT_TR[cid]; _chatPaintList(); var box=document.getElementById('chat-thread'); if(!box)return; box.innerHTML='<div style="color:#9aa8a3;text-align:center;margin-top:40px">⏳ Đang tải tin nhắn…</div>';
+async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComponent(pid); _CHAT_OPEN={cid:cid,pid:pid}; _CHAT_SHOWTR=false; _chatPaintList(); var box=document.getElementById('chat-thread'); if(!box)return; box.innerHTML='<div style="color:#9aa8a3;text-align:center;margin-top:40px">⏳ Đang tải tin nhắn…</div>';
  try{ var res=await sb.functions.invoke('pancake-thread',{body:{page_id:pid,conv_id:cid}}); var d=(res&&res.data)||{};
    if(!d.ok){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Chưa tải được tin nhắn'+(d.reason?(' ('+d.reason+')'):'')+'. Thử lại sau.</div>'; return; }
    _CHAT_CUR={cid:cid,pid:pid,page:d.page||'',count:d.count,messages:d.messages||[]};
+   if(_CHAT_TR[cid] && _CHAT_TRN[cid]!==_CHAT_CUR.messages.length){ delete _CHAT_TR[cid]; }
    _chatRenderThread();
    if(_CHAT_AUTOTR){ try{ chatTranslate(); }catch(e){} }
  }catch(e){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Lỗi: '+_mvEsc((e&&e.message)||e)+'</div>'; }
