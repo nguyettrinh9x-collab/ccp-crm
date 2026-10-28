@@ -497,7 +497,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-j';
+const APP_VERSION='2026-10-28-k';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3823,7 +3823,7 @@ function renderPay(){ var el=document.getElementById('v-pay'); if(!el) return;
 }
 var _CHAT_CONVS=[], _CHAT_PAGE='', _CHAT_Q='', _CHAT_TIMER=null, _CHAT_OPEN=null, _CHAT_SIG='';
 function _chatIcon(p){ return /whats/i.test(p||'')?'🟢':(/face/i.test(p||'')?'💬':'📄'); }
-async function _chatLoad(){ try{ var r=await sb.from('pancake_leads').select('conv_id,page_id,page_name,platform,ten,phone,snippet,conv_inserted_at,sale,note,in_crm,status').order('conv_inserted_at',{ascending:false}).limit(200); _CHAT_CONVS=r.data||[]; _CHAT_SIG=(_CHAT_CONVS.length)+'|'+((_CHAT_CONVS[0]||{}).conv_id||'')+'|'+((_CHAT_CONVS[0]||{}).snippet||''); }catch(e){} }
+async function _chatLoad(){ try{ var r=await sb.from('pancake_leads').select('conv_id,page_id,page_name,platform,ten,phone,snippet,conv_inserted_at,sale,note,in_crm,status,tags').order('conv_inserted_at',{ascending:false}).limit(200); _CHAT_CONVS=r.data||[]; _CHAT_SIG=(_CHAT_CONVS.length)+'|'+((_CHAT_CONVS[0]||{}).conv_id||'')+'|'+((_CHAT_CONVS[0]||{}).snippet||''); }catch(e){} }
 function _chatLead(cid){ return (_CHAT_CONVS||[]).find(function(c){return c.conv_id===cid;})||null; }
 async function chatSaveNote(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; var ta=document.getElementById('chat-note'); if(!ta)return; var v=ta.value||''; var btn=document.getElementById('chat-note-btn'); if(btn){btn.textContent='⏳ Đang lưu…';btn.disabled=true;}
  try{ var e=await sb.from('pancake_leads').update({note:v}).eq('conv_id',cid); if(e&&e.error)throw e.error; var ld=_chatLead(cid); if(ld)ld.note=v; if(btn){btn.textContent='✓ Đã lưu';setTimeout(function(){if(btn){btn.textContent='💾 Lưu ghi chú';btn.disabled=false;}},1500);} }catch(err){ if(btn){btn.textContent='💾 Lưu ghi chú';btn.disabled=false;} alert('Lỗi lưu ghi chú: '+((err&&err.message)||err)); }
@@ -3846,6 +3846,19 @@ function _chatChips(){ var pages=[]; _CHAT_CONVS.forEach(function(c){ if(c.page_
  pages.forEach(function(p){ var pe=p.replace(/'/g,"\\'"); h+=' <span onclick="_chatSetPage(\''+pe+'\')" class="pill" style="cursor:pointer;'+(_CHAT_PAGE===p?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">'+_mvEsc(p)+'</span>'; });
  return h; }
 function _chatAva(name,plat){ var n=(name||'?').trim(); var c=n?n[0].toUpperCase():'?'; var cl=['#1F6F54','#2d7dd2','#c0587e','#d98e32','#7a5cc0','#3a9e8c','#c94f4f']; var i=0; for(var k=0;k<n.length;k++)i=(i+n.charCodeAt(k))%cl.length; var b=/whats/i.test(plat||'')?'🟢':(/face/i.test(plat||'')?'💬':''); return '<div style="position:relative;flex:0 0 40px;width:40px;height:40px;border-radius:50%;background:'+cl[i]+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px">'+_mvEsc(c)+(b?'<span style="position:absolute;right:-3px;bottom:-3px;font-size:13px">'+b+'</span>':'')+'</div>'; }
+function _chatTagColor(t){ var s=(t||'').trim().toLowerCase();
+ if(/^page/.test(s)) return ['#f0a24b','#5a3000'];
+ if(/care/.test(s)) return ['#4a90d9','#fff'];
+ if(/chốt|chot/.test(s)) return ['#2fa36b','#fff'];
+ if(/đợi|doi|\bck\b/.test(s)) return ['#e0b100','#4a3b00'];
+ if(/bỏ qua|bo qua|chặn|chan|spam/.test(s)) return ['#cfd6d2','#5a5a5a'];
+ if(/whatsapp|zalo/.test(s)) return ['#25d366','#063d1a'];
+ if(/web/.test(s)) return ['#7a5cc0','#fff'];
+ if(/sđt|sdt|phone|số/.test(s)) return ['#5b7083','#fff'];
+ if(/khách|khach/.test(s)) return ['#c0587e','#fff'];
+ return ['#e5efe9','#1F6F54']; }
+function _chatTags(tagStr){ var ts=(tagStr||'').split(',').map(function(x){return x.trim();}).filter(Boolean).slice(0,5); if(!ts.length)return '';
+ return '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">'+ts.map(function(t){var col=_chatTagColor(t);return '<span style="font-size:9.5px;line-height:1.3;padding:2px 7px;border-radius:9px;background:'+col[0]+';color:'+col[1]+';white-space:nowrap;font-weight:600">'+_mvEsc(t)+'</span>';}).join('')+'</div>'; }
 function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=document.getElementById('chat-list'); if(!lc) return;
  if(ch) ch.innerHTML=_chatChips();
  var q=(_CHAT_Q||'').toLowerCase();
@@ -3855,7 +3868,7 @@ function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=
   return '<div onclick="chatOpen(\''+encodeURIComponent(c.conv_id)+'\',\''+encodeURIComponent(c.page_id)+'\')" onmouseover="this.style.background=\'#f2f6f4\'" onmouseout="this.style.background=\''+bg+'\'" style="display:flex;gap:10px;align-items:center;padding:8px 9px;border-radius:10px;cursor:pointer;background:'+bg+'">'
    +_chatAva(c.ten,c.platform)
    +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc(c.ten||'(không tên)')+(c.sale?' <span style="font-weight:400;color:#9aa8a3;font-size:11px">· '+_mvEsc(c.sale)+'</span>':'')+'</div>'
-   +'<div style="font-size:12px;color:#8a978f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc((c.snippet||'').slice(0,60))+'</div></div></div>'; }).join('');
+   +'<div style="font-size:12px;color:#8a978f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc((c.snippet||'').slice(0,60))+'</div>'+_chatTags(c.tags)+'</div></div>'; }).join('');
  lc.innerHTML=items||'<div style="color:#6b7c76;padding:10px">Không có hội thoại.</div>';
 }
 async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) return;
