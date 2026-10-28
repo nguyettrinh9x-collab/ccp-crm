@@ -127,12 +127,13 @@
 <div id="login">
   <div class="login-card">
     <div class="logo">CCP CRM<small>Hệ thống chăm sóc khách hàng chủ động</small></div>
-    <input id="u" placeholder="Tài khoản" autocomplete="off">
-    <input id="p" type="password" placeholder="Mật khẩu">
+    <input id="u" type="email" name="email" placeholder="Email" autocomplete="username">
+    <input id="p" type="password" name="password" placeholder="Mật khẩu" autocomplete="current-password">
     <button onclick="login()">Đăng nhập</button>
   </div>
 </div>
 
+<script>try{var _e=localStorage.getItem("ccp_email");var _u=document.getElementById("u");if(_e&&_u&&!_u.value)_u.value=_e;}catch(_){}</script>
 <!-- ============ APP ============ -->
 <div id="app">
   <button id="navtoggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
@@ -497,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-k';
+const APP_VERSION='2026-10-28-l';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3454,7 +3455,7 @@ async function login(){
     }
     _reset(); alert('Đăng nhập lỗi: '+error.message); return;
   }
-  _reset();
+  _reset(); try{localStorage.setItem('ccp_email',email);}catch(_){}
   if(!await ensureMFA()){ await sb.auth.signOut(); return; }
   await afterLogin();
 }
