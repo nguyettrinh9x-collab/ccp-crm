@@ -152,6 +152,11 @@
       <a data-v="perms">Tài khoản</a>
       <a data-v="settings">Cài đặt</a>
       <a data-v="trash">Thùng rác</a>
+      <a data-v="appt">📅 Lịch hẹn 🆕</a>
+      <a data-v="pay">💵 Lương tạm tính 🆕</a>
+      <a data-v="integ">🔌 Tích hợp & tự động hóa 🆕</a>
+      <a data-v="ailog">🤖 Nhật ký AI & chi phí 🆕</a>
+      <a data-v="chat">💬 Hội thoại 🆕</a>
     </nav>
     <div class="foot">
       Đăng nhập: <b id="who"></b><br><span id="role"></span>
@@ -194,6 +199,12 @@
     <div class="view" id="v-perms"></div>
     <!-- TRASH -->
     <div class="view" id="v-trash"></div>
+    <!-- MỤC MỚI (thêm) -->
+    <div class="view" id="v-appt"></div>
+    <div class="view" id="v-pay"></div>
+    <div class="view" id="v-integ"></div>
+    <div class="view" id="v-ailog"></div>
+    <div class="view" id="v-chat"></div>
   </div>
 </div>
 
@@ -472,12 +483,14 @@ function applyMenu(){
     let v=a.dataset.v; if(v==='list_chot'||v==='list_chua'||v==='list_all') v='list';
     if(v==='pancake'){ a.style.display=(canPancake()||allowed.includes('pancake'))?'flex':'none'; return; }
     if(v==='danhgia'){ a.style.display=canPancake()?'flex':'none'; return; } /* chỉ Nguyệt/Admin */
+    if(v==='integ'||v==='ailog'||v==='pay'){ a.style.display=canPancake()?'flex':'none'; return; } /* mục mới admin-only */
+    if(v==='appt'||v==='chat'){ a.style.display='flex'; return; } /* mục mới cho mọi vai trò */
     a.style.display=allowed.includes(v)?'flex':'none';
   });
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-07-a';
+const APP_VERSION='2026-10-28-a';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3727,6 +3740,83 @@ function _dgfull(){try{
  var d=document.createElement('div'); d.innerHTML=w; host.appendChild(d.firstChild);
 }catch(e){window.__dgerr=''+e;}}
 if(typeof renderDanhGia==='function'){var _o=renderDanhGia;renderDanhGia=function(){var x=_o.apply(this,arguments);setTimeout(_dgfull,40);return x;};}
+})();
+</script>
+<script>
+/* ===== MỤC MỚI — chỉ THÊM, giữ nguyên phần cũ (28/10/2026) ===== */
+try{ if(typeof TITLES==='object') Object.assign(TITLES,{appt:'📅 Lịch hẹn',pay:'💵 Lương tạm tính (demo)',integ:'🔌 Tích hợp & tự động hóa',ailog:'🤖 Nhật ký AI & chi phí',chat:'💬 Hội thoại'}); }catch(e){}
+function _mvEsc(s){return (''+(s==null?'':s)).replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _mvTable(head,rows){ var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr>'; head.forEach(function(x){h+='<th style="padding:7px 9px;border-bottom:1px solid #e3ece7;background:#eef4f1;text-align:left;font-size:12px">'+x+'</th>';}); h+='</tr>'; rows.forEach(function(r){ h+='<tr>'; r.forEach(function(c){ h+='<td style="padding:7px 9px;border-bottom:1px solid #eef2f0">'+c+'</td>'; }); h+='</tr>'; }); h+='</table></div>'; return h; }
+function _mvNote(t){ return '<div style="background:#eef4f1;border-left:3px solid #1F6F54;border-radius:0 8px 8px 0;padding:8px 12px;font-size:12.5px;margin:8px 0">'+t+'</div>'; }
+async function renderInteg(){ var el=document.getElementById('v-integ'); if(!el) return;
+ if(!canPancake()){ el.innerHTML='<div class="card empty">🔒 Chỉ chị Nguyệt / Admin xem được mục này.</div>'; return; }
+ el.innerHTML='<div class="card">⏳ Đang kiểm tra trạng thái…</div>';
+ var pk='—', sc='—';
+ try{ var r1=await sb.from('pancake_leads').select('created_at').order('created_at',{ascending:false}).limit(1); if(r1.data&&r1.data[0]) pk=(''+r1.data[0].created_at).slice(0,16).replace('T',' '); }catch(e){}
+ try{ var r2=await sb.from('sale_score_runs').select('created_at').order('created_at',{ascending:false}).limit(1); if(r2.data&&r2.data[0]) sc=(''+r2.data[0].created_at).slice(0,16).replace('T',' '); }catch(e){}
+ var P=function(t,c){return '<span style="font-weight:700;color:'+c+'">'+t+'</span>';};
+ var rows=[
+  ['Pancake — đọc hội thoại/khách', P('🟢 Hoạt động','#1f8a4c'),'Đọc (14/28 page có token)', pk,'Tự kéo mỗi giờ'],
+  ['Pancake — GỬI tin', P('⚪ Chưa xác minh','#6b7c76'),'Cần kiểm tra quyền','—','Chờ xác minh để nhắn 2 chiều'],
+  ['Facebook — Send API', P('🔴 Chưa nối','#d94848'),'Cần Admin page','—','—'],
+  ['WhatsApp — Business API', P('⚪ Chưa rõ','#6b7c76'),'Cần xác nhận loại API','—','Hiện chỉ dùng wa.me'],
+  ['AI Gemini (chấm điểm / copilot)', P('🟢 Hoạt động','#1f8a4c'),'Key lưu server','lần chấm gần nhất: '+sc,'—'],
+  ['Telegram — bot nhắc việc', P('🟢 Hoạt động','#1f8a4c'),'—','cron hằng ngày','Nhắc nội bộ kèm link']
+ ];
+ el.innerHTML='<div class="card"><h2 class="sec">🔌 Tích hợp & tự động hóa</h2>'
+  +'<p style="color:#6b7c76;font-size:12px;margin:-4px 0 10px">Trang theo dõi — CHỈ ĐỌC. Không hiển thị token/khóa. "Lần chạy cuối" lấy từ dữ liệu thực.</p>'
+  +_mvTable(['Dịch vụ','Trạng thái','Quyền','Lần chạy cuối','Ghi chú'],rows)
+  +_mvNote('🆕 Mục mới. Để bật <b>nhắn 2 chiều (Hội thoại)</b> cần xác minh quyền API gửi tin của Pancake / Facebook / WhatsApp.')+'</div>';
+}
+async function renderAiLog(){ var el=document.getElementById('v-ailog'); if(!el) return;
+ if(!canPancake()){ el.innerHTML='<div class="card empty">🔒 Chỉ chị Nguyệt / Admin.</div>'; return; }
+ el.innerHTML='<div class="card">⏳ Đang tải…</div>';
+ var rows=[];
+ try{ var r=await sb.from('sale_score_runs').select('*').order('created_at',{ascending:false}).limit(20);
+   (r.data||[]).forEach(function(x){ rows.push([ (''+x.created_at).slice(0,16).replace('T',' '),'Chấm điểm sale (tuần '+(''+x.week_start).slice(0,10)+')','gemini-flash','<span style="color:#2563eb;font-weight:700">thật</span>', (x.n_convos||0)+' hội thoại · '+(x.n_sales||0)+' sale','TB '+(x.avg_total||0)+'/100' ]); });
+ }catch(e){}
+ if(!rows.length) rows=[['—','Chưa có lượt chấm AI nào','—','—','—','—']];
+ el.innerHTML='<div class="card"><h2 class="sec">🤖 Nhật ký AI & chi phí</h2>'
+  +'<p style="color:#6b7c76;font-size:12px;margin:-4px 0 10px">Các lượt AI đã chạy (thật). <b>Token & chi phí chi tiết từng lần gọi sẽ bổ sung ở bản sau</b> — hiện chỉ hiển thị số đo có thực.</p>'
+  +_mvTable(['Thời gian','Tác vụ','Model','Chế độ','Khối lượng','Kết quả'],rows)
+  +_mvNote('Nguyên tắc: tách token AI phát triển vs vận hành; số ước tính sẽ ghi rõ khi bổ sung.')+'</div>';
+}
+function renderAppt(){ var el=document.getElementById('v-appt'); if(!el) return;
+ var d0=D(0);
+ var list=(DATA||[]).filter(function(c){ return c.tt==='hen' || (c.follow && c.follow>=d0 && !isChot(c.tt) && c.tt!=='kcnc' && c.tt!=='khach_chan'); });
+ list.sort(function(a,b){ return (a.follow||'9999')<(b.follow||'9999')?-1:1; });
+ var rows=list.slice(0,200).map(function(c){ return [
+   '<b>'+_mvEsc(c.follow||'—')+'</b>', _mvEsc(c.ten||''), _mvEsc(c.phone||''),
+   (typeof SALES!=='undefined'?(SALES[c.owner]||'—'):'—'),
+   (typeof STATUS!=='undefined'?(STATUS[c.tt]||c.tt):c.tt),
+   '<span style="cursor:pointer;color:#1F6F54;font-weight:700" onclick="editCustomer(\''+c.id+'\')">Mở 🔎</span>' ]; });
+ if(!rows.length) rows=[['—','Chưa có lịch hẹn','','','','']];
+ el.innerHTML='<div class="card"><h2 class="sec">📅 Lịch hẹn</h2>'
+  +'<p style="color:#6b7c76;font-size:12px;margin:-4px 0 10px">Gộp khách trạng thái "Hẹn" + khách có ngày follow sắp tới. Bấm "Mở" để xem hồ sơ.</p>'
+  +_mvTable(['Ngày','Khách','SĐT','Sale','Trạng thái',''],rows)
+  +_mvNote('🆕 Mục mới (đọc từ dữ liệu có sẵn). Sau này có thể tạo lịch hẹn riêng với giờ cụ thể.')+'</div>';
+}
+function renderPay(){ var el=document.getElementById('v-pay'); if(!el) return;
+ if(!canPancake()){ el.innerHTML='<div class="card empty">🔒 Chỉ chị Nguyệt / Admin (lương).</div>'; return; }
+ var rev={};
+ (DATA||[]).forEach(function(c){ if(isChot(c.tt)){ rev[c.owner]=(rev[c.owner]||0)+(Number(c.dt)||0); } });
+ var rows=[];
+ if(typeof SALES!=='undefined') Object.keys(SALES).forEach(function(id){ var r=rev[id]||0; var base=6000000; var hh=Math.round(r*24000*0.03); var tam=base+hh;
+   rows.push([ '<b>'+SALES[id]+'</b>','6.000.000','(cấu hình)','3% × $'+Math.round(r).toLocaleString('en-US'), hh.toLocaleString('vi-VN'), '<b>≈ '+tam.toLocaleString('vi-VN')+'</b>' ]); });
+ el.innerHTML='<div class="card"><h2 class="sec">💵 Lương <span style="background:#fff6e5;color:#c98a00;padding:2px 9px;border-radius:20px;font-size:12px">tạm tính</span></h2>'
+  +_mvNote('⚠️ <b>CÔNG THỨC LÀ GIẢ ĐỊNH MINH HỌA</b> (cơ bản 6tr + 3% doanh số quy đổi 24.000đ/$). Ngày công đang để "(cấu hình)". <b>Chờ chị cấp công thức thật + hệ số ngày công</b> để em thay.')
+  +_mvTable(['Nhân viên','Cơ bản','Ngày công','HH doanh số','Thưởng HH (đ)','Tạm tính (đ)'],rows.length?rows:[['—','','','','','']])
+  +_mvNote('Doanh số lấy từ khách đã chốt trong CRM. Hiển thị rõ thành phần + kỳ dữ liệu; sẽ phân quyền khi chốt công thức.')+'</div>';
+}
+function renderChatHold(){ var el=document.getElementById('v-chat'); if(!el) return;
+ el.innerHTML='<div class="card"><h2 class="sec">💬 Hội thoại (Facebook / WhatsApp)</h2>'
+  +_mvNote('🆕 Mục này <b>chưa kích hoạt</b> — cần kiểm chứng thật trước (không làm giả):')
+  +'<ul style="font-size:13px;line-height:1.8"><li><b>Quyền API gửi tin</b>: Pancake có cho gửi không? Page Facebook nào chị là Admin (để nối Messenger Send API)? WhatsApp dùng Business API chính thức hay chỉ wa.me?</li>'
+  +'<li>Giải thích rõ <b>"Smith"</b> và <b>"Google code"</b> trước khi tích hợp.</li></ul>'
+  +_mvNote('Trong lúc chờ: hội thoại mới vẫn xem ở tab <b>📥 Khách mới (Pancake)</b>; nhắn WhatsApp dùng nút wa.me ở hồ sơ khách.')+'</div>';
+}
+(function(){ var NV={integ:renderInteg,ailog:renderAiLog,appt:renderAppt,pay:renderPay,chat:renderChatHold};
+ try{ if(typeof go==='function' && !window.__mvGo){ window.__mvGo=1; var _g=go; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(NV[v]) NV[v](); }catch(e){} return r; }; } }catch(e){}
 })();
 </script>
 </body>
