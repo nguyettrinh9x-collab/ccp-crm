@@ -498,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-x';
+const APP_VERSION='2026-10-28-y';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3309,7 +3309,10 @@ async function reloadCustomer(id){ if(!window.sb||id==null) return; try{
 }catch(e){} }
 /* Nạp lại danh sách việc (nhẹ) */
 async function reloadTasks(){ if(!window.sb) return; try{ const { data:tk }=await sb.from('tasks').select('*'); TASKS=(tk||[]).map(t=>({id:t.id, owner:t.owner, customer_id:t.customer_id, loai:t.loai, noi_dung:t.noi_dung, han:(t.han||'').slice(0,10), xong:!!t.xong})); }catch(e){} }
-async function loadAll(){
+async function loadCustomers(){ /* tải khách riêng (dùng cho tải nền sau khi mở app cho nhanh) */
+  try{ const cs=await fetchAllRows('customers','ngay_tao',false); const allc=(cs||[]).map(normCust); DATA=allc.filter(c=>!c.da_xoa); TRASH=allc.filter(c=>c.da_xoa); window.__custLoaded=true; }catch(e){}
+}
+async function loadAll(skipCust){
   const { data:{ user } } = await sb.auth.getUser();
   if(!user) return false;
   const { data:profs, error:pe } = await sb.from('profiles').select('*');
@@ -3331,7 +3334,7 @@ async function loadAll(){
   const _SB=(p)=>p.then(r=>r).catch(e=>({data:[],error:e}));
   const _FA=(t,o,a)=>fetchAllRows(t,o,a).catch(()=>[]);
   const [cs, spdr, ss, imgsr, od, tkr, tgr, mrr, plr] = await Promise.all([
-    _FA('customers','ngay_tao',false),
+    (skipCust?Promise.resolve(null):_FA('customers','ngay_tao',false)),
     _SB(sb.from('marketing_spend').select('*')),
     _FA('sale_scores'),
     _SB(sb.from('app_images').select('*')),
@@ -3341,9 +3344,7 @@ async function loadAll(){
     _SB(sb.from('mkt_reports').select('*')),
     _SB(sb.from('pancake_leads').select('*').eq('status','new').order('conv_inserted_at',{ascending:false}))
   ]);
-  const allc = (cs||[]).map(normCust);
-  DATA = allc.filter(c=>!c.da_xoa);
-  TRASH = allc.filter(c=>c.da_xoa);
+  if(!skipCust){ const allc = (cs||[]).map(normCust); DATA = allc.filter(c=>!c.da_xoa); TRASH = allc.filter(c=>c.da_xoa); window.__custLoaded=true; }
   SPEND = ((spdr&&spdr.data)||[]).map(s=>({ngay:(s.ngay||'').slice(0,10), nguon:s.nguon, mkt:s.mkt, chi_phi:Number(s.chi_phi)||0}));
   MKTREP=[];
   try{ SCORES = (ss||[]).map(r=>({sale:r.sale, week_start:(r.week_start||'').slice(0,10), score_total:Number(r.score_total)||0, s_speed:Number(r.s_speed)||0, s_needs:Number(r.s_needs)||0, s_product:Number(r.s_product)||0, compliance_flag:!!r.compliance_flag, weaknesses:r.weaknesses||'', worst_quote:r.worst_quote||'', strengths:r.strengths||''})); }catch(e){ SCORES=[]; }
@@ -3437,7 +3438,8 @@ async function saveLan1Inline(cid){
   EDIT_LAN1_CID=null; await loadAll(); editCustomer(cid); renderAll();
 }
 async function afterLogin(){
-  if(!await loadAll()) return;
+  window.__custLoaded=false;
+  if(!await loadAll(true)) return; /* tải nhanh (chưa gồm 8.047 khách) để mở app ngay */
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('who').textContent=ME.name;
@@ -3450,6 +3452,8 @@ async function afterLogin(){
   renderAll();
   try{ sessionStorage.setItem('ccp_active','1'); }catch(e){}
   startIdle();
+  /* Tải 8.047 khách Ở NỀN rồi cập nhật lại giao diện (không chặn lúc mở app) */
+  setTimeout(function(){ loadCustomers().then(function(){ try{ renderAll(); }catch(e){} }); }, 50);
 }
 /* ---- Đăng nhập / đăng xuất bằng Supabase Auth (email + mật khẩu) ---- */
 async function login(){
