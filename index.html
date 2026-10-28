@@ -498,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-o';
+const APP_VERSION='2026-10-28-p';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3885,7 +3885,8 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'</div>'
    +'<div style="flex:1;display:flex;flex-direction:column;background:#f7faf8;min-width:280px">'
      +'<div id="chat-thread" style="flex:1;overflow:auto;padding:14px"><div style="color:#9aa8a3;text-align:center;margin-top:40px">← Chọn một hội thoại để xem tin nhắn.</div></div>'
-     +'<div style="border-top:1px solid #e9efec;padding:10px 12px;background:#fff;display:flex;gap:8px;align-items:center"><input disabled placeholder="Gửi tin đang khóa — chờ cấp quyền API gửi…" style="flex:1;border:1px solid #e3ece7;border-radius:20px;padding:8px 14px;font-size:13px;background:#f3f5f4;color:#9aa8a3"><button disabled style="border:none;background:#cdd8d3;color:#fff;border-radius:20px;padding:8px 16px;font-size:13px;cursor:not-allowed">Gửi</button></div>'
+     +'<div id="chat-tagbar"></div>'
+     +'<div style="border-top:1px solid #e9efec;padding:10px 12px;background:#fff;display:flex;gap:8px;align-items:center"><input id="chat-send-input" placeholder="Nhập tin trả lời khách… (Enter để gửi)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:20px;padding:8px 14px;font-size:13px"><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
    +'</div></div></div>';
  }
  await _chatLoad(); _chatPaintList();
@@ -3905,7 +3906,7 @@ function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if
   +'</div>';
  (d.messages||[]).forEach(function(mm,ix){ var me=mm.from_page; var vi=on?(tr[ix]||''):''; var showVi=on&&vi&&vi.trim()&&vi.trim()!==String(mm.text||'').trim();
   h+='<div style="display:flex;justify-content:'+(me?'flex-end':'flex-start')+';margin-bottom:7px"><div style="max-width:78%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.45;background:'+(me?'#1F6F54':'#fff')+';color:'+(me?'#fff':'#243')+';'+(me?'':'border:1px solid #e3ece7')+'"><div style="font-size:10.5px;'+(me?'color:#cfe7db':'color:#9aa8a3')+';margin-bottom:2px">'+_mvEsc(mm.sender)+' · '+_mvEsc(mm.at)+'</div>'+_mvEsc(mm.text)+(showVi?'<div style="margin-top:4px;padding-top:4px;border-top:1px dashed '+(me?'rgba(255,255,255,.35)':'#f0d0d0')+';font-size:12px;font-weight:500;'+(me?'color:#ffe3e0':'color:#e23d3d')+'">🇻🇳 '+_mvEsc(vi)+'</div>':'')+'</div></div>'; });
- box.innerHTML=h; box.scrollTop=box.scrollHeight;
+ box.innerHTML=h; box.scrollTop=box.scrollHeight; _chatPaintTagbar();
 }
 async function chatTranslate(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; if(_CHAT_TR[cid]){ _CHAT_SHOWTR=!_CHAT_SHOWTR; _CHAT_AUTOTR=_CHAT_SHOWTR; try{localStorage.setItem('chat_autotr',_CHAT_AUTOTR?'1':'0');}catch(e){} _chatRenderThread(); return; }
  var box=document.getElementById('chat-thread'); if(box){ var old=box.innerHTML; box.insertAdjacentHTML('afterbegin','<div id="chat-tr-load" style="color:#1F6F54;font-size:12px;text-align:center;padding:4px">⏳ Đang dịch…</div>'); }
@@ -3924,6 +3925,21 @@ async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComp
    _chatRenderThread();
    if(_CHAT_AUTOTR){ try{ chatTranslate(); }catch(e){} }
  }catch(e){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Lỗi: '+_mvEsc((e&&e.message)||e)+'</div>'; }
+}
+async function chatSend(){ if(!_CHAT_CUR)return; var inp=document.getElementById('chat-send-input'); if(!inp)return; var txt=String(inp.value||'').trim(); if(!txt)return; var btn=document.getElementById('chat-send-btn'); if(btn){btn.disabled=true;btn.textContent='⏳';} inp.disabled=true;
+ try{ var res=await sb.functions.invoke('pancake-send',{body:{page_id:_CHAT_CUR.pid,conv_id:_CHAT_CUR.cid,message:txt}}); var d=(res&&res.data)||{};
+  if(d.ok){ inp.value=''; var ld=_chatLead(_CHAT_CUR.cid)||{}; _CHAT_CUR.messages.push({sender:(d.page||ld.page_name||'Shop'),from_page:true,text:txt,at:new Date().toISOString().slice(0,19).replace('T',' ')}); _CHAT_CUR.count=(_CHAT_CUR.count||0)+1; _chatRenderThread(); }
+  else { var rs=d.reason||'lỗi không rõ'; var hint=''; if(/token/.test(rs))hint='\\nPage này chưa cấp quyền gửi (thiếu token).'; else if(/24|window|outside|session/i.test(rs))hint='\\nWhatsApp đã quá 24h — khách cần nhắn lại trước khi mình gửi.'; alert('Chưa gửi được: '+rs+hint); }
+ }catch(e){ alert('Lỗi gửi: '+((e&&e.message)||e)); }
+ finally{ if(btn){btn.disabled=false;btn.textContent='Gửi';} inp.disabled=false; inp.focus(); }
+}
+var _CHAT_TAGLIST=['Phúc','Tiên','Hạnh','Page Cad','Yến','KTT','Thẩm','Mai','Việt','Tuấn','Bảo','Duy','Page EU','Hùng','Ngàn','Nghĩa','T.Tiên','Page Mỹ','Đang Care','Đợi CK','Đã Chốt','Bỏ qua','Khách Chặn','web','whatsapp','SĐT','Nguyệt','Hoè'];
+function _chatPaintTagbar(){ var bar=document.getElementById('chat-tagbar'); if(!bar)return; if(!_CHAT_CUR){ bar.innerHTML=''; return; }
+ var ld=_chatLead(_CHAT_CUR.cid)||{}; var cur=(ld.tags||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+ bar.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:4px;padding:7px 12px;border-top:1px solid #e9efec;background:#fafbfc;max-height:92px;overflow:auto">'+_CHAT_TAGLIST.map(function(t){ var on=cur.indexOf(t)>=0; var col=_chatTagColor(t); var te=t.replace(/'/g,"\\'"); return '<span onclick="chatToggleTag(\''+te+'\')" title="Gắn/bỏ thẻ" style="cursor:pointer;font-size:11px;line-height:1.5;padding:3px 9px;border-radius:7px;font-weight:600;white-space:nowrap;'+(on?('background:'+col[0]+';color:'+col[1]):'background:#eef1f0;color:#8a978f')+'">'+(on?'● ':'')+_mvEsc(t)+'</span>'; }).join('')+'</div>';
+}
+async function chatToggleTag(t){ if(!_CHAT_CUR)return; var ld=_chatLead(_CHAT_CUR.cid); if(!ld)return; var cur=(ld.tags||'').split(',').map(function(x){return x.trim();}).filter(Boolean); var i=cur.indexOf(t); if(i>=0)cur.splice(i,1); else cur.push(t); var ns=cur.join(', '); ld.tags=ns; _chatPaintTagbar(); _chatPaintList();
+ try{ var e=await sb.from('pancake_leads').update({tags:ns}).eq('conv_id',_CHAT_CUR.cid); if(e&&e.error)throw e.error; }catch(err){ alert('Lỗi lưu thẻ: '+((err&&err.message)||err)); }
 }
 (function(){ var NV={integ:renderInteg,ailog:renderAiLog,appt:renderAppt,pay:renderPay,chat:renderChat};
  try{ if(typeof go==='function' && !window.__mvGo){ window.__mvGo=1; var _g=go; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(NV[v]) NV[v](); }catch(e){} return r; }; } }catch(e){}
