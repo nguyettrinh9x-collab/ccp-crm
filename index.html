@@ -498,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-r';
+const APP_VERSION='2026-10-28-s';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3888,12 +3888,12 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div style="flex:1;display:flex;flex-direction:column;background:#f7faf8;min-width:240px">'
      +'<div id="chat-thread" style="flex:1;overflow:auto;padding:14px"><div style="color:#9aa8a3;text-align:center;margin-top:40px">← Chọn một hội thoại để xem tin nhắn.</div></div>'
      +'<div id="chat-tagbar"></div>'
-     +'<div style="border-top:1px solid #e9efec;padding:10px 12px;background:#fff;display:flex;gap:8px;align-items:center"><input id="chat-send-input" placeholder="Nhập tin trả lời khách… (Enter để gửi)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:20px;padding:8px 14px;font-size:13px"><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
+     +'<div style="border-top:1px solid #e9efec;padding:10px 12px;background:#fff;display:flex;gap:8px;align-items:center"><button id="chat-vn-btn" onclick="chatToggleVN()" title="Gõ tiếng Việt, tự dịch sang tiếng khách khi gửi" style="border:none;background:#eef1f0;color:#6b7c76;border-radius:16px;padding:7px 11px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap">🌐 VN</button><input id="chat-send-input" placeholder="Nhập tin trả lời khách… (Enter để gửi)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:20px;padding:8px 14px;font-size:13px"><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
    +'</div>'
    +'<div style="flex:0 0 250px;max-width:28%;border-left:1px solid #e9efec;background:#fff;overflow:auto"><div id="chat-notepanel" style="padding:12px"><div style="color:#9aa8a3;font-size:12px;text-align:center;margin-top:30px">Chọn hội thoại để xem thông tin.</div></div></div>'
    +'</div></div>';
  }
- _chatPaintDatebar(); _chatPaintTagFilter(); await _chatLoad(); _chatPaintList();
+ _chatPaintDatebar(); _chatPaintTagFilter(); if(_CHAT_VNMODE){var _vb=document.getElementById('chat-vn-btn');if(_vb){_vb.style.background='#e23d3d';_vb.style.color='#fff';}var _vi=document.getElementById('chat-send-input');if(_vi)_vi.placeholder='Gõ tiếng Việt — tự dịch sang tiếng khách khi gửi';} await _chatLoad(); _chatPaintList();
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
  _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
@@ -3953,9 +3953,13 @@ async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComp
    if(_CHAT_AUTOTR){ try{ chatTranslate(); }catch(e){} }
  }catch(e){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Lỗi: '+_mvEsc((e&&e.message)||e)+'</div>'; }
 }
+var _CHAT_VNMODE=(function(){try{return localStorage.getItem('chat_vnmode')==='1';}catch(e){return false;}})();
+function chatToggleVN(){ _CHAT_VNMODE=!_CHAT_VNMODE; try{localStorage.setItem('chat_vnmode',_CHAT_VNMODE?'1':'0');}catch(e){} var b=document.getElementById('chat-vn-btn'); if(b){ b.style.background=_CHAT_VNMODE?'#e23d3d':'#eef1f0'; b.style.color=_CHAT_VNMODE?'#fff':'#6b7c76'; } var inp=document.getElementById('chat-send-input'); if(inp)inp.placeholder=_CHAT_VNMODE?'Gõ tiếng Việt — tự dịch sang tiếng khách khi gửi':'Nhập tin trả lời khách… (Enter để gửi)'; }
 async function chatSend(){ if(!_CHAT_CUR)return; var inp=document.getElementById('chat-send-input'); if(!inp)return; var txt=String(inp.value||'').trim(); if(!txt)return; var btn=document.getElementById('chat-send-btn'); if(btn){btn.disabled=true;btn.textContent='⏳';} inp.disabled=true;
- try{ var res=await sb.functions.invoke('pancake-send',{body:{page_id:_CHAT_CUR.pid,conv_id:_CHAT_CUR.cid,message:txt}}); var d=(res&&res.data)||{};
-  if(d.ok){ inp.value=''; var ld=_chatLead(_CHAT_CUR.cid)||{}; _CHAT_CUR.messages.push({sender:(d.page||ld.page_name||'Shop'),from_page:true,text:txt,at:new Date().toISOString().slice(0,19).replace('T',' ')}); _CHAT_CUR.count=(_CHAT_CUR.count||0)+1; _chatRenderThread(); }
+ try{ var sendTxt=txt;
+  if(_CHAT_VNMODE){ var sample=''; var ms=_CHAT_CUR.messages||[]; for(var i=ms.length-1;i>=0;i--){ if(!ms[i].from_page&&ms[i].text){ sample=ms[i].text; break; } } var tr=await sb.functions.invoke('translate',{body:{reply_vi:txt,sample:sample}}); var td=(tr&&tr.data)||{}; if(td.ok&&td.out){ sendTxt=td.out; } else { alert('Chưa dịch được câu trả lời, thử lại.'); if(btn){btn.disabled=false;btn.textContent='Gửi';} inp.disabled=false; return; } }
+  var res=await sb.functions.invoke('pancake-send',{body:{page_id:_CHAT_CUR.pid,conv_id:_CHAT_CUR.cid,message:sendTxt}}); var d=(res&&res.data)||{};
+  if(d.ok){ inp.value=''; var ld=_chatLead(_CHAT_CUR.cid)||{}; _CHAT_CUR.messages.push({sender:(d.page||ld.page_name||'Shop'),from_page:true,text:sendTxt,at:new Date().toISOString().slice(0,19).replace('T',' ')}); _CHAT_CUR.count=(_CHAT_CUR.count||0)+1; _chatRenderThread(); }
   else { var rs=d.reason||'lỗi không rõ'; var hint=''; if(/token/.test(rs))hint='\\nPage này chưa cấp quyền gửi (thiếu token).'; else if(/24|window|outside|session/i.test(rs))hint='\\nWhatsApp đã quá 24h — khách cần nhắn lại trước khi mình gửi.'; alert('Chưa gửi được: '+rs+hint); }
  }catch(e){ alert('Lỗi gửi: '+((e&&e.message)||e)); }
  finally{ if(btn){btn.disabled=false;btn.textContent='Gửi';} inp.disabled=false; inp.focus(); }
