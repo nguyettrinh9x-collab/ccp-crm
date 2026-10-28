@@ -339,7 +339,8 @@ async function bulkTaskAssign(){ const sel=document.getElementById('task-bulk-sa
   if(tasks.length){ const e=await sbUpdIn('tasks',{owner},tasks); if(e){alert('Lỗi việc: '+e.message);return;} }
   if(custs.length){ const e=await sbUpdIn('customers',{owner, ngay_capnhat:D(0)},custs); if(e){alert('Lỗi khách: '+e.message);return;} }
   TASK_SEL.clear(); await loadAll(); renderAll(); }
-let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='';
+let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='', DONE_HIDE=true;
+function toggleDone(){ DONE_HIDE=!DONE_HIDE; renderToday(); }
 function setDoneQ(v){ DONE_Q=v; renderToday(); const el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 function setDoneSale(v){ DONE_SALE=v; renderToday(); }
 function setDoneFrom(v){ DONE_FROM=v; renderToday(); }
@@ -490,7 +491,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-d';
+const APP_VERSION='2026-10-28-e';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -2180,7 +2181,13 @@ function renderToday(){
         const khachCell=tc?`<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten}</b>`:(cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">—</span>');
         return `<tr style="background:#eefaf3"><td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td><td>${khachCell}</td><td>${t.noi_dung||''}</td><td>${t.han||'—'}</td><td>${SALES[t.owner]||'—'}</td><td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark);font-weight:700" onclick="reactivateTask('${t.id}')">🔄 Kích hoạt lại</span></td></tr>`; };
       const dFil=`<div class="filters" style="margin:8px 0 10px"><input id="dn-q" class="search" value="${(DONE_Q||'').replace(/"/g,'&quot;')}" oninput="setDoneQ(this.value)" placeholder="🔎 Lọc tên khách / nội dung..." style="max-width:300px"><select onchange="setDoneSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${DONE_SALE===k?'selected':''}>${v}</option>`).join('')}</select><span style="font-size:12px;color:var(--muted)">Đến hạn:</span><input type="date" value="${DONE_FROM}" onchange="setDoneFrom(this.value)" title="Từ ngày" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" value="${DONE_TO}" onchange="setDoneTo(this.value)" title="Đến ngày" style="width:auto">${(DONE_Q||DONE_SALE||DONE_FROM||DONE_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearDoneFilters()">Xoá lọc</button>`:''}</div>`;
-      html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length}${done.length!==doneAll.length?' / '+doneAll.length:''})</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Bấm <b>Kích hoạt lại</b> để đưa việc về danh sách chưa làm — nhắc sale làm tiếp.</p>${dFil}<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Loại</th><th>Khách</th><th>Nội dung</th><th>Đến hạn</th><th>Sale</th><th></th></tr>${done.map(drow).join('')||'<tr><td colspan="6" class="empty">Không có việc khớp bộ lọc.</td></tr>'}</table></div>`;
+const dToggleBtn=`<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;margin-left:10px;vertical-align:middle" onclick="toggleDone()">${DONE_HIDE?'👁️ Hiện':'🙈 Ẩn'}</button>`;
+      html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length}${done.length!==doneAll.length?' / '+doneAll.length:''})${dToggleBtn}</h2>`;
+      if(DONE_HIDE){
+        html+=`<p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Đang ẩn để đỡ rối. Bấm <b>👁️ Hiện</b> để xem danh sách việc đã xong.</p>`;
+      }else{
+        html+=`<p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Bấm <b>Kích hoạt lại</b> để đưa việc về danh sách chưa làm — nhắc sale làm tiếp.</p>${dFil}<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Loại</th><th>Khách</th><th>Nội dung</th><th>Đến hạn</th><th>Sale</th><th></th></tr>${done.map(drow).join('')||'<tr><td colspan="6" class="empty">Không có việc khớp bộ lọc.</td></tr>'}</table></div>`;
+      }
     }
   }
   /* Nhắc follow đã được gộp vào nhóm "Quá hạn" / "Hôm nay" ở bảng việc phía trên */
