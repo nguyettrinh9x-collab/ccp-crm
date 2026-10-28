@@ -497,7 +497,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-h';
+const APP_VERSION='2026-10-28-i';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3862,7 +3862,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
  _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
-var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_SHOWTR=false;
+var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_SHOWTR=false, _CHAT_AUTOTR=(function(){try{return localStorage.getItem('chat_autotr')!=='0';}catch(e){return true;}})();
 function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if(!box||!_CHAT_CUR)return; var d=_CHAT_CUR; var cid=d.cid, pid=d.pid; var tr=_CHAT_TR[cid]||null; var on=_CHAT_SHOWTR&&tr;
  var btn='<span onclick="chatTranslate()" style="cursor:pointer;color:#1F6F54;font-size:12px;margin-right:14px">'+(on?'🌐 Tắt dịch':'🌐 Dịch tiếng Việt')+'</span>';
  var h='<div style="font-weight:700;margin-bottom:12px;position:sticky;top:-14px;background:#f7faf8;padding:4px 0;border-bottom:1px solid #e9efec">'+_mvEsc(d.page||'')+' <span style="font-weight:400;color:#9aa8a3;font-size:12px">· '+d.count+' tin</span> <span style="float:right">'+btn+'<span onclick="chatOpen(\''+encodeURIComponent(cid)+'\',\''+encodeURIComponent(pid)+'\')" style="cursor:pointer;color:#1F6F54;font-size:12px">🔄 Làm mới</span></span></div>';
@@ -3870,7 +3870,7 @@ function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if
   h+='<div style="display:flex;justify-content:'+(me?'flex-end':'flex-start')+';margin-bottom:7px"><div style="max-width:78%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.45;background:'+(me?'#1F6F54':'#fff')+';color:'+(me?'#fff':'#243')+';'+(me?'':'border:1px solid #e3ece7')+'"><div style="font-size:10.5px;'+(me?'color:#cfe7db':'color:#9aa8a3')+';margin-bottom:2px">'+_mvEsc(mm.sender)+' · '+_mvEsc(mm.at)+'</div>'+_mvEsc(mm.text)+(showVi?'<div style="margin-top:4px;padding-top:4px;border-top:1px dashed '+(me?'rgba(255,255,255,.35)':'#e3ece7')+';font-size:12px;'+(me?'color:#eafff5':'color:#1F6F54')+'">🇻🇳 '+_mvEsc(vi)+'</div>':'')+'</div></div>'; });
  box.innerHTML=h; box.scrollTop=box.scrollHeight;
 }
-async function chatTranslate(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; if(_CHAT_TR[cid]){ _CHAT_SHOWTR=!_CHAT_SHOWTR; _chatRenderThread(); return; }
+async function chatTranslate(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; if(_CHAT_TR[cid]){ _CHAT_SHOWTR=!_CHAT_SHOWTR; _CHAT_AUTOTR=_CHAT_SHOWTR; try{localStorage.setItem('chat_autotr',_CHAT_AUTOTR?'1':'0');}catch(e){} _chatRenderThread(); return; }
  var box=document.getElementById('chat-thread'); if(box){ var old=box.innerHTML; box.insertAdjacentHTML('afterbegin','<div id="chat-tr-load" style="color:#1F6F54;font-size:12px;text-align:center;padding:4px">⏳ Đang dịch…</div>'); }
  try{ var texts=(_CHAT_CUR.messages||[]).map(function(m){return String(m.text||'');});
   var res=await sb.functions.invoke('translate',{body:{texts:texts}}); var d=(res&&res.data)||{};
@@ -3883,6 +3883,7 @@ async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComp
    if(!d.ok){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Chưa tải được tin nhắn'+(d.reason?(' ('+d.reason+')'):'')+'. Thử lại sau.</div>'; return; }
    _CHAT_CUR={cid:cid,pid:pid,page:d.page||'',count:d.count,messages:d.messages||[]};
    _chatRenderThread();
+   if(_CHAT_AUTOTR){ try{ chatTranslate(); }catch(e){} }
  }catch(e){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Lỗi: '+_mvEsc((e&&e.message)||e)+'</div>'; }
 }
 (function(){ var NV={integ:renderInteg,ailog:renderAiLog,appt:renderAppt,pay:renderPay,chat:renderChat};
