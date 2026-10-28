@@ -498,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-t';
+const APP_VERSION='2026-10-28-u';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3879,7 +3879,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
  if(!document.getElementById('chat-list')){
   el.innerHTML='<div class="card" style="padding:0;overflow:hidden">'
    +'<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #e9efec;background:#3b4ba8;color:#fff"><span style="font-size:17px;font-weight:700">💬 Hội thoại</span><span style="font-size:12px;opacity:.85">Gộp mọi page Pancake · tự làm mới ~45s</span></div>'
-   +'<div style="display:flex;height:600px;max-height:72vh">'
+   +'<div style="display:flex;height:850px;max-height:88vh">'
    +'<div style="flex:0 0 340px;max-width:44%;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
      +'<div style="padding:10px 12px 4px"><input id="chat-q" oninput="_CHAT_Q=this.value;_chatPaintList()" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
      +'<div id="chat-datebar" style="padding:0 12px 5px;display:flex;flex-wrap:wrap;gap:4px"></div>'
