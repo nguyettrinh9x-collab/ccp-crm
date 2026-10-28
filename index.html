@@ -497,7 +497,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-i';
+const APP_VERSION='2026-10-28-j';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3823,7 +3823,23 @@ function renderPay(){ var el=document.getElementById('v-pay'); if(!el) return;
 }
 var _CHAT_CONVS=[], _CHAT_PAGE='', _CHAT_Q='', _CHAT_TIMER=null, _CHAT_OPEN=null, _CHAT_SIG='';
 function _chatIcon(p){ return /whats/i.test(p||'')?'🟢':(/face/i.test(p||'')?'💬':'📄'); }
-async function _chatLoad(){ try{ var r=await sb.from('pancake_leads').select('conv_id,page_id,page_name,platform,ten,snippet,conv_inserted_at,sale').order('conv_inserted_at',{ascending:false}).limit(200); _CHAT_CONVS=r.data||[]; _CHAT_SIG=(_CHAT_CONVS.length)+'|'+((_CHAT_CONVS[0]||{}).conv_id||'')+'|'+((_CHAT_CONVS[0]||{}).snippet||''); }catch(e){} }
+async function _chatLoad(){ try{ var r=await sb.from('pancake_leads').select('conv_id,page_id,page_name,platform,ten,phone,snippet,conv_inserted_at,sale,note,in_crm,status').order('conv_inserted_at',{ascending:false}).limit(200); _CHAT_CONVS=r.data||[]; _CHAT_SIG=(_CHAT_CONVS.length)+'|'+((_CHAT_CONVS[0]||{}).conv_id||'')+'|'+((_CHAT_CONVS[0]||{}).snippet||''); }catch(e){} }
+function _chatLead(cid){ return (_CHAT_CONVS||[]).find(function(c){return c.conv_id===cid;})||null; }
+async function chatSaveNote(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; var ta=document.getElementById('chat-note'); if(!ta)return; var v=ta.value||''; var btn=document.getElementById('chat-note-btn'); if(btn){btn.textContent='⏳ Đang lưu…';btn.disabled=true;}
+ try{ var e=await sb.from('pancake_leads').update({note:v}).eq('conv_id',cid); if(e&&e.error)throw e.error; var ld=_chatLead(cid); if(ld)ld.note=v; if(btn){btn.textContent='✓ Đã lưu';setTimeout(function(){if(btn){btn.textContent='💾 Lưu ghi chú';btn.disabled=false;}},1500);} }catch(err){ if(btn){btn.textContent='💾 Lưu ghi chú';btn.disabled=false;} alert('Lỗi lưu ghi chú: '+((err&&err.message)||err)); }
+}
+async function chatAddCrm(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; var ld=_chatLead(cid); if(!ld){alert('Không tìm thấy dữ liệu khách.');return;}
+ if((ld.in_crm||ld.status==='added') && !confirm('Khách này có thể đã có trong CRM. Vẫn thêm mới?'))return;
+ var btn=document.getElementById('chat-addcrm'); if(btn){btn.textContent='⏳ Đang thêm…';btn.disabled=true;}
+ try{ var rec=(typeof pkLeadToRec==='function')?pkLeadToRec(ld):{ten:ld.ten||'(không tên)',phone:ld.phone||'',owner:(typeof revFind==='function'?revFind(SALES,(ld.sale||'').split('/')[0].trim()):null)||(window.ME&&ME.id)||null,nguon:'pancake',tt:'tuong_tac'};
+  var ins=await sb.from('customers').insert(rec).select('id').single(); if(ins&&ins.error)throw ins.error;
+  await sb.from('pancake_leads').update({status:'added',in_crm:true}).eq('conv_id',cid);
+  ld.in_crm=true; ld.status='added';
+  if(typeof toast==='function')toast('✓ Đã thêm "'+(ld.ten||'')+'" vào CRM'); else alert('✓ Đã thêm vào CRM');
+  _chatRenderThread();
+  if(typeof loadAll==='function'){ loadAll(); }
+ }catch(err){ if(btn){btn.textContent='➕ Thêm vào CRM';btn.disabled=false;} alert('Lỗi thêm khách: '+((err&&err.message)||err)); }
+}
 function _chatSetPage(p){ _CHAT_PAGE=p; _chatPaintList(); }
 function _chatChips(){ var pages=[]; _CHAT_CONVS.forEach(function(c){ if(c.page_name&&pages.indexOf(c.page_name)<0)pages.push(c.page_name); });
  var h='<span onclick="_chatSetPage(\'\')" class="pill" style="cursor:pointer;'+(!_CHAT_PAGE?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">Tất cả ('+_CHAT_CONVS.length+')</span>';
@@ -3866,6 +3882,13 @@ var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_SHOWTR=false, _CHAT_AUTOTR=(function(){tr
 function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if(!box||!_CHAT_CUR)return; var d=_CHAT_CUR; var cid=d.cid, pid=d.pid; var tr=_CHAT_TR[cid]||null; var on=_CHAT_SHOWTR&&tr;
  var btn='<span onclick="chatTranslate()" style="cursor:pointer;color:#1F6F54;font-size:12px;margin-right:14px">'+(on?'🌐 Tắt dịch':'🌐 Dịch tiếng Việt')+'</span>';
  var h='<div style="font-weight:700;margin-bottom:12px;position:sticky;top:-14px;background:#f7faf8;padding:4px 0;border-bottom:1px solid #e9efec">'+_mvEsc(d.page||'')+' <span style="font-weight:400;color:#9aa8a3;font-size:12px">· '+d.count+' tin</span> <span style="float:right">'+btn+'<span onclick="chatOpen(\''+encodeURIComponent(cid)+'\',\''+encodeURIComponent(pid)+'\')" style="cursor:pointer;color:#1F6F54;font-size:12px">🔄 Làm mới</span></span></div>';
+ var lead=_chatLead(cid)||{}; var inCrm=lead.in_crm||lead.status==='added'; var exTa=document.getElementById('chat-note'); var noteVal=exTa?exTa.value:(lead.note||'');
+ var crmBtn=inCrm?'<span style="font-size:11px;color:#1F6F54;background:#eaf6f0;padding:3px 10px;border-radius:12px">✓ Đã trong CRM</span>':'<span id="chat-addcrm" onclick="chatAddCrm()" style="cursor:pointer;font-size:11px;color:#fff;background:#1F6F54;padding:4px 12px;border-radius:12px">➕ Thêm vào CRM</span>';
+ h+='<div style="background:#fff;border:1px solid #e9efec;border-radius:10px;padding:9px 11px;margin-bottom:12px">'
+  +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-weight:600;font-size:12px;color:#54635d">📋 '+_mvEsc(lead.ten||d.page||'Khách')+(lead.sale?(' · <span style="font-weight:400;color:#9aa8a3">'+_mvEsc(lead.sale)+'</span>'):'')+'</span>'+crmBtn+'</div>'
+  +'<textarea id="chat-note" placeholder="📝 Ghi chú về khách (tình trạng, nhu cầu, hẹn gọi…)" style="width:100%;min-height:54px;border:1px solid #e3ece7;border-radius:8px;padding:7px 9px;font-size:12.5px;resize:vertical;font-family:inherit;box-sizing:border-box">'+_mvEsc(noteVal)+'</textarea>'
+  +'<div style="text-align:right;margin-top:5px"><button id="chat-note-btn" onclick="chatSaveNote()" style="border:none;background:#eef4f1;color:#1F6F54;border-radius:8px;padding:5px 13px;font-size:12px;cursor:pointer;font-weight:600">💾 Lưu ghi chú</button></div>'
+  +'</div>';
  (d.messages||[]).forEach(function(mm,ix){ var me=mm.from_page; var vi=on?(tr[ix]||''):''; var showVi=on&&vi&&vi.trim()&&vi.trim()!==String(mm.text||'').trim();
   h+='<div style="display:flex;justify-content:'+(me?'flex-end':'flex-start')+';margin-bottom:7px"><div style="max-width:78%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.45;background:'+(me?'#1F6F54':'#fff')+';color:'+(me?'#fff':'#243')+';'+(me?'':'border:1px solid #e3ece7')+'"><div style="font-size:10.5px;'+(me?'color:#cfe7db':'color:#9aa8a3')+';margin-bottom:2px">'+_mvEsc(mm.sender)+' · '+_mvEsc(mm.at)+'</div>'+_mvEsc(mm.text)+(showVi?'<div style="margin-top:4px;padding-top:4px;border-top:1px dashed '+(me?'rgba(255,255,255,.35)':'#e3ece7')+';font-size:12px;'+(me?'color:#eafff5':'color:#1F6F54')+'">🇻🇳 '+_mvEsc(vi)+'</div>':'')+'</div></div>'; });
  box.innerHTML=h; box.scrollTop=box.scrollHeight;
