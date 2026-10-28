@@ -490,7 +490,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-b';
+const APP_VERSION='2026-10-28-c';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3808,36 +3808,54 @@ function renderPay(){ var el=document.getElementById('v-pay'); if(!el) return;
   +_mvTable(['Nhân viên','Cơ bản','Ngày công','HH doanh số','Thưởng HH (đ)','Tạm tính (đ)'],rows.length?rows:[['—','','','','','']])
   +_mvNote('Doanh số lấy từ khách đã chốt trong CRM. Hiển thị rõ thành phần + kỳ dữ liệu; sẽ phân quyền khi chốt công thức.')+'</div>';
 }
-var _CHAT_CONVS=[], _CHAT_PAGE='', _CHAT_Q='';
-async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) return;
- if(!_CHAT_CONVS.length){ el.innerHTML='<div class="card">⏳ Đang tải hội thoại từ Pancake…</div>';
-  try{ var r=await sb.from('pancake_leads').select('conv_id,page_id,page_name,platform,ten,snippet,conv_inserted_at,sale').order('conv_inserted_at',{ascending:false}).limit(150); _CHAT_CONVS=r.data||[]; }catch(e){ _CHAT_CONVS=[]; } }
- _chatPaint();
-}
+var _CHAT_CONVS=[], _CHAT_PAGE='', _CHAT_Q='', _CHAT_TIMER=null, _CHAT_OPEN=null;
 function _chatIcon(p){ return /whats/i.test(p||'')?'🟢':(/face/i.test(p||'')?'💬':'📄'); }
-function _chatSetPage(p){ _CHAT_PAGE=p; _chatPaint(); }
-function _chatPaint(){ var el=document.getElementById('v-chat'); if(!el) return;
- var pages=[]; _CHAT_CONVS.forEach(function(c){ if(c.page_name&&pages.indexOf(c.page_name)<0)pages.push(c.page_name); });
+async function _chatLoad(){ try{ var r=await sb.from('pancake_leads').select('conv_id,page_id,page_name,platform,ten,snippet,conv_inserted_at,sale').order('conv_inserted_at',{ascending:false}).limit(200); _CHAT_CONVS=r.data||[]; }catch(e){} }
+function _chatSetPage(p){ _CHAT_PAGE=p; _chatPaintList(); }
+function _chatChips(){ var pages=[]; _CHAT_CONVS.forEach(function(c){ if(c.page_name&&pages.indexOf(c.page_name)<0)pages.push(c.page_name); });
+ var h='<span onclick="_chatSetPage(\'\')" class="pill" style="cursor:pointer;'+(!_CHAT_PAGE?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">Tất cả ('+_CHAT_CONVS.length+')</span>';
+ pages.forEach(function(p){ var pe=p.replace(/'/g,"\\'"); h+=' <span onclick="_chatSetPage(\''+pe+'\')" class="pill" style="cursor:pointer;'+(_CHAT_PAGE===p?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">'+_mvEsc(p)+'</span>'; });
+ return h; }
+function _chatAva(name,plat){ var n=(name||'?').trim(); var c=n?n[0].toUpperCase():'?'; var cl=['#1F6F54','#2d7dd2','#c0587e','#d98e32','#7a5cc0','#3a9e8c','#c94f4f']; var i=0; for(var k=0;k<n.length;k++)i=(i+n.charCodeAt(k))%cl.length; var b=/whats/i.test(plat||'')?'🟢':(/face/i.test(plat||'')?'💬':''); return '<div style="position:relative;flex:0 0 40px;width:40px;height:40px;border-radius:50%;background:'+cl[i]+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px">'+_mvEsc(c)+(b?'<span style="position:absolute;right:-3px;bottom:-3px;font-size:13px">'+b+'</span>':'')+'</div>'; }
+function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=document.getElementById('chat-list'); if(!lc) return;
+ if(ch) ch.innerHTML=_chatChips();
  var q=(_CHAT_Q||'').toLowerCase();
  var list=_CHAT_CONVS.filter(function(c){ return (!_CHAT_PAGE||c.page_name===_CHAT_PAGE) && (!q || ((c.ten||'')+' '+(c.snippet||'')).toLowerCase().indexOf(q)>=0); });
- var chips='<span onclick="_chatSetPage(\'\')" class="pill" style="cursor:pointer;'+(!_CHAT_PAGE?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">Tất cả ('+_CHAT_CONVS.length+')</span>';
- pages.forEach(function(p){ var pe=p.replace(/'/g,"\\'"); chips+=' <span onclick="_chatSetPage(\''+pe+'\')" class="pill" style="cursor:pointer;'+(_CHAT_PAGE===p?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">'+_mvEsc(p)+'</span>'; });
- var items=list.slice(0,120).map(function(c){ return '<div onclick="chatOpen(\''+encodeURIComponent(c.conv_id)+'\',\''+encodeURIComponent(c.page_id)+'\')" style="padding:9px;border:1px solid #e3ece7;border-radius:10px;margin-bottom:7px;cursor:pointer;background:#fff"><div style="font-weight:700">'+_chatIcon(c.platform)+' '+_mvEsc(c.ten||'(không tên)')+(c.sale?' <span style="font-weight:400;color:#6b7c76;font-size:11px">· '+_mvEsc(c.sale)+'</span>':'')+'</div><div style="font-size:12px;color:#6b7c76;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc((c.snippet||'').slice(0,80))+'</div></div>'; }).join('');
- el.innerHTML='<div class="card"><h2 class="sec">💬 Hội thoại (tất cả page Pancake)</h2>'
-  +'<p style="color:#6b7c76;font-size:12px;margin:-4px 0 8px">Gộp hội thoại từ mọi page đã kết nối (đọc qua API Pancake). Bấm 1 hội thoại để xem nội dung tin nhắn thật.</p>'
-  +'<div style="margin-bottom:8px;line-height:2">'+chips+'</div>'
-  +'<input oninput="_CHAT_Q=this.value;_chatPaint()" value="'+_mvEsc(_CHAT_Q)+'" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;max-width:360px;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px;margin-bottom:10px">'
-  +'<div style="display:flex;gap:12px;flex-wrap:wrap"><div style="width:320px;max-width:100%;max-height:520px;overflow:auto">'+(items||'<div style="color:#6b7c76">Không có hội thoại.</div>')+'</div>'
-  +'<div id="chat-thread" style="flex:1;min-width:300px;border:1px solid #e3ece7;border-radius:12px;background:#f7faf8;padding:12px;min-height:240px;max-height:520px;overflow:auto"><div style="color:#6b7c76">← Chọn một hội thoại để xem nội dung tin nhắn.</div></div></div>'
-  +_mvNote('🆕 Đọc hội thoại từ Pancake. <b>Gửi tin 2 chiều đang KHÓA</b> — chờ xác minh quyền API gửi (Pancake/Facebook/WhatsApp).')+'</div>';
+ var cnt=document.getElementById('chat-count'); if(cnt) cnt.textContent=list.length+' hội thoại';
+ var items=list.slice(0,150).map(function(c){ var op=_CHAT_OPEN&&_CHAT_OPEN.cid===c.conv_id; var bg=op?'#eaf4ef':'transparent';
+  return '<div onclick="chatOpen(\''+encodeURIComponent(c.conv_id)+'\',\''+encodeURIComponent(c.page_id)+'\')" onmouseover="this.style.background=\'#f2f6f4\'" onmouseout="this.style.background=\''+bg+'\'" style="display:flex;gap:10px;align-items:center;padding:8px 9px;border-radius:10px;cursor:pointer;background:'+bg+'">'
+   +_chatAva(c.ten,c.platform)
+   +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc(c.ten||'(không tên)')+(c.sale?' <span style="font-weight:400;color:#9aa8a3;font-size:11px">· '+_mvEsc(c.sale)+'</span>':'')+'</div>'
+   +'<div style="font-size:12px;color:#8a978f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc((c.snippet||'').slice(0,60))+'</div></div></div>'; }).join('');
+ lc.innerHTML=items||'<div style="color:#6b7c76;padding:10px">Không có hội thoại.</div>';
 }
-async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComponent(pid); var box=document.getElementById('chat-thread'); if(!box)return; box.innerHTML='<div style="color:#6b7c76">⏳ Đang tải tin nhắn…</div>';
+async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) return;
+ if(!document.getElementById('chat-list')){
+  el.innerHTML='<div class="card" style="padding:0;overflow:hidden">'
+   +'<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #e9efec;background:#1F6F54;color:#fff"><span style="font-size:17px;font-weight:700">💬 Hội thoại</span><span style="font-size:12px;opacity:.85">Gộp mọi page Pancake · tự làm mới ~45s</span></div>'
+   +'<div style="display:flex;height:600px;max-height:72vh">'
+   +'<div style="flex:0 0 340px;max-width:44%;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
+     +'<div style="padding:10px 12px 6px"><input id="chat-q" oninput="_CHAT_Q=this.value;_chatPaintList()" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
+     +'<div id="chat-chips" style="padding:0 12px 6px;line-height:2;max-height:84px;overflow:auto">⏳</div>'
+     +'<div id="chat-count" style="padding:2px 14px;font-size:11px;color:#9aa8a3"></div>'
+     +'<div id="chat-list" style="flex:1;overflow:auto;padding:4px 8px 10px">⏳ Đang tải…</div>'
+   +'</div>'
+   +'<div style="flex:1;display:flex;flex-direction:column;background:#f7faf8;min-width:280px">'
+     +'<div id="chat-thread" style="flex:1;overflow:auto;padding:14px"><div style="color:#9aa8a3;text-align:center;margin-top:40px">← Chọn một hội thoại để xem tin nhắn.</div></div>'
+     +'<div style="border-top:1px solid #e9efec;padding:10px 12px;background:#fff;display:flex;gap:8px;align-items:center"><input disabled placeholder="Gửi tin đang khóa — chờ cấp quyền API gửi…" style="flex:1;border:1px solid #e3ece7;border-radius:20px;padding:8px 14px;font-size:13px;background:#f3f5f4;color:#9aa8a3"><button disabled style="border:none;background:#cdd8d3;color:#fff;border-radius:20px;padding:8px 16px;font-size:13px;cursor:not-allowed">Gửi</button></div>'
+   +'</div></div></div>';
+ }
+ await _chatLoad(); _chatPaintList();
+ if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
+ _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null) return; await _chatLoad(); _chatPaintList(); }, 45000);
+}
+async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComponent(pid); _CHAT_OPEN={cid:cid,pid:pid}; _chatPaintList(); var box=document.getElementById('chat-thread'); if(!box)return; box.innerHTML='<div style="color:#9aa8a3;text-align:center;margin-top:40px">⏳ Đang tải tin nhắn…</div>';
  try{ var res=await sb.functions.invoke('pancake-thread',{body:{page_id:pid,conv_id:cid}}); var d=(res&&res.data)||{};
-   if(!d.ok){ box.innerHTML='<div style="color:#d94848">Chưa tải được tin nhắn'+(d.reason?(' ('+d.reason+')'):'')+'. Thử lại sau.</div>'; return; }
-   var h='<div style="font-weight:700;margin-bottom:8px">'+_mvEsc(d.page||'')+' · '+d.count+' tin</div>';
-   (d.messages||[]).forEach(function(mm){ var me=mm.from_page; h+='<div style="display:flex;justify-content:'+(me?'flex-end':'flex-start')+';margin-bottom:7px"><div style="max-width:82%;padding:7px 11px;border-radius:12px;font-size:13px;background:'+(me?'#dcf3e6':'#fff')+';border:1px solid #e3ece7"><div style="font-size:10.5px;color:#6b7c76;margin-bottom:2px">'+_mvEsc(mm.sender)+' · '+_mvEsc(mm.at)+'</div>'+_mvEsc(mm.text)+'</div></div>'; });
+   if(!d.ok){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Chưa tải được tin nhắn'+(d.reason?(' ('+d.reason+')'):'')+'. Thử lại sau.</div>'; return; }
+   var h='<div style="font-weight:700;margin-bottom:12px;position:sticky;top:-14px;background:#f7faf8;padding:4px 0;border-bottom:1px solid #e9efec">'+_mvEsc(d.page||'')+' <span style="font-weight:400;color:#9aa8a3;font-size:12px">· '+d.count+' tin</span> <span onclick="chatOpen(\''+encodeURIComponent(cid)+'\',\''+encodeURIComponent(pid)+'\')" style="float:right;cursor:pointer;color:#1F6F54;font-size:12px">🔄 Làm mới</span></div>';
+   (d.messages||[]).forEach(function(mm){ var me=mm.from_page; h+='<div style="display:flex;justify-content:'+(me?'flex-end':'flex-start')+';margin-bottom:7px"><div style="max-width:78%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.45;background:'+(me?'#1F6F54':'#fff')+';color:'+(me?'#fff':'#243')+';'+(me?'':'border:1px solid #e3ece7')+'"><div style="font-size:10.5px;'+(me?'color:#cfe7db':'color:#9aa8a3')+';margin-bottom:2px">'+_mvEsc(mm.sender)+' · '+_mvEsc(mm.at)+'</div>'+_mvEsc(mm.text)+'</div></div>'; });
    box.innerHTML=h; box.scrollTop=box.scrollHeight;
- }catch(e){ box.innerHTML='<div style="color:#d94848">Lỗi: '+_mvEsc((e&&e.message)||e)+'</div>'; }
+ }catch(e){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Lỗi: '+_mvEsc((e&&e.message)||e)+'</div>'; }
 }
 (function(){ var NV={integ:renderInteg,ailog:renderAiLog,appt:renderAppt,pay:renderPay,chat:renderChat};
  try{ if(typeof go==='function' && !window.__mvGo){ window.__mvGo=1; var _g=go; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(NV[v]) NV[v](); }catch(e){} return r; }; } }catch(e){}
