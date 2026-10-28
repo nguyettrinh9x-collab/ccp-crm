@@ -364,19 +364,20 @@ function toastUndo(msg, undoFn){
   t.appendChild(b); window.__undoFn=undoFn; t.style.display='flex';
   clearTimeout(window.__undoT); window.__undoT=setTimeout(()=>{ t.style.display='none'; window.__undoFn=null; },6000);
 }
+function _setTaskXong(ids,v){ (ids||[]).forEach(function(id){ var t=(TASKS||[]).find(function(x){return String(x.id)===String(id);}); if(t)t.xong=v; }); }
 async function taskDoneQuick(id){
   const { error }=await sb.from('tasks').update({xong:true}).eq('id',id);
   if(error){ toast('⚠ Lỗi, thử lại',false); return; }
-  await reloadTasks(); renderAll();
-  toastUndo('✓ Đã xong việc', async()=>{ await sb.from('tasks').update({xong:false}).eq('id',id); await reloadTasks(); renderAll(); });
+  _setTaskXong([id],true); renderAll(); /* cập nhật tại chỗ, KHÔNG tải lại cho nhanh */
+  toastUndo('✓ Đã xong việc', async()=>{ await sb.from('tasks').update({xong:false}).eq('id',id); _setTaskXong([id],false); renderAll(); });
 }
 async function custDone(cid, taskCSV, hasFollow){
   const taskIds=(taskCSV||'').split(',').filter(Boolean);
   const c=findC(cid); const prevFollow=(c&&hasFollow)?c.follow:null;
   if(taskIds.length){ const { error }=await sb.from('tasks').update({xong:true}).in('id',taskIds); if(error){ toast('⚠ Lỗi việc',false); return; } }
   if(hasFollow){ const { error }=await sb.from('customers').update({follow:D(3), ngay_capnhat:D(0)}).eq('id',cid); if(error){ toast('⚠ Lỗi follow',false); return; } }
-  await loadAll(); renderAll();
-  toastUndo('✓ Đã xử lý khách này', async()=>{ if(taskIds.length) await sb.from('tasks').update({xong:false}).in('id',taskIds); if(hasFollow) await sb.from('customers').update({follow:prevFollow}).eq('id',cid); await loadAll(); renderAll(); });
+  _setTaskXong(taskIds,true); if(hasFollow && c){ c.follow=D(3); c.ngay_capnhat=D(0); } renderAll(); /* cập nhật tại chỗ, KHÔNG tải lại */
+  toastUndo('✓ Đã xử lý khách này', async()=>{ if(taskIds.length) await sb.from('tasks').update({xong:false}).in('id',taskIds); if(hasFollow) await sb.from('customers').update({follow:prevFollow}).eq('id',cid); _setTaskXong(taskIds,false); if(hasFollow && c){ c.follow=prevFollow; } renderAll(); });
 }
 async function sbUpdIn(table, patch, ids){ /* cập nhật hàng loạt theo batch 150 để tránh URL quá dài (>1000 ID) */
   const arr=[...new Set(ids)];
@@ -391,8 +392,8 @@ async function bucketDone(bucket){
   if(tasks.length+follows.length>200) toast('Đang xử lý '+(tasks.length+follows.length)+' mục…');
   if(tasks.length){ const e=await sbUpdIn('tasks',{xong:true},tasks); if(e){ toast('⚠ Lỗi việc: '+e.message,false); return; } }
   if(follows.length){ const e=await sbUpdIn('customers',{follow:D(3), ngay_capnhat:D(0)},follows); if(e){ toast('⚠ Lỗi follow: '+e.message,false); return; } }
-  await loadAll(); renderAll();
-  toastUndo('✓ Đã xong cả nhóm ('+(tasks.length+follows.length)+')', async()=>{ if(tasks.length) await sbUpdIn('tasks',{xong:false},tasks); const byDate={}; prev.forEach(p=>{ (byDate[p.follow||'null']=byDate[p.follow||'null']||[]).push(p.id); }); for(const k in byDate){ await sbUpdIn('customers',{follow:(k==='null'?null:k)},byDate[k]); } await loadAll(); renderAll(); });
+  _setTaskXong(tasks,true); follows.forEach(function(id){ var c=findC(id); if(c){ c.follow=D(3); c.ngay_capnhat=D(0); } }); renderAll(); /* cập nhật tại chỗ, KHÔNG tải lại */
+  toastUndo('✓ Đã xong cả nhóm ('+(tasks.length+follows.length)+')', async()=>{ if(tasks.length) await sbUpdIn('tasks',{xong:false},tasks); const byDate={}; prev.forEach(p=>{ (byDate[p.follow||'null']=byDate[p.follow||'null']||[]).push(p.id); }); for(const k in byDate){ await sbUpdIn('customers',{follow:(k==='null'?null:k)},byDate[k]); } _setTaskXong(tasks,false); prev.forEach(function(p){ var c=findC(p.id); if(c)c.follow=p.follow; }); renderAll(); });
 }
 /* ==== Việc cần làm — Hoãn nhanh, Dọn lead lạnh, Ưu tiên theo điểm, Chế độ tập trung ==== */
 const MUC_W_TTD={nong:3,am:2,lanh:1};
@@ -498,7 +499,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-z';
+const APP_VERSION='2026-10-28-aa';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
