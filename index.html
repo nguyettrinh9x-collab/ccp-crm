@@ -498,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-v';
+const APP_VERSION='2026-10-28-w';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -2188,7 +2188,7 @@ function renderToday(){
         const khachCell=tc?`<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten}</b>`:(cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">—</span>');
         return `<tr style="background:#eefaf3"><td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td><td>${khachCell}</td><td>${t.noi_dung||''}</td><td>${t.han||'—'}</td><td>${SALES[t.owner]||'—'}</td><td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark);font-weight:700" onclick="reactivateTask('${t.id}')">🔄 Kích hoạt lại</span></td></tr>`; };
       const dFil=`<div class="filters" style="margin:8px 0 10px"><input id="dn-q" class="search" value="${(DONE_Q||'').replace(/"/g,'&quot;')}" oninput="setDoneQ(this.value)" placeholder="🔎 Lọc tên khách / nội dung..." style="max-width:300px"><select onchange="setDoneSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${DONE_SALE===k?'selected':''}>${v}</option>`).join('')}</select><span style="font-size:12px;color:var(--muted)">Đến hạn:</span><input type="date" value="${DONE_FROM}" onchange="setDoneFrom(this.value)" title="Từ ngày" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" value="${DONE_TO}" onchange="setDoneTo(this.value)" title="Đến ngày" style="width:auto">${(DONE_Q||DONE_SALE||DONE_FROM||DONE_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearDoneFilters()">Xoá lọc</button>`:''}</div>`;
-const dToggleBtn=`<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;margin-left:10px;vertical-align:middle" onclick="toggleDone()">${DONE_HIDE?'👁️ Hiện':'🙈 Ẩn'}</button>`;
+const dToggleBtn=`<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;margin-left:10px;vertical-align:middle" onclick="toggleDone()">${DONE_HIDE?'👁️ Hiện':'🙈 Ẩn'}</button>`+(doneAll.length?`<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;margin-left:8px;vertical-align:middle;color:#e23d3d;border-color:#f0c3c3" onclick="deleteAllDoneTasks()">🗑️ Xoá tất cả đã xong</button>`:'');
       html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length}${done.length!==doneAll.length?' / '+doneAll.length:''})${dToggleBtn}</h2>`;
       if(DONE_HIDE){
         html+=`<p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Đang ẩn để đỡ rối. Bấm <b>👁️ Hiện</b> để xem danh sách việc đã xong.</p>`;
@@ -3365,6 +3365,7 @@ async function toggleTask(id){
   if(error){ alert('Lỗi: '+error.message); return; } await loadAll(); renderAll();
 }
 async function reactivateTask(id){ if(!confirm('Kích hoạt lại việc này để nhắc sale làm tiếp?'))return; await toggleTask(id); }
+async function deleteAllDoneTasks(){ var ids=(TASKS||[]).filter(t=>t.xong).map(t=>t.id); if(!ids.length){ toast('Không có việc đã xong để xoá',false); return; } if(!confirm('🗑️ Xoá VĨNH VIỄN '+ids.length+' việc đã hoàn thành?\n\nThao tác này KHÔNG khôi phục được. Danh sách sẽ gọn và nhẹ hơn.')) return; if(!confirm('Xác nhận lần cuối: xoá '+ids.length+' việc đã xong?')) return; for(var i=0;i<ids.length;i+=500){ var chunk=ids.slice(i,i+500); var r=await sb.from('tasks').delete().in('id',chunk); if(r.error){ toast('⚠ Lỗi xoá: '+r.error.message,false); return; } } TASKS=(TASKS||[]).filter(t=>!t.xong); try{toast('🗑️ Đã xoá '+ids.length+' việc đã hoàn thành',true);}catch(e){} renderAll(); }
 async function markAllTasksDone(){
   if(!isAdmin()){ alert('Chỉ Admin mới dùng được chức năng này.'); return; }
   const keys=(window.TODAY_SEL_KEYS||[]);
