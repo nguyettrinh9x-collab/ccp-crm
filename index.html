@@ -339,8 +339,9 @@ async function bulkTaskAssign(){ const sel=document.getElementById('task-bulk-sa
   if(tasks.length){ const e=await sbUpdIn('tasks',{owner},tasks); if(e){alert('Lỗi việc: '+e.message);return;} }
   if(custs.length){ const e=await sbUpdIn('customers',{owner, ngay_capnhat:D(0)},custs); if(e){alert('Lỗi khách: '+e.message);return;} }
   TASK_SEL.clear(); await loadAll(); renderAll(); }
-let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='', DONE_HIDE=true;
-function toggleDone(){ DONE_HIDE=!DONE_HIDE; renderToday(); }
+let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='';
+let DONE_HIDE=(function(){try{return localStorage.getItem('done_hide')!=='0';}catch(e){return true;}})();
+function toggleDone(){ DONE_HIDE=!DONE_HIDE; try{localStorage.setItem('done_hide',DONE_HIDE?'1':'0');}catch(e){} renderToday(); }
 function setDoneQ(v){ DONE_Q=v; renderToday(); const el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
 function setDoneSale(v){ DONE_SALE=v; renderToday(); }
 function setDoneFrom(v){ DONE_FROM=v; renderToday(); }
@@ -491,7 +492,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-e';
+const APP_VERSION='2026-10-28-f';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
