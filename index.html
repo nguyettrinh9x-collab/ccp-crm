@@ -499,7 +499,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-ac';
+const APP_VERSION='2026-10-28-ad';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -2339,6 +2339,8 @@ function tyGiaBill(c){
 }
 var __BILLS=null;
 function reloadBills(){ __BILLS=null; renderTongBill(); }
+var __BILLS=null;
+function reloadBills(){ __BILLS=null; renderTongBill(); }
 function renderTongBill(){
   const el=document.getElementById('v-tongbill'); if(!el) return;
   if(!__BILLS){ el.innerHTML='<div style="padding:50px;text-align:center;color:#6b7c76">⏳ Đang tải Tổng Bill từ Google Sheet…</div>'; try{ sb.from('bill_rows').select('*').order('ngay',{ascending:true,nullsFirst:false}).then(function(r){ __BILLS=(r&&r.data)||[]; renderTongBill(); }); }catch(e){ __BILLS=[]; renderTongBill(); } return; }
@@ -2356,13 +2358,13 @@ function renderTongBill(){
     <div class="card" style="padding:0;overflow-x:auto"><table>
     <tr><th>Ngày</th><th>Mã đơn</th><th>MKT</th><th>Sale</th><th>Khách</th><th>Nước</th><th>Tỷ giá</th><th>DT (USD)</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th><th>Nợ gốc (VNĐ)</th><th>Đã thu (VNĐ)</th><th>Thu đợt 1</th><th>Ngày TH 1</th><th>Thu đợt 2</th><th>Ngày TH 2</th><th>Thu đợt 3</th><th>Ngày TH 3</th><th>Trạng thái</th><th>Hạn thu</th><th>Loại đơn</th></tr>`;
   let T={ds:0,nogoc:0,dathu:0};
-  rows.forEach(b=>{ T.ds+=Number(b.doanh_thu_vnd)||0; T.nogoc+=Number(b.da_thu_vnd)||0; T.dathu+=Number(b.no_vnd)||0;
-    html+=`<tr data-s="${((b.ten||'')+' '+(b.ma_don||'')).toLowerCase().replace(/["<>]/g,'')}"><td>${b.ngay||'—'}</td><td>${b.ma_don||'—'}</td><td>${b.mkt||'—'}</td><td>${b.sale||'—'}</td><td><b>${b.ten||'—'}</b></td><td>${b.quoc_gia||'—'}</td><td>${money(b.ty_gia)}</td><td>$${Number(b.dt_usd)||0}</td><td><b>${money(b.doanh_thu_vnd)}</b></td><td>${Number(b.no_goc)?Number(b.no_goc).toLocaleString('en-US'):'—'}</td><td>${money(b.da_thu_vnd)}</td><td style="font-weight:700;color:var(--won)">${money(b.no_vnd)}</td><td>${Number(b.thu1)?money(b.thu1):'—'}</td><td>${b.ng1||'—'}</td><td>${Number(b.thu2)?money(b.thu2):'—'}</td><td>${b.ng2||'—'}</td><td>${Number(b.thu3)?money(b.thu3):'—'}</td><td>${b.ng3||'—'}</td><td>${b.tracking||'—'}</td><td>${b.web||'—'}</td><td>${loaiTxt(b.loai)}</td></tr>`;
+  rows.forEach(b=>{ T.ds+=Number(b.doanh_thu_vnd)||0; T.nogoc+=Number(b.no_vnd)||0; T.dathu+=Number(b.da_thu_vnd)||0;
+    html+=`<tr data-s="${((b.ten||'')+' '+(b.ma_don||'')).toLowerCase().replace(/["<>]/g,'')}"><td>${b.ngay||'—'}</td><td>${b.ma_don||'—'}</td><td>${b.mkt||'—'}</td><td>${b.sale||'—'}</td><td><b>${b.ten||'—'}</b></td><td>${b.quoc_gia||'—'}</td><td>${money(b.ty_gia)}</td><td>$${Number(b.tien_goc)||0}</td><td><b>${money(b.doanh_thu_vnd)}</b></td><td>${Number(b.no_goc)?Number(b.no_goc).toLocaleString('en-US'):'—'}</td><td style="color:${Number(b.no_vnd)?'var(--over)':'inherit'}">${money(b.no_vnd)}</td><td style="font-weight:700;color:var(--won)">${money(b.da_thu_vnd)}</td><td>${Number(b.thu1)?money(b.thu1):'—'}</td><td>${b.ng1||'—'}</td><td>${Number(b.thu2)?money(b.thu2):'—'}</td><td>${b.ng2||'—'}</td><td>${Number(b.thu3)?money(b.thu3):'—'}</td><td>${b.ng3||'—'}</td><td>${b.tracking||'—'}</td><td>${b.web||'—'}</td><td>${loaiTxt(b.loai)}</td></tr>`;
   });
   if(!rows.length) html+=`<tr><td colspan="21" class="empty">Không có đơn trong tháng ${BILL_MONTH}.</td></tr>`;
   else html+=`<tr style="background:var(--cream);font-weight:800"><td colspan="8">TỔNG (${rows.length} đơn)</td><td>${money(T.ds)}</td><td></td><td>${money(T.nogoc)}</td><td>${money(T.dathu)}</td><td colspan="9"></td></tr>`;
   html+=`</table></div>`;
-  { const bySale={}; rows.forEach(b=>{ const s=((b.sale||'').trim())||'(chưa gán)'; const g=bySale[s]||(bySale[s]={n:0,usd:0,ds:0,cm:0,cs:0}); g.n++; g.usd+=Number(b.dt_usd)||0; g.ds+=Number(b.doanh_thu_vnd)||0; if(b.loai==='upsell')g.cs++; else g.cm++; });
+  { const bySale={}; rows.forEach(b=>{ const s=((b.sale||'').trim())||'(chưa gán)'; const g=bySale[s]||(bySale[s]={n:0,usd:0,ds:0,cm:0,cs:0}); g.n++; g.usd+=Number(b.tien_goc)||0; g.ds+=Number(b.doanh_thu_vnd)||0; if(b.loai==='upsell')g.cs++; else g.cm++; });
     let h=`<h2 class="sec" style="margin-top:22px">📊 Tổng hợp theo Sale — tháng ${BILL_MONTH}</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Sale</th><th>Tổng đơn</th><th>Đơn Chốt Mới</th><th>Đơn Chăm Sóc</th><th>Tổng $</th><th>Doanh số (VNĐ)</th></tr>`;
     let G={n:0,usd:0,ds:0,cm:0,cs:0};
     Object.keys(bySale).sort().forEach(s=>{ const g=bySale[s]; G.n+=g.n;G.usd+=g.usd;G.ds+=g.ds;G.cm+=g.cm;G.cs+=g.cs; h+=`<tr><td><b>${s}</b></td><td style="text-align:center">${g.n}</td><td style="text-align:center">${g.cm}</td><td style="text-align:center">${g.cs}</td><td style="text-align:center">${g.usd.toLocaleString('en-US')}</td><td>${money(g.ds)}</td></tr>`; });
