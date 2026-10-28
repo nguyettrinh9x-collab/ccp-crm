@@ -498,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-u';
+const APP_VERSION='2026-10-28-v';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3863,9 +3863,10 @@ function _chatTagColor(t){ var s=(t||'').trim().toLowerCase();
 function _chatTags(tagStr){ var ts=(tagStr||'').split(',').map(function(x){return x.trim();}).filter(Boolean).slice(0,5); if(!ts.length)return '';
  return '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">'+ts.map(function(t){var col=_chatTagColor(t);return '<span style="font-size:9.5px;line-height:1.3;padding:2px 7px;border-radius:9px;background:'+col[0]+';color:'+col[1]+';white-space:nowrap;font-weight:600">'+_mvEsc(t)+'</span>';}).join('')+'</div>'; }
 function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=document.getElementById('chat-list'); if(!lc) return;
+ _chatPaintModebar();
  if(ch) ch.innerHTML=_chatChips();
  var q=(_CHAT_Q||'').toLowerCase();
- var list=_CHAT_CONVS.filter(function(c){ if(_CHAT_PAGE&&c.page_name!==_CHAT_PAGE)return false; if(!_chatDateOk(c.conv_inserted_at))return false; if(q&&((c.ten||'')+' '+(c.snippet||'')).toLowerCase().indexOf(q)<0)return false; if(_CHAT_FTAGS.length){ var tg=','+(c.tags||'').split(',').map(function(x){return x.trim();}).join(',')+','; for(var k=0;k<_CHAT_FTAGS.length;k++){ if(tg.indexOf(','+_CHAT_FTAGS[k]+',')<0)return false; } } return true; });
+ var list=_CHAT_CONVS.filter(function(c){ if(_CHAT_PAGE&&c.page_name!==_CHAT_PAGE)return false; if(!_chatModeOk(c))return false; if(!_chatDateOk(c.conv_inserted_at))return false; if(q&&((c.ten||'')+' '+(c.snippet||'')).toLowerCase().indexOf(q)<0)return false; if(_CHAT_FTAGS.length){ var tg=','+(c.tags||'').split(',').map(function(x){return x.trim();}).join(',')+','; for(var k=0;k<_CHAT_FTAGS.length;k++){ if(tg.indexOf(','+_CHAT_FTAGS[k]+',')<0)return false; } } return true; });
  var _unc=0; for(var _j=0;_j<list.length;_j++){if(list[_j].unread)_unc++;}
  var cnt=document.getElementById('chat-count'); if(cnt) cnt.innerHTML=list.length+' hội thoại'+(_unc?' · <b style="color:#e23d3d">'+_unc+' chưa đọc</b>':'');
  var items=list.slice(0,150).map(function(c){ var op=_CHAT_OPEN&&_CHAT_OPEN.cid===c.conv_id; var bg=op?'#eaf4ef':(c.unread?'#fff4f4':'transparent');
@@ -3882,6 +3883,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div style="display:flex;height:850px;max-height:88vh">'
    +'<div style="flex:0 0 340px;max-width:44%;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
      +'<div style="padding:10px 12px 4px"><input id="chat-q" oninput="_CHAT_Q=this.value;_chatPaintList()" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
+     +'<div id="chat-modebar" style="padding:2px 12px 5px;display:flex;flex-wrap:wrap;gap:4px"></div>'
      +'<div id="chat-datebar" style="padding:0 12px 5px;display:flex;flex-wrap:wrap;gap:4px"></div>'
      +'<div id="chat-tagfilter" style="padding:0 12px 5px"></div>'
      +'<div id="chat-chips" style="padding:0 12px 6px;line-height:2;max-height:72px;overflow:auto">⏳</div>'
@@ -3920,7 +3922,13 @@ function _chatPaintNote(){ var np=document.getElementById('chat-notepanel'); if(
   +'<textarea id="chat-note" placeholder="Nhập ghi chú về khách (tình trạng, nhu cầu, hẹn gọi…)" style="width:100%;min-height:150px;border:1px solid #e3ece7;border-radius:8px;padding:8px 10px;font-size:12.5px;resize:vertical;font-family:inherit;box-sizing:border-box">'+_mvEsc(noteVal)+'</textarea>'
   +'<div style="text-align:right;margin-top:6px"><button id="chat-note-btn" onclick="chatSaveNote()" style="border:none;background:#3b4ba8;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600">💾 Lưu ghi chú</button></div>';
 }
-var _CHAT_DP='', _CHAT_FTAGS=[], _CHAT_FTOPEN=false;
+var _CHAT_DP='', _CHAT_FTAGS=[], _CHAT_FTOPEN=false, _CHAT_MODE='';
+function _chatIsToday(iso){ if(!iso)return false; var d=new Date(iso); if(isNaN(d))return false; var n=new Date(); var s=new Date(n.getFullYear(),n.getMonth(),n.getDate()); return d>=s; }
+function _chatModeOk(c){ if(!_CHAT_MODE)return true; var it=_chatIsToday(c.conv_inserted_at); if(_CHAT_MODE==='new_today')return it; if(_CHAT_MODE==='dao')return !!c.unread&&!it; if(_CHAT_MODE==='nocrm')return !(c.in_crm||c.status==='added'); return true; }
+function _chatModeCounts(){ var a={new_today:0,dao:0,nocrm:0}; (_CHAT_CONVS||[]).forEach(function(c){ var it=_chatIsToday(c.conv_inserted_at); if(it)a.new_today++; if(c.unread&&!it)a.dao++; if(!(c.in_crm||c.status==='added'))a.nocrm++; }); return a; }
+function _chatPaintModebar(){ var b=document.getElementById('chat-modebar'); if(!b)return; var ct=_chatModeCounts(); var ps=[['','Tất cả',null],['new_today','🆕 Mới hôm nay',ct.new_today],['dao','♻️ Khách đào',ct.dao],['nocrm','📥 Chưa vào CRM',ct.nocrm]];
+ b.innerHTML=ps.map(function(p){ var on=_CHAT_MODE===p[0]; var lbl=p[1]+(p[2]!=null?(' ('+p[2]+')'):''); return '<span onclick="_chatSetMode(\''+p[0]+'\')" style="cursor:pointer;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;'+(on?'background:#1F6F54;color:#fff':'background:#eef1f0;color:#6b7c76')+'">'+lbl+'</span>'; }).join(' '); }
+function _chatSetMode(m){ _CHAT_MODE=m; _chatPaintModebar(); _chatPaintList(); }
 function _chatPaintTagFilter(){ var b=document.getElementById('chat-tagfilter'); if(!b)return;
  var head='<span onclick="_CHAT_FTOPEN=!_CHAT_FTOPEN;_chatPaintTagFilter()" style="cursor:pointer;font-size:11px;font-weight:600;color:'+(_CHAT_FTAGS.length?'#3b4ba8':'#6b7c76')+'">🏷️ Lọc thẻ'+(_CHAT_FTAGS.length?(' ('+_CHAT_FTAGS.length+')'):'')+' '+(_CHAT_FTOPEN?'▾':'▸')+'</span>'+(_CHAT_FTAGS.length?' <span onclick="_CHAT_FTAGS=[];_chatPaintTagFilter();_chatPaintList()" style="cursor:pointer;font-size:10.5px;color:#c0587e">✕ bỏ lọc</span>':'');
  if(!_CHAT_FTOPEN){ b.innerHTML=head; return; }
