@@ -498,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-w';
+const APP_VERSION='2026-10-28-x';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3273,17 +3273,23 @@ function resetIdle(){ if(!sb||!ME) return; clearTimeout(__idleTimer); __idleTime
 function startIdle(){ ['click','keydown','mousemove','touchstart','scroll'].forEach(ev=>document.addEventListener(ev, resetIdle, {passive:true})); resetIdle(); }
 
 /* ---- Tải toàn bộ dữ liệu từ Supabase vào app ---- */
-async function fetchAllRows(tbl, orderCol, asc){ // phân trang lấy HẾT (Supabase mặc định giới hạn 1000 dòng)
-  let out=[], from=0; const PZ=1000;
-  while(true){
+async function fetchAllRows(tbl, orderCol, asc){ // phân trang lấy HẾT - trang đầu lấy count rồi tải các trang sau SONG SONG cho nhanh
+  const PZ=1000;
+  let q0=sb.from(tbl).select('*',{count:'exact'});
+  if(orderCol) q0=q0.order(orderCol,{ascending:!!asc});
+  const first=await q0.range(0,PZ-1);
+  if(first.error){ console.error('fetchAllRows '+tbl, first.error); return []; }
+  let out=first.data||[];
+  const total=first.count||out.length;
+  if(total<=PZ) return out;
+  const pages=[];
+  for(let from=PZ; from<total; from+=PZ){
     let q=sb.from(tbl).select('*');
     if(orderCol) q=q.order(orderCol,{ascending:!!asc});
-    const { data, error } = await q.range(from, from+PZ-1);
-    if(error){ console.error('fetchAllRows '+tbl, error); break; }
-    out=out.concat(data||[]);
-    if(!data || data.length<PZ) break;
-    from+=PZ;
+    pages.push(q.range(from, from+PZ-1));
   }
+  const res=await Promise.all(pages);
+  res.forEach(r=>{ if(!r.error && r.data) out=out.concat(r.data); });
   return out;
 }
 /* Chuẩn hoá 1 dòng khách (dùng chung loadAll + reloadCustomer) */
@@ -3321,32 +3327,38 @@ async function loadAll(){
   });
   const myp = (profs||[]).find(p=>p.id===user.id) || {id:user.id, ten:user.email, role:'sale', quyen:[]};
   ME = {id:user.id, name:myp.ten, role:myp.role, uname:user.id, mail:user.email||'', quyen:myp.quyen||PERMS[user.id]||[]};
-  const cs = await fetchAllRows('customers','ngay_tao',false);
+  /* Tải SONG SONG tất cả bảng (trước đây tải lần lượt -> rất chậm) */
+  const _SB=(p)=>p.then(r=>r).catch(e=>({data:[],error:e}));
+  const _FA=(t,o,a)=>fetchAllRows(t,o,a).catch(()=>[]);
+  const [cs, spdr, ss, imgsr, od, tkr, tgr, mrr, plr] = await Promise.all([
+    _FA('customers','ngay_tao',false),
+    _SB(sb.from('marketing_spend').select('*')),
+    _FA('sale_scores'),
+    _SB(sb.from('app_images').select('*')),
+    _FA('orders'),
+    _SB(sb.from('tasks').select('*')),
+    _SB(sb.from('sale_targets').select('*')),
+    _SB(sb.from('mkt_reports').select('*')),
+    _SB(sb.from('pancake_leads').select('*').eq('status','new').order('conv_inserted_at',{ascending:false}))
+  ]);
   const allc = (cs||[]).map(normCust);
   DATA = allc.filter(c=>!c.da_xoa);
   TRASH = allc.filter(c=>c.da_xoa);
-  const { data:spd } = await sb.from('marketing_spend').select('*');
-  SPEND = (spd||[]).map(s=>({ngay:(s.ngay||'').slice(0,10), nguon:s.nguon, mkt:s.mkt, chi_phi:Number(s.chi_phi)||0}));
-  MKTREP=[]; /* sẽ suy ra từ MREPORTS bên dưới -> bỏ query mkt_reports lặp 2 lần */
-  try{ if(canPancake()){ const ss = await fetchAllRows('sale_scores'); SCORES = (ss||[]).map(r=>({sale:r.sale, week_start:(r.week_start||'').slice(0,10), score_total:Number(r.score_total)||0, s_speed:Number(r.s_speed)||0, s_needs:Number(r.s_needs)||0, s_product:Number(r.s_product)||0, compliance_flag:!!r.compliance_flag, weaknesses:r.weaknesses||'', worst_quote:r.worst_quote||'', strengths:r.strengths||''})); } }catch(e){ SCORES=[]; }
-  try{ const { data:imgs } = await sb.from('app_images').select('*'); IMAGES={}; (imgs||[]).forEach(r=>IMAGES[r.key]=r.data); }catch(e){ IMAGES=IMAGES||{}; }
+  SPEND = ((spdr&&spdr.data)||[]).map(s=>({ngay:(s.ngay||'').slice(0,10), nguon:s.nguon, mkt:s.mkt, chi_phi:Number(s.chi_phi)||0}));
+  MKTREP=[];
+  try{ SCORES = (ss||[]).map(r=>({sale:r.sale, week_start:(r.week_start||'').slice(0,10), score_total:Number(r.score_total)||0, s_speed:Number(r.s_speed)||0, s_needs:Number(r.s_needs)||0, s_product:Number(r.s_product)||0, compliance_flag:!!r.compliance_flag, weaknesses:r.weaknesses||'', worst_quote:r.worst_quote||'', strengths:r.strengths||''})); }catch(e){ SCORES=[]; }
+  IMAGES={}; ((imgsr&&imgsr.data)||[]).forEach(r=>IMAGES[r.key]=r.data);
   ORDERS = {};
-  const od = await fetchAllRows('orders');
   (od||[]).forEach(o=>{ const k=String(o.customer_id); (ORDERS[k]=ORDERS[k]||[]).push({id:o.id, ngay:(o.ngay||'').slice(0,10), san_pham:o.san_pham, so_tien:Number(o.so_tien)||0, so_tien_vnd:Number(o.so_tien_vnd)||0}); });
-  TASKS = [];
-  const { data:tk } = await sb.from('tasks').select('*');
-  TASKS = (tk||[]).map(t=>({id:t.id, owner:t.owner, customer_id:t.customer_id, loai:t.loai, noi_dung:t.noi_dung, han:(t.han||'').slice(0,10), xong:!!t.xong}));
+  TASKS = (((tkr&&tkr.data)||[])).map(t=>({id:t.id, owner:t.owner, customer_id:t.customer_id, loai:t.loai, noi_dung:t.noi_dung, han:(t.han||'').slice(0,10), xong:!!t.xong}));
   TARGETS = {};
-  const { data:tg } = await sb.from('sale_targets').select('*');
-  (tg||[]).forEach(t=>{ TARGETS[t.owner+'|'+t.thang]=Number(t.muc_tieu)||0; });
+  (((tgr&&tgr.data)||[])).forEach(t=>{ TARGETS[t.owner+'|'+t.thang]=Number(t.muc_tieu)||0; });
   MREPORTS = []; MTRASH = [];
-  const { data:mr } = await sb.from('mkt_reports').select('*');
-  const _mall=(mr||[]).map(r=>({id:r.id, owner:r.owner, ngay:(r.ngay||'').slice(0,10), ten_page:r.ten_page, camp:r.camp,
+  const _mall=(((mrr&&mrr.data)||[])).map(r=>({id:r.id, owner:r.owner, ngay:(r.ngay||'').slice(0,10), ten_page:r.ten_page, camp:r.camp,
     tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0, da_xoa:!!r.da_xoa}));
   MREPORTS=_mall.filter(r=>!r.da_xoa); MTRASH=_mall.filter(r=>r.da_xoa);
   MKTREP = MREPORTS.map(r=>({owner:r.owner, ngay:r.ngay, tien:r.tien, sl_mes:r.sl_mes, so_cmt:r.so_cmt, mes_tt:r.mes_tt, sd_chot:r.sd_chot}));
-  PLEADS=[];
-  try{ const { data:pl } = await sb.from('pancake_leads').select('*').eq('status','new').order('conv_inserted_at',{ascending:false}); PLEADS=pl||[]; }catch(e){ PLEADS=[]; }
+  PLEADS=((plr&&plr.data)||[]);
   return true;
 }
 /* ---- Việc cần làm / nhắc việc (Supabase) ---- */
