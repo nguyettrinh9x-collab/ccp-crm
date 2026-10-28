@@ -499,7 +499,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-ab';
+const APP_VERSION='2026-10-28-ac';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -866,7 +866,7 @@ function go(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
   document.getElementById('v-'+view).classList.add('active');
   document.getElementById('title').textContent=TITLES[v]||TITLES[view];
-  if(({list:1,care:1,pancake:1,tongbill:1})[view] && !window.__custFull){ _custLoadingHtml('v-'+view); ensureCustomers().then(function(){ try{ go(v); }catch(e){} }); return; }
+  if(({list:1,care:1,pancake:1})[view] && !window.__custFull){ _custLoadingHtml('v-'+view); ensureCustomers().then(function(){ try{ go(v); }catch(e){} }); return; }
   if(view==='list') renderList();
   else if(view==='care') renderCare();
   else if(view==='today') renderToday();
@@ -1176,7 +1176,7 @@ function renderLLLog(){
 }
 
 /* ============ RENDER ============ */
-function renderAll(){ renderAlert(); if(!window.__goWrapped && typeof go==='function'){ window.__goWrapped=1; var _g=go; var GR={list:1,care:1,today:1,tongbill:1,pancake:1,danhgia:1,lichlam:1}; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(!GR[v]) renderAll(); }catch(e){} return r; }; } if(!window.__trashInit){ window.__trashInit=1; window.purgeAllTrash=async function(){ if(!window.sb) return; var nc=(typeof TRASH!=='undefined'&&TRASH)?TRASH.length:0; var nm=(typeof MTRASH!=='undefined'&&MTRASH)?MTRASH.length:0; if(!nc&&!nm){ alert('Thùng rác trống.'); return; } if(!confirm('XOÁ VĨNH VIỄN '+nc+' khách + '+nm+' báo cáo MKT trong thùng rác?\nKhông khôi phục được.')) return; try{ if(nc){ var e1=await sb.from('customers').delete().eq('da_xoa',true); if(e1&&e1.error){ alert('Lỗi xoá khách: '+e1.error.message); return; } } if(nm){ var e2=await sb.from('mkt_reports').delete().eq('da_xoa',true); if(e2&&e2.error){ alert('Lỗi xoá báo cáo MKT: '+e2.error.message); return; } } }catch(err){ alert('Lỗi: '+err.message); return; } if(typeof loadAll==='function'){ await loadAll(); } if(typeof renderAll==='function') renderAll(); alert('✅ Đã dọn sạch thùng rác.'); }; if(typeof renderTrash==='function'){ var _rt=renderTrash; window.renderTrash=function(){ var r=_rt.apply(this,arguments); try{ var adm=(typeof isAdmin==='function')?isAdmin():true; var host=document.getElementById('v-trash'); if(adm && host && !document.getElementById('purge-all-trash-btn')){ var b=document.createElement('button'); b.id='purge-all-trash-btn'; b.type='button'; b.className='btn'; b.textContent='🗑 Xoá tất cả thùng rác'; b.style.cssText='background:#e23d3d;border-color:#e23d3d;color:#fff;margin:0 0 10px'; b.onclick=function(){ purgeAllTrash(); }; host.insertBefore(b, host.firstChild); } }catch(e){} return r; }; } } if(!window.__refreshFab){ window.__refreshFab=1; try{ var fb=document.createElement('button'); fb.id='refresh-fab'; fb.type='button'; fb.title='Làm mới dữ liệu (lấy thay đổi mới nhất)'; fb.textContent='🔄'; fb.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9998;width:44px;height:44px;border-radius:50%;border:none;background:#1F6F54;color:#fff;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer'; fb.onclick=async function(){ fb.disabled=true; var o=fb.textContent; fb.textContent='⏳'; try{ if(typeof loadAll==='function'){ await loadAll(); } if(typeof renderAll==='function') renderAll(); }catch(e){} fb.textContent=o; fb.disabled=false; }; document.body.appendChild(fb); }catch(e){} } var R={dashboard:renderDash,care:renderCare,add:renderAdd,pancake:renderPancake,list:renderList,today:renderToday,report:renderReport,marketing:renderMarketing,tongbill:renderTongBill,team:renderTeam,danhgia:renderDanhGia,lichlam:renderLichLam,settings:renderSettings,perms:renderPerms,trash:renderTrash}; var ids=Object.keys(R), cur=''; try{ for(var ii=0;ii<ids.length;ii++){ var el=document.getElementById('v-'+ids[ii]); if(el && el.offsetParent!==null){ cur=ids[ii]; break; } } }catch(e){} var NEEDCUST={dashboard:1,list:1,care:1,team:1,marketing:1,report:1,trash:1,pancake:1,tongbill:1}; if(cur && NEEDCUST[cur] && !window.__custFull){ _custLoadingHtml('v-'+cur); ensureCustomers().then(function(){ try{ renderAll(); }catch(e){} }); return; } if(cur && R[cur]){ try{ R[cur](); }catch(e){} } else { for(var k in R){ try{ R[k](); }catch(e){} } } }
+function renderAll(){ renderAlert(); if(!window.__goWrapped && typeof go==='function'){ window.__goWrapped=1; var _g=go; var GR={list:1,care:1,today:1,tongbill:1,pancake:1,danhgia:1,lichlam:1}; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(!GR[v]) renderAll(); }catch(e){} return r; }; } if(!window.__trashInit){ window.__trashInit=1; window.purgeAllTrash=async function(){ if(!window.sb) return; var nc=(typeof TRASH!=='undefined'&&TRASH)?TRASH.length:0; var nm=(typeof MTRASH!=='undefined'&&MTRASH)?MTRASH.length:0; if(!nc&&!nm){ alert('Thùng rác trống.'); return; } if(!confirm('XOÁ VĨNH VIỄN '+nc+' khách + '+nm+' báo cáo MKT trong thùng rác?\nKhông khôi phục được.')) return; try{ if(nc){ var e1=await sb.from('customers').delete().eq('da_xoa',true); if(e1&&e1.error){ alert('Lỗi xoá khách: '+e1.error.message); return; } } if(nm){ var e2=await sb.from('mkt_reports').delete().eq('da_xoa',true); if(e2&&e2.error){ alert('Lỗi xoá báo cáo MKT: '+e2.error.message); return; } } }catch(err){ alert('Lỗi: '+err.message); return; } if(typeof loadAll==='function'){ await loadAll(); } if(typeof renderAll==='function') renderAll(); alert('✅ Đã dọn sạch thùng rác.'); }; if(typeof renderTrash==='function'){ var _rt=renderTrash; window.renderTrash=function(){ var r=_rt.apply(this,arguments); try{ var adm=(typeof isAdmin==='function')?isAdmin():true; var host=document.getElementById('v-trash'); if(adm && host && !document.getElementById('purge-all-trash-btn')){ var b=document.createElement('button'); b.id='purge-all-trash-btn'; b.type='button'; b.className='btn'; b.textContent='🗑 Xoá tất cả thùng rác'; b.style.cssText='background:#e23d3d;border-color:#e23d3d;color:#fff;margin:0 0 10px'; b.onclick=function(){ purgeAllTrash(); }; host.insertBefore(b, host.firstChild); } }catch(e){} return r; }; } } if(!window.__refreshFab){ window.__refreshFab=1; try{ var fb=document.createElement('button'); fb.id='refresh-fab'; fb.type='button'; fb.title='Làm mới dữ liệu (lấy thay đổi mới nhất)'; fb.textContent='🔄'; fb.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9998;width:44px;height:44px;border-radius:50%;border:none;background:#1F6F54;color:#fff;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer'; fb.onclick=async function(){ fb.disabled=true; var o=fb.textContent; fb.textContent='⏳'; try{ if(typeof loadAll==='function'){ await loadAll(); } if(typeof renderAll==='function') renderAll(); }catch(e){} fb.textContent=o; fb.disabled=false; }; document.body.appendChild(fb); }catch(e){} } var R={dashboard:renderDash,care:renderCare,add:renderAdd,pancake:renderPancake,list:renderList,today:renderToday,report:renderReport,marketing:renderMarketing,tongbill:renderTongBill,team:renderTeam,danhgia:renderDanhGia,lichlam:renderLichLam,settings:renderSettings,perms:renderPerms,trash:renderTrash}; var ids=Object.keys(R), cur=''; try{ for(var ii=0;ii<ids.length;ii++){ var el=document.getElementById('v-'+ids[ii]); if(el && el.offsetParent!==null){ cur=ids[ii]; break; } } }catch(e){} var NEEDCUST={dashboard:1,list:1,care:1,team:1,marketing:1,report:1,trash:1,pancake:1}; if(cur && NEEDCUST[cur] && !window.__custFull){ _custLoadingHtml('v-'+cur); ensureCustomers().then(function(){ try{ renderAll(); }catch(e){} }); return; } if(cur && R[cur]){ try{ R[cur](); }catch(e){} } else { for(var k in R){ try{ R[k](); }catch(e){} } } }
 
 function renderAlert(){
   const due=myData().filter(c=>flag(c)==='warn').length;
@@ -2337,83 +2337,37 @@ function tyGiaBill(c){
   if(g==='US') return 23500; if(g==='Canada') return 16000; if(g==='Euro') return 24500; // EUR
   return 0;
 }
+var __BILLS=null;
+function reloadBills(){ __BILLS=null; renderTongBill(); }
 function renderTongBill(){
   const el=document.getElementById('v-tongbill'); if(!el) return;
+  if(!__BILLS){ el.innerHTML='<div style="padding:50px;text-align:center;color:#6b7c76">⏳ Đang tải Tổng Bill từ Google Sheet…</div>'; try{ sb.from('bill_rows').select('*').order('ngay',{ascending:true,nullsFirst:false}).then(function(r){ __BILLS=(r&&r.data)||[]; renderTongBill(); }); }catch(e){ __BILLS=[]; renderTongBill(); } return; }
   const money=n=>(Math.round(Number(n)||0)).toLocaleString('vi-VN')+' đ';
-  const inMonth=c=>((c.ngay_chot||c.ngay_tao||'').slice(0,7)===BILL_MONTH);
-  const rows=DATA.filter(c=>isChot(c.tt)&&inMonth(c));
-  const calc=c=>{ const tg=tyGiaBill(c); const vnd=(Number(c.dt)||0)*tg; const noVnd=(Number(c.no_goc)||0)*tg; return {tg,vnd,noVnd,dathu:vnd-noVnd}; };
-  const loaiDon=c=>c.loai_don==='upsell'?'Chăm Sóc':'Chốt Mới';
-
+  const loaiTxt=l=>l==='upsell'?'Chăm Sóc':(l==='no'?'Nợ':(l==='moi'?'Chốt Mới':(l||'—')));
+  const rows=__BILLS.filter(b=>((b.ngay||'').slice(0,7))===BILL_MONTH);
   let html=`<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
     <span style="font-weight:700">📅 Chọn tháng:</span>
     <input type="month" value="${BILL_MONTH}" onchange="setBillMonth(this.value)" style="width:auto;padding:7px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px">
-    <input type="text" id="bill-search" placeholder="🔍 Tìm tên hoặc SĐT..." oninput="billFilter(this.value)" style="width:230px;padding:7px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px">
+    <input type="text" id="bill-search" placeholder="🔍 Tìm tên / mã đơn..." oninput="billFilter(this.value)" style="width:230px;padding:7px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px">
     <span id="bill-search-count" style="font-size:12px;color:var(--teal-dark);font-weight:600"></span>
-    <span style="font-size:12px;color:var(--muted)">Tỷ giá: US 23.500 · EU 24.500 · UK 28.000 · AU 16.800 · CAD 16.000</span></div>`;
-
-  // ----- Bảng bill chi tiết -----
-  html+=`<h2 class="sec">📄 Bill chi tiết — khách đã chốt tháng ${BILL_MONTH}</h2>
+    <button class="btn ghost" type="button" onclick="reloadBills()" style="padding:6px 12px;font-size:12px">🔄 Tải lại từ sheet</button>
+    <span style="font-size:12px;color:var(--muted)">Nguồn: Google Sheet (ốp trực tiếp) · tổng ${__BILLS.length} đơn</span></div>`;
+  html+=`<h2 class="sec">📄 Bill chi tiết — tháng ${BILL_MONTH} (${rows.length} đơn)</h2>
     <div class="card" style="padding:0;overflow-x:auto"><table>
-    <tr><th>Ngày</th><th>Mã đơn</th><th>MKT</th><th>Sale</th><th>Khách</th><th>Nước</th><th>Tỷ giá</th><th>DT (USD)</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th><th>Nợ gốc (VNĐ)</th><th>Đã thu (VNĐ)</th><th>Thu đợt 1</th><th>Ngày TH 1</th><th>Thu đợt 2</th><th>Ngày TH 2</th><th>Thu đợt 3</th><th>Ngày TH 3</th><th>Mã tracking</th><th>Mã web</th><th>Loại đơn</th><th>Sửa</th></tr>`;
-  let T={vnd:0,noVnd:0,dathu:0};
-  rows.slice().sort((a,b)=>(''+(a.ngay_chot||a.ngay_tao||'')).localeCompare(''+(b.ngay_chot||b.ngay_tao||''))).forEach(c=>{
-    const x=calc(c); T.vnd+=x.vnd; T.noVnd+=x.noVnd; T.dathu+=x.dathu;
-    html+=`<tr data-s="${((c.ten||'')+' '+(c.phone||'')).toLowerCase().replace(/["<>]/g,'')}"><td>${(c.ngay_chot||c.ngay_tao||'—').slice(0,10)}</td><td>${c.ma_don||'—'}</td><td>${MKT[c.mkt]||'—'}</td><td>${SALES[c.owner]||'—'}</td>
-      <td><b style="cursor:pointer;color:var(--teal-dark)" title="Sửa khách" onclick="editCustomer('${c.id}')">${c.ten}</b></td>
-      <td>${c.quoc_gia||'—'}</td><td>${x.tg?money(x.tg):'⚠ thiếu nước'}</td><td>$${Number(c.dt)||0}</td>
-      <td><b>${money(x.vnd)}</b></td><td>${Number(c.no_goc)?curSym(c)+(Number(c.no_goc)).toLocaleString('en-US'):'—'}</td>
-      <td style="color:${x.noVnd?'var(--over)':'inherit'}">${money(x.noVnd)}</td>
-      <td style="font-weight:700;color:var(--won)">${money(x.dathu)}</td>
-      <td>${Number(c.thu_dot1)?money(c.thu_dot1):'—'}</td><td>${(c.ngay_thu1||'—').slice(0,10)}</td>
-      <td>${Number(c.thu_dot2)?money(c.thu_dot2):'—'}</td><td>${(c.ngay_thu2||'—').slice(0,10)}</td>
-      <td>${Number(c.thu_dot3)?money(c.thu_dot3):'—'}</td><td>${(c.ngay_thu3||'—').slice(0,10)}</td>
-      <td>${c.ma_tracking||'—'}</td><td>${c.ma_web||'—'}</td>
-      <td>${loaiDon(c)}</td>
-      <td><button onclick="editCustomer('${c.id}')" style="padding:4px 10px;border:none;border-radius:8px;background:var(--teal);color:#fff;cursor:pointer;font-size:12px">✏️ Sửa</button></td></tr>`;
+    <tr><th>Ngày</th><th>Mã đơn</th><th>MKT</th><th>Sale</th><th>Khách</th><th>Nước</th><th>Tỷ giá</th><th>DT (USD)</th><th>Doanh số (VNĐ)</th><th>Nợ gốc</th><th>Nợ gốc (VNĐ)</th><th>Đã thu (VNĐ)</th><th>Thu đợt 1</th><th>Ngày TH 1</th><th>Thu đợt 2</th><th>Ngày TH 2</th><th>Thu đợt 3</th><th>Ngày TH 3</th><th>Trạng thái</th><th>Hạn thu</th><th>Loại đơn</th></tr>`;
+  let T={ds:0,nogoc:0,dathu:0};
+  rows.forEach(b=>{ T.ds+=Number(b.doanh_thu_vnd)||0; T.nogoc+=Number(b.da_thu_vnd)||0; T.dathu+=Number(b.no_vnd)||0;
+    html+=`<tr data-s="${((b.ten||'')+' '+(b.ma_don||'')).toLowerCase().replace(/["<>]/g,'')}"><td>${b.ngay||'—'}</td><td>${b.ma_don||'—'}</td><td>${b.mkt||'—'}</td><td>${b.sale||'—'}</td><td><b>${b.ten||'—'}</b></td><td>${b.quoc_gia||'—'}</td><td>${money(b.ty_gia)}</td><td>$${Number(b.dt_usd)||0}</td><td><b>${money(b.doanh_thu_vnd)}</b></td><td>${Number(b.no_goc)?Number(b.no_goc).toLocaleString('en-US'):'—'}</td><td>${money(b.da_thu_vnd)}</td><td style="font-weight:700;color:var(--won)">${money(b.no_vnd)}</td><td>${Number(b.thu1)?money(b.thu1):'—'}</td><td>${b.ng1||'—'}</td><td>${Number(b.thu2)?money(b.thu2):'—'}</td><td>${b.ng2||'—'}</td><td>${Number(b.thu3)?money(b.thu3):'—'}</td><td>${b.ng3||'—'}</td><td>${b.tracking||'—'}</td><td>${b.web||'—'}</td><td>${loaiTxt(b.loai)}</td></tr>`;
   });
-  if(!rows.length) html+=`<tr><td colspan="22" class="empty">Chưa có khách chốt trong tháng ${BILL_MONTH}.</td></tr>`;
-  else html+=`<tr style="background:var(--cream);font-weight:800"><td colspan="8">TỔNG (${rows.length} đơn)</td><td>${money(T.vnd)}</td><td></td><td>${money(T.noVnd)}</td><td>${money(T.dathu)}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  if(!rows.length) html+=`<tr><td colspan="21" class="empty">Không có đơn trong tháng ${BILL_MONTH}.</td></tr>`;
+  else html+=`<tr style="background:var(--cream);font-weight:800"><td colspan="8">TỔNG (${rows.length} đơn)</td><td>${money(T.ds)}</td><td></td><td>${money(T.nogoc)}</td><td>${money(T.dathu)}</td><td colspan="9"></td></tr>`;
   html+=`</table></div>`;
-
-  // ----- Tổng hợp theo Sale / MKT -----
-  const pct=(a,b)=> b? (Math.round(a/b*1000)/10)+'%' : '—';
-  const num=n=>(Math.round((Number(n)||0)*100)/100).toLocaleString('en-US');
-  // ----- Tổng hợp theo SALE (khớp sheet) -----
-  {
-    let h=`<h2 class="sec" style="margin-top:22px">📊 Tổng hợp theo Sale — tháng ${BILL_MONTH}</h2>
-      <div class="card" style="padding:0;overflow-x:auto"><table>
-      <tr><th>SALE</th><th>Tổng $</th><th>Doanh số</th><th>Nợ tiền Việt</th><th>DS sau nợ</th><th>Số đơn CM</th><th>Số đơn CS</th><th>Tổng đơn</th><th>DS CM</th><th>DS CS</th><th>Tỷ lệ CM/CS</th><th>Tỷ lệ HTM</th><th>Mục tiêu</th></tr>`;
-    let G={u:0,ds:0,no:0,cm:0,cs:0,dcm:0,dcs:0};
-    Object.entries(SALES).forEach(([id,nm])=>{
-      const g=rows.filter(c=>c.owner===id); if(!g.length) return;
-      let u=0,ds=0,no=0,cm=0,cs=0,dcm=0,dcs=0;
-      g.forEach(c=>{const x=calc(c); u+=Number(c.dt)||0; ds+=x.vnd; no+=x.noVnd; if(c.loai_don==='upsell'){cs++;dcs+=x.vnd;}else{cm++;dcm+=x.vnd;}});
-      G.u+=u;G.ds+=ds;G.no+=no;G.cm+=cm;G.cs+=cs;G.dcm+=dcm;G.dcs+=dcs;
-      h+=`<tr><td><b>${nm}</b></td><td style="text-align:center">${num(u)}</td><td>${money(ds)}</td><td style="color:${no?'var(--over)':'inherit'}">${money(no)}</td><td style="color:var(--won);font-weight:700">${money(ds-no)}</td><td style="text-align:center">${cm}</td><td style="text-align:center">${cs}</td><td style="text-align:center"><b>${cm+cs}</b></td><td>${money(dcm)}</td><td>${money(dcs)}</td><td style="text-align:center">${pct(cm,cm+cs)}</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr>`;
-    });
-    h+=`<tr style="background:var(--cream);font-weight:800"><td>TỔNG</td><td style="text-align:center">${num(G.u)}</td><td>${money(G.ds)}</td><td>${money(G.no)}</td><td>${money(G.ds-G.no)}</td><td style="text-align:center">${G.cm}</td><td style="text-align:center">${G.cs}</td><td style="text-align:center">${G.cm+G.cs}</td><td>${money(G.dcm)}</td><td>${money(G.dcs)}</td><td style="text-align:center">${pct(G.cm,G.cm+G.cs)}</td><td></td><td></td></tr></table></div>`;
-    html+=h;
-  }
-  // ----- Tổng hợp theo MKT (khớp sheet) -----
-  {
-    let h=`<h2 class="sec" style="margin-top:22px">📊 Tổng hợp theo MKT — tháng ${BILL_MONTH}</h2>
-      <div class="card" style="padding:0;overflow-x:auto"><table>
-      <tr><th>MKT</th><th>Chi phí ads</th><th>Số đơn CM</th><th>Số đơn CS</th><th>Tổng đơn</th><th>DS CM</th><th>DS CS</th><th>DS tổng</th><th>GTTB CM</th><th>GTTB CS</th><th>Nợ</th><th>Tổng $</th><th>Tổng trừ nợ</th><th>COST CM</th><th>COST tổng</th></tr>`;
-    let G={cm:0,cs:0,dcm:0,dcs:0,no:0,u:0};
-    Object.entries(MKT).forEach(([id,nm])=>{
-      const g=rows.filter(c=>c.mkt===id); if(!g.length) return;
-      let cm=0,cs=0,dcm=0,dcs=0,no=0,u=0;
-      g.forEach(c=>{const x=calc(c); u+=Number(c.dt)||0; no+=x.noVnd; if(c.loai_don==='upsell'){cs++;dcs+=x.vnd;}else{cm++;dcm+=x.vnd;}});
-      G.cm+=cm;G.cs+=cs;G.dcm+=dcm;G.dcs+=dcs;G.no+=no;G.u+=u;
-      const dsTong=dcm+dcs;
-      h+=`<tr><td><b>${nm}</b></td><td style="text-align:center">—</td><td style="text-align:center">${cm}</td><td style="text-align:center">${cs}</td><td style="text-align:center"><b>${cm+cs}</b></td><td>${money(dcm)}</td><td>${money(dcs)}</td><td><b>${money(dsTong)}</b></td><td>${cm?money(dcm/cm):'—'}</td><td>${cs?money(dcs/cs):'—'}</td><td style="color:${no?'var(--over)':'inherit'}">${money(no)}</td><td style="text-align:center">${num(u)}</td><td style="color:var(--won);font-weight:700">${money(dsTong-no)}</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr>`;
-    });
-    const gTong=G.dcm+G.dcs;
-    h+=`<tr style="background:var(--cream);font-weight:800"><td>TỔNG</td><td style="text-align:center">—</td><td style="text-align:center">${G.cm}</td><td style="text-align:center">${G.cs}</td><td style="text-align:center">${G.cm+G.cs}</td><td>${money(G.dcm)}</td><td>${money(G.dcs)}</td><td>${money(gTong)}</td><td></td><td></td><td>${money(G.no)}</td><td style="text-align:center">${num(G.u)}</td><td>${money(gTong-G.no)}</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr></table></div>`;
-    html+=h;
-  }
-  html+=`<p style="color:var(--muted);font-size:12px;margin-top:10px">Doanh số VNĐ = DT (USD) × tỷ giá theo nước · Nợ tiền Việt = Nợ gốc × tỷ giá · DS sau nợ = Doanh số − Nợ tiền Việt · GTTB = DS ÷ số đơn. Cột "Chi phí ads / Mục tiêu / Tỷ lệ HTM" cần nhập tay (CRM chưa có dữ liệu chi phí quảng cáo & mục tiêu).</p>`;
+  { const bySale={}; rows.forEach(b=>{ const s=((b.sale||'').trim())||'(chưa gán)'; const g=bySale[s]||(bySale[s]={n:0,usd:0,ds:0,cm:0,cs:0}); g.n++; g.usd+=Number(b.dt_usd)||0; g.ds+=Number(b.doanh_thu_vnd)||0; if(b.loai==='upsell')g.cs++; else g.cm++; });
+    let h=`<h2 class="sec" style="margin-top:22px">📊 Tổng hợp theo Sale — tháng ${BILL_MONTH}</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Sale</th><th>Tổng đơn</th><th>Đơn Chốt Mới</th><th>Đơn Chăm Sóc</th><th>Tổng $</th><th>Doanh số (VNĐ)</th></tr>`;
+    let G={n:0,usd:0,ds:0,cm:0,cs:0};
+    Object.keys(bySale).sort().forEach(s=>{ const g=bySale[s]; G.n+=g.n;G.usd+=g.usd;G.ds+=g.ds;G.cm+=g.cm;G.cs+=g.cs; h+=`<tr><td><b>${s}</b></td><td style="text-align:center">${g.n}</td><td style="text-align:center">${g.cm}</td><td style="text-align:center">${g.cs}</td><td style="text-align:center">${g.usd.toLocaleString('en-US')}</td><td>${money(g.ds)}</td></tr>`; });
+    h+=`<tr style="background:var(--cream);font-weight:800"><td>TỔNG</td><td style="text-align:center">${G.n}</td><td style="text-align:center">${G.cm}</td><td style="text-align:center">${G.cs}</td><td style="text-align:center">${G.usd.toLocaleString('en-US')}</td><td>${money(G.ds)}</td></tr></table></div>`;
+    html+=h; }
   el.innerHTML=html;
 }
 let MKT_DETAIL_DATE='';
