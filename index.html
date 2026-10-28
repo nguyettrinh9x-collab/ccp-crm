@@ -490,7 +490,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-28-a';
+const APP_VERSION='2026-10-28-b';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3808,14 +3808,38 @@ function renderPay(){ var el=document.getElementById('v-pay'); if(!el) return;
   +_mvTable(['Nhân viên','Cơ bản','Ngày công','HH doanh số','Thưởng HH (đ)','Tạm tính (đ)'],rows.length?rows:[['—','','','','','']])
   +_mvNote('Doanh số lấy từ khách đã chốt trong CRM. Hiển thị rõ thành phần + kỳ dữ liệu; sẽ phân quyền khi chốt công thức.')+'</div>';
 }
-function renderChatHold(){ var el=document.getElementById('v-chat'); if(!el) return;
- el.innerHTML='<div class="card"><h2 class="sec">💬 Hội thoại (Facebook / WhatsApp)</h2>'
-  +_mvNote('🆕 Mục này <b>chưa kích hoạt</b> — cần kiểm chứng thật trước (không làm giả):')
-  +'<ul style="font-size:13px;line-height:1.8"><li><b>Quyền API gửi tin</b>: Pancake có cho gửi không? Page Facebook nào chị là Admin (để nối Messenger Send API)? WhatsApp dùng Business API chính thức hay chỉ wa.me?</li>'
-  +'<li>Giải thích rõ <b>"Smith"</b> và <b>"Google code"</b> trước khi tích hợp.</li></ul>'
-  +_mvNote('Trong lúc chờ: hội thoại mới vẫn xem ở tab <b>📥 Khách mới (Pancake)</b>; nhắn WhatsApp dùng nút wa.me ở hồ sơ khách.')+'</div>';
+var _CHAT_CONVS=[], _CHAT_PAGE='', _CHAT_Q='';
+async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) return;
+ if(!_CHAT_CONVS.length){ el.innerHTML='<div class="card">⏳ Đang tải hội thoại từ Pancake…</div>';
+  try{ var r=await sb.from('pancake_leads').select('conv_id,page_id,page_name,platform,ten,snippet,conv_inserted_at,sale').order('conv_inserted_at',{ascending:false}).limit(150); _CHAT_CONVS=r.data||[]; }catch(e){ _CHAT_CONVS=[]; } }
+ _chatPaint();
 }
-(function(){ var NV={integ:renderInteg,ailog:renderAiLog,appt:renderAppt,pay:renderPay,chat:renderChatHold};
+function _chatIcon(p){ return /whats/i.test(p||'')?'🟢':(/face/i.test(p||'')?'💬':'📄'); }
+function _chatSetPage(p){ _CHAT_PAGE=p; _chatPaint(); }
+function _chatPaint(){ var el=document.getElementById('v-chat'); if(!el) return;
+ var pages=[]; _CHAT_CONVS.forEach(function(c){ if(c.page_name&&pages.indexOf(c.page_name)<0)pages.push(c.page_name); });
+ var q=(_CHAT_Q||'').toLowerCase();
+ var list=_CHAT_CONVS.filter(function(c){ return (!_CHAT_PAGE||c.page_name===_CHAT_PAGE) && (!q || ((c.ten||'')+' '+(c.snippet||'')).toLowerCase().indexOf(q)>=0); });
+ var chips='<span onclick="_chatSetPage(\'\')" class="pill" style="cursor:pointer;'+(!_CHAT_PAGE?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">Tất cả ('+_CHAT_CONVS.length+')</span>';
+ pages.forEach(function(p){ var pe=p.replace(/'/g,"\\'"); chips+=' <span onclick="_chatSetPage(\''+pe+'\')" class="pill" style="cursor:pointer;'+(_CHAT_PAGE===p?'background:#1F6F54;color:#fff':'background:#eef2f0;color:#555')+'">'+_mvEsc(p)+'</span>'; });
+ var items=list.slice(0,120).map(function(c){ return '<div onclick="chatOpen(\''+encodeURIComponent(c.conv_id)+'\',\''+encodeURIComponent(c.page_id)+'\')" style="padding:9px;border:1px solid #e3ece7;border-radius:10px;margin-bottom:7px;cursor:pointer;background:#fff"><div style="font-weight:700">'+_chatIcon(c.platform)+' '+_mvEsc(c.ten||'(không tên)')+(c.sale?' <span style="font-weight:400;color:#6b7c76;font-size:11px">· '+_mvEsc(c.sale)+'</span>':'')+'</div><div style="font-size:12px;color:#6b7c76;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc((c.snippet||'').slice(0,80))+'</div></div>'; }).join('');
+ el.innerHTML='<div class="card"><h2 class="sec">💬 Hội thoại (tất cả page Pancake)</h2>'
+  +'<p style="color:#6b7c76;font-size:12px;margin:-4px 0 8px">Gộp hội thoại từ mọi page đã kết nối (đọc qua API Pancake). Bấm 1 hội thoại để xem nội dung tin nhắn thật.</p>'
+  +'<div style="margin-bottom:8px;line-height:2">'+chips+'</div>'
+  +'<input oninput="_CHAT_Q=this.value;_chatPaint()" value="'+_mvEsc(_CHAT_Q)+'" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;max-width:360px;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px;margin-bottom:10px">'
+  +'<div style="display:flex;gap:12px;flex-wrap:wrap"><div style="width:320px;max-width:100%;max-height:520px;overflow:auto">'+(items||'<div style="color:#6b7c76">Không có hội thoại.</div>')+'</div>'
+  +'<div id="chat-thread" style="flex:1;min-width:300px;border:1px solid #e3ece7;border-radius:12px;background:#f7faf8;padding:12px;min-height:240px;max-height:520px;overflow:auto"><div style="color:#6b7c76">← Chọn một hội thoại để xem nội dung tin nhắn.</div></div></div>'
+  +_mvNote('🆕 Đọc hội thoại từ Pancake. <b>Gửi tin 2 chiều đang KHÓA</b> — chờ xác minh quyền API gửi (Pancake/Facebook/WhatsApp).')+'</div>';
+}
+async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComponent(pid); var box=document.getElementById('chat-thread'); if(!box)return; box.innerHTML='<div style="color:#6b7c76">⏳ Đang tải tin nhắn…</div>';
+ try{ var res=await sb.functions.invoke('pancake-thread',{body:{page_id:pid,conv_id:cid}}); var d=(res&&res.data)||{};
+   if(!d.ok){ box.innerHTML='<div style="color:#d94848">Chưa tải được tin nhắn'+(d.reason?(' ('+d.reason+')'):'')+'. Thử lại sau.</div>'; return; }
+   var h='<div style="font-weight:700;margin-bottom:8px">'+_mvEsc(d.page||'')+' · '+d.count+' tin</div>';
+   (d.messages||[]).forEach(function(mm){ var me=mm.from_page; h+='<div style="display:flex;justify-content:'+(me?'flex-end':'flex-start')+';margin-bottom:7px"><div style="max-width:82%;padding:7px 11px;border-radius:12px;font-size:13px;background:'+(me?'#dcf3e6':'#fff')+';border:1px solid #e3ece7"><div style="font-size:10.5px;color:#6b7c76;margin-bottom:2px">'+_mvEsc(mm.sender)+' · '+_mvEsc(mm.at)+'</div>'+_mvEsc(mm.text)+'</div></div>'; });
+   box.innerHTML=h; box.scrollTop=box.scrollHeight;
+ }catch(e){ box.innerHTML='<div style="color:#d94848">Lỗi: '+_mvEsc((e&&e.message)||e)+'</div>'; }
+}
+(function(){ var NV={integ:renderInteg,ailog:renderAiLog,appt:renderAppt,pay:renderPay,chat:renderChat};
  try{ if(typeof go==='function' && !window.__mvGo){ window.__mvGo=1; var _g=go; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(NV[v]) NV[v](); }catch(e){} return r; }; } }catch(e){}
 })();
 </script>
