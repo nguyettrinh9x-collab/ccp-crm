@@ -148,6 +148,7 @@
       <a data-v="add">Thêm khách</a>
       <a data-v="pancake">📥 Khách mới (Pancake)</a>
       <a data-v="chat">💬 Hội thoại 🆕</a>
+      <a data-v="imglib">📷 Thư viện ảnh 🆕</a>
       <a data-v="dashboard">Tổng quan</a>
       <a data-v="report">Báo cáo</a>
       <a data-v="marketing">Marketing</a>
@@ -214,6 +215,7 @@
     <div class="view" id="v-brain"></div>
     <div class="view" id="v-feedback"></div>
     <div class="view" id="v-chat"></div>
+    <div class="view" id="v-imglib"></div>
   </div>
 </div>
 
@@ -249,7 +251,7 @@ function addSpPick(){ const p=document.getElementById('f-sppick'); const q=docum
 const ALL_MODULES = [
   ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
   ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
-  ['marketing','BC Marketing'],['tongbill','Tổng Bill'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['lichlam_log','Lịch sử đăng ký lịch'],['pancake','Khách mới (Pancake)'],['chat','💬 Hội thoại'],['danhgia','📊 Đánh giá Sale/MKT'],['brain','🧠 Bộ não CSKH'],['feedback','💬 Góp ý'],['appt','📅 Lịch hẹn'],['pay','💵 Lương tạm tính'],['integ','🔌 Tích hợp'],['ailog','🤖 Nhật ký AI'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
+  ['marketing','BC Marketing'],['tongbill','Tổng Bill'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['lichlam_log','Lịch sử đăng ký lịch'],['pancake','Khách mới (Pancake)'],['chat','💬 Hội thoại'],['imglib','📷 Thư viện ảnh'],['danhgia','📊 Đánh giá Sale/MKT'],['brain','🧠 Bộ não CSKH'],['feedback','💬 Góp ý'],['appt','📅 Lịch hẹn'],['pay','💵 Lương tạm tính'],['integ','🔌 Tích hợp'],['ailog','🤖 Nhật ký AI'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
 ];
 // Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
 const DEFAULT_PERMS = {
@@ -494,13 +496,13 @@ function applyMenu(){
   const allowed=PERMS[ME.uname]||[];
   document.querySelectorAll('#nav a').forEach(a=>{
     let v=a.dataset.v; if(v==='list_chot'||v==='list_chua'||v==='list_all') v='list';
-    if(['pancake','chat','danhgia','brain','feedback','appt','pay','integ','ailog'].indexOf(v)>=0){ a.style.display=(canPancake()||allowed.includes(v))?'flex':'none'; return; } /* admin luôn thấy; người khác theo phân quyền */
+    if(['pancake','chat','imglib','danhgia','brain','feedback','appt','pay','integ','ailog'].indexOf(v)>=0){ a.style.display=(canPancake()||allowed.includes(v))?'flex':'none'; return; } /* admin luôn thấy; người khác theo phân quyền */
     a.style.display=allowed.includes(v)?'flex':'none';
   });
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-bb';
+const APP_VERSION='2026-10-29-bc';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -874,6 +876,7 @@ function go(v){
   else if(view==='tongbill') renderTongBill();
   else if(view==='lichlam') llReloadRender();
   else if(view==='pancake') renderPancake();
+  else if(view==='imglib') renderImgLib();
   else if(view==='danhgia') renderDanhGia();
 }
 
@@ -3850,7 +3853,7 @@ if(typeof renderDanhGia==='function'){var _o=renderDanhGia;renderDanhGia=functio
 </script>
 <script>
 /* ===== MỤC MỚI — chỉ THÊM, giữ nguyên phần cũ (28/10/2026) ===== */
-try{ if(typeof TITLES==='object') Object.assign(TITLES,{appt:'📅 Lịch hẹn',pay:'💵 Lương tạm tính (demo)',integ:'🔌 Tích hợp & tự động hóa',ailog:'🤖 Nhật ký AI & chi phí',chat:'💬 Hội thoại',brain:'🧠 Bộ não CSKH',feedback:'💬 Góp ý'}); }catch(e){}
+try{ if(typeof TITLES==='object') Object.assign(TITLES,{appt:'📅 Lịch hẹn',pay:'💵 Lương tạm tính (demo)',integ:'🔌 Tích hợp & tự động hóa',ailog:'🤖 Nhật ký AI & chi phí',chat:'💬 Hội thoại',imglib:'📷 Thư viện ảnh',brain:'🧠 Bộ não CSKH',feedback:'💬 Góp ý'}); }catch(e){}
 function _mvEsc(s){return (''+(s==null?'':s)).replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function _mvTable(head,rows){ var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr>'; head.forEach(function(x){h+='<th style="padding:7px 9px;border-bottom:1px solid #e3ece7;background:#eef4f1;text-align:left;font-size:12px">'+x+'</th>';}); h+='</tr>'; rows.forEach(function(r){ h+='<tr>'; r.forEach(function(c){ h+='<td style="padding:7px 9px;border-bottom:1px solid #eef2f0">'+c+'</td>'; }); h+='</tr>'; }); h+='</table></div>'; return h; }
 function _mvNote(t){ return '<div style="background:#eef4f1;border-left:3px solid #1F6F54;border-radius:0 8px 8px 0;padding:8px 12px;font-size:12.5px;margin:8px 0">'+t+'</div>'; }
@@ -4009,6 +4012,61 @@ function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=
    +'<div style="font-size:12px;color:'+(c.unread?'#55403f':'#8a978f')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc((c.snippet||'').slice(0,60))+'</div>'+_chatTags(c.tags)+'</div>'+(c.unread?'<span title="Chưa đọc" style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:#e23d3d;margin-left:2px"></span>':'')+'</div>'; }).join('');
  lc.innerHTML=items||'<div style="color:#6b7c76;padding:10px">Không có hội thoại.</div>';
 }
+/* ============ THƯ VIỆN ẢNH (đồng bộ từ Pancake) ============ */
+var IMGLIB_FOLDERS=null, IMGLIB_ITEMS={}, IMGLIB_SEL=null, IMGLIB_Q='';
+async function imgLibLoadFolders(force){ if(IMGLIB_FOLDERS&&!force) return IMGLIB_FOLDERS; try{ var r=await sb.from('image_folders').select('id,name,total').order('name',{ascending:true}); IMGLIB_FOLDERS=(r&&r.data)||[]; }catch(e){ IMGLIB_FOLDERS=[]; } return IMGLIB_FOLDERS; }
+async function imgLibItems(fid){ if(IMGLIB_ITEMS[fid]) return IMGLIB_ITEMS[fid]; try{ var r=await sb.from('image_items').select('id,name,url').eq('folder_id',fid).limit(500); IMGLIB_ITEMS[fid]=(r&&r.data)||[]; }catch(e){ IMGLIB_ITEMS[fid]=[]; } return IMGLIB_ITEMS[fid]; }
+function imgLibSearch(v){ IMGLIB_Q=v; imgLibPaintFolders(); }
+function imgLibPaintFolders(){ var b=document.getElementById('imglib-folders'); if(!b)return; var q=(IMGLIB_Q||'').toLowerCase(); var list=(IMGLIB_FOLDERS||[]).filter(function(f){ return !q || (f.name||'').toLowerCase().indexOf(q)>=0; });
+ b.innerHTML=list.map(function(f){ var on=IMGLIB_SEL===f.id; var ne=f.name.replace(/'/g,"\\'"); return '<div onclick="imgLibPickFolder(\''+ne+'::'+f.id+'\')" style="cursor:pointer;padding:7px 9px;border-radius:8px;font-size:12.5px;display:flex;justify-content:space-between;gap:6px;'+(on?'background:#1F6F54;color:#fff':'color:#2b3a33')+'"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_mvEsc(f.name)+'</span><span style="opacity:.7;font-size:11px">'+(f.total||0)+'</span></div>'; }).join('')||'<div style="color:#9aa8a3;padding:10px;font-size:12px">Không có thư mục.</div>';
+}
+async function imgLibPickFolder(key){ var fid=key.split('::').pop(); IMGLIB_SEL=fid; imgLibPaintFolders();
+ var grid=document.getElementById('imglib-grid'); var head=document.getElementById('imglib-head'); if(!grid)return; grid.innerHTML='<div style="color:#9aa8a3">⏳ Đang tải ảnh…</div>';
+ var fobj=(IMGLIB_FOLDERS||[]).find(function(x){return x.id===fid;}); if(head)head.innerHTML='📁 '+_mvEsc(fobj?fobj.name:'')+' <span style="font-weight:400;color:#9aa8a3;font-size:12px">· '+((fobj&&fobj.total)||0)+' ảnh</span>';
+ var items=await imgLibItems(fid);
+ grid.innerHTML=items.map(function(it){ var u=it.url.replace(/'/g,"\\'"); return '<div style="border:1px solid #eef2f0;border-radius:10px;overflow:hidden;background:#fff"><img src="'+_mvEsc(it.url)+'" loading="lazy" onclick="imgLibOpen(\''+u+'\')" style="width:100%;height:120px;object-fit:cover;cursor:zoom-in;display:block"><div style="display:flex;gap:4px;padding:5px"><button onclick="imgLibCopy(\''+u+'\')" title="Copy link" style="flex:1;border:1px solid #e3ece7;background:#f6f9f7;border-radius:6px;padding:4px;font-size:11px;cursor:pointer">🔗</button><button onclick="imgLibOpen(\''+u+'\')" title="Mở/Tải" style="flex:1;border:1px solid #e3ece7;background:#f6f9f7;border-radius:6px;padding:4px;font-size:11px;cursor:pointer">⬇</button></div></div>'; }).join('')||'<div style="color:#9aa8a3">Thư mục trống.</div>';
+}
+function imgLibOpen(u){ window.open(u,'_blank'); }
+function imgLibCopy(u){ try{ navigator.clipboard.writeText(u); if(typeof toast==='function')toast('✓ Đã copy link ảnh'); else alert('Đã copy link'); }catch(e){ prompt('Copy link ảnh:',u); } }
+async function renderImgLib(){ var el=document.getElementById('v-imglib'); if(!el)return;
+ el.innerHTML='<div class="card" style="padding:0;overflow:hidden">'
+  +'<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #e9efec;background:#1F6F54;color:#fff"><span style="font-size:17px;font-weight:700">📷 Thư viện ảnh</span><span style="font-size:12px;opacity:.85">Đồng bộ từ Pancake · gộp mọi trang</span></div>'
+  +'<div style="display:flex;height:820px;max-height:84vh">'
+   +'<div style="flex:0 0 280px;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
+     +'<div style="padding:10px"><input id="imglib-q" oninput="imgLibSearch(this.value)" placeholder="🔎 Tìm thư mục (vd: u xơ, pcos, ivf…)" style="width:100%;border:1px solid #e3ece7;border-radius:18px;padding:7px 14px;font-size:12.5px"></div>'
+     +'<div id="imglib-folders" style="flex:1;overflow:auto;padding:4px 6px">⏳ Đang tải…</div>'
+   +'</div>'
+   +'<div style="flex:1;display:flex;flex-direction:column;min-width:0">'
+     +'<div id="imglib-head" style="padding:11px 14px;border-bottom:1px solid #e9efec;font-weight:700;color:#2b3a33">← Chọn một thư mục bên trái để xem ảnh</div>'
+     +'<div id="imglib-grid" style="flex:1;overflow:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:10px;align-content:start;background:#fafcfb"></div>'
+   +'</div>'
+  +'</div></div>';
+ await imgLibLoadFolders(); imgLibPaintFolders();
+}
+/* ---- Bộ chọn ảnh để GỬI trong Hội thoại ---- */
+async function openChatImgPicker(){ if(!_CHAT_CUR){ alert('Hãy mở một hội thoại trước.'); return; }
+ await imgLibLoadFolders();
+ var m=document.getElementById('imgpick-modal'); if(m)m.remove();
+ m=document.createElement('div'); m.id='imgpick-modal'; m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px';
+ m.innerHTML='<div style="background:#fff;border-radius:14px;width:720px;max-width:96vw;height:80vh;display:flex;flex-direction:column;overflow:hidden" onclick="event.stopPropagation()">'
+  +'<div style="padding:12px 16px;border-bottom:1px solid #e9efec;display:flex;align-items:center;gap:10px;background:#1F6F54;color:#fff"><b>📷 Gửi ảnh cho khách</b><span style="font-size:12px;opacity:.85">Chọn ảnh để gửi vào hội thoại</span><span onclick="var x=document.getElementById(&quot;imgpick-modal&quot;);if(x)x.remove()" style="margin-left:auto;cursor:pointer;font-size:18px">✕</span></div>'
+  +'<div style="padding:9px 12px;border-bottom:1px solid #eef2f0;display:flex;gap:8px"><select id="imgpick-folder" onchange="imgPickLoad(this.value)" style="flex:1;border:1px solid #e3ece7;border-radius:8px;padding:7px;font-size:12.5px"><option value="">— Chọn thư mục —</option>'+(IMGLIB_FOLDERS||[]).map(function(f){return '<option value="'+_mvEsc(f.id)+'">'+_mvEsc(f.name)+' ('+(f.total||0)+')</option>';}).join('')+'</select></div>'
+  +'<div id="imgpick-grid" style="flex:1;overflow:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:9px;align-content:start"><div style="color:#9aa8a3">Chọn thư mục để xem ảnh…</div></div>'
+ +'</div>';
+ m.onclick=function(){ m.remove(); };
+ document.body.appendChild(m);
+}
+async function imgPickLoad(fid){ var g=document.getElementById('imgpick-grid'); if(!g)return; if(!fid){ g.innerHTML='<div style="color:#9aa8a3">Chọn thư mục để xem ảnh…</div>'; return; } g.innerHTML='<div style="color:#9aa8a3">⏳ Đang tải…</div>';
+ var items=await imgLibItems(fid);
+ g.innerHTML=items.map(function(it){ var u=it.url.replace(/'/g,"\\'"); return '<div style="border:1px solid #eef2f0;border-radius:9px;overflow:hidden"><img src="'+_mvEsc(it.url)+'" loading="lazy" style="width:100%;height:105px;object-fit:cover;display:block"><button onclick="chatSendImage(\''+u+'\',this)" style="width:100%;border:0;border-top:1px solid #eef2f0;background:#1F6F54;color:#fff;padding:5px;font-size:11.5px;cursor:pointer;font-weight:600">Gửi</button></div>'; }).join('')||'<div style="color:#9aa8a3">Thư mục trống.</div>';
+}
+async function chatSendImage(url,btn){ if(!_CHAT_CUR)return; if(btn){btn.disabled=true;btn.textContent='⏳';}
+ try{ var res=await sb.functions.invoke('pancake-send',{body:{page_id:_CHAT_CUR.pid,conv_id:_CHAT_CUR.cid,image_url:url}}); var d=(res&&res.data)||{};
+  if(d.ok){ var ld=_chatLead(_CHAT_CUR.cid)||{}; _CHAT_CUR.messages.push({sender:(d.page||ld.page_name||'Shop'),from_page:true,text:'[Đã gửi ảnh]',at:new Date().toISOString().slice(0,19).replace('T',' ')}); _CHAT_CUR.count=(_CHAT_CUR.count||0)+1; try{_chatRenderThread();}catch(e){} if(typeof toast==='function')toast('✓ Đã gửi ảnh'); if(btn){btn.textContent='✓ Đã gửi';} }
+  else { alert('Chưa gửi được ảnh: '+(d.reason||'lỗi')); if(btn){btn.disabled=false;btn.textContent='Gửi';} }
+ }catch(e){ alert('Lỗi gửi ảnh: '+((e&&e.message)||e)); if(btn){btn.disabled=false;btn.textContent='Gửi';} }
+}
+
 async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) return;
  if(!document.getElementById('chat-list')){
   el.innerHTML='<div class="card" style="padding:0;overflow:hidden">'
@@ -4027,7 +4085,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div style="flex:1;display:flex;flex-direction:column;background:#f7faf8;min-width:240px">'
      +'<div id="chat-thread" style="flex:1;overflow:auto;padding:14px"><div style="color:#9aa8a3;text-align:center;margin-top:40px">← Chọn một hội thoại để xem tin nhắn.</div></div>'
      +'<div id="chat-tagbar"></div>'
-     +'<div style="border-top:1px solid #e9efec;padding:8px 12px 10px;background:#fff;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="chat-pv-note" style="display:none;flex-basis:100%;font-size:11.5px;color:#1F6F54;line-height:1.4"></div><span id="chat-trg" style="display:flex;gap:3px;white-space:nowrap"></span><input id="chat-send-input" placeholder="Nhập tin trả lời khách… (Enter để gửi)" oninput="_chatClearPv()" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:20px;padding:8px 14px;font-size:13px"><button id="chat-tr-btn" onclick="chatPreviewTranslate()" title="Dịch nội dung đang soạn sang ngôn ngữ đã chọn để xem trước" style="border:1px solid #c9d6e8;background:#eef2fb;color:#3b4ba8;border-radius:20px;padding:8px 13px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">🔄 Dịch</button><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
+     +'<div style="border-top:1px solid #e9efec;padding:8px 12px 10px;background:#fff;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="chat-pv-note" style="display:none;flex-basis:100%;font-size:11.5px;color:#1F6F54;line-height:1.4"></div><span id="chat-trg" style="display:flex;gap:3px;white-space:nowrap"></span><input id="chat-send-input" placeholder="Nhập tin trả lời khách… (Enter để gửi)" oninput="_chatClearPv()" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:20px;padding:8px 14px;font-size:13px"><button id="chat-img-btn" onclick="openChatImgPicker()" title="Gửi ảnh từ thư viện (đồng bộ Pancake)" style="border:1px solid #d2e8bd;background:#eef7e6;color:#1F6F54;border-radius:20px;padding:8px 12px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">📷</button><button id="chat-tr-btn" onclick="chatPreviewTranslate()" title="Dịch nội dung đang soạn sang ngôn ngữ đã chọn để xem trước" style="border:1px solid #c9d6e8;background:#eef2fb;color:#3b4ba8;border-radius:20px;padding:8px 13px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">🔄 Dịch</button><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
    +'</div>'
    +'<div style="flex:0 0 250px;max-width:28%;border-left:1px solid #e9efec;background:#fff;overflow:auto"><div id="chat-notepanel" style="padding:12px"><div style="color:#9aa8a3;font-size:12px;text-align:center;margin-top:30px">Chọn hội thoại để xem thông tin.</div></div></div>'
    +'</div></div>';
