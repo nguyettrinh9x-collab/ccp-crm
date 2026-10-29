@@ -514,7 +514,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-bk';
+const APP_VERSION='2026-10-30-bl';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4012,7 +4012,7 @@ function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=
  var q=(_CHAT_Q||'').toLowerCase();
  var list=_CHAT_CONVS.filter(function(c){ if(_CHAT_PAGE&&c.page_name!==_CHAT_PAGE)return false; if(!_chatModeOk(c))return false; if(!_chatDateOk(_chatBasisDate(c)))return false; if(q&&((c.ten||'')+' '+(c.snippet||'')).toLowerCase().indexOf(q)<0)return false; if(_CHAT_FTAGS.length){ var tg=','+(c.tags||'').split(',').map(function(x){return x.trim();}).join(',')+','; for(var k=0;k<_CHAT_FTAGS.length;k++){ if(tg.indexOf(','+_CHAT_FTAGS[k]+',')<0)return false; } } return true; });
  var _unc=0; for(var _j=0;_j<list.length;_j++){if(list[_j].unread)_unc++;}
- var cnt=document.getElementById('chat-count'); if(cnt) cnt.innerHTML=list.length+' hội thoại'+(_unc?' · <b style="color:#e23d3d">'+_unc+' chưa đọc</b>':'');
+ var cnt=document.getElementById('chat-count'); if(cnt) cnt.innerHTML=list.length+' hội thoại'+(_unc?' · <b onclick="_chatSetMode(\'unread\')" style="color:#e23d3d;cursor:pointer;text-decoration:underline">'+_unc+' chưa đọc ▸</b>':'');
  var items=list.slice(0,80).map(function(c){ var op=_CHAT_OPEN&&_CHAT_OPEN.cid===c.conv_id; var bg=op?'#eaf4ef':(c.unread?'#fff4f4':'transparent');
   return '<div onclick="chatOpen(\''+encodeURIComponent(c.conv_id)+'\',\''+encodeURIComponent(c.page_id)+'\')" onmouseover="this.style.background=\'#f2f6f4\'" onmouseout="this.style.background=\''+bg+'\'" style="display:flex;gap:10px;align-items:center;padding:8px 9px;border-radius:10px;cursor:pointer;background:'+bg+'">'
    +_chatAva(c.ten,c.platform)
@@ -4155,12 +4155,12 @@ function _chatPaintNote(){ var np=document.getElementById('chat-notepanel'); if(
 }
 var _CHAT_DP='', _CHAT_FTAGS=[], _CHAT_FTOPEN=false, _CHAT_MODE='';
 function _chatIsToday(iso){ if(!iso)return false; var d=new Date(iso); if(isNaN(d))return false; var n=new Date(); var s=new Date(n.getFullYear(),n.getMonth(),n.getDate()); return d>=s; }
-function _chatModeOk(c){ if(!_CHAT_MODE)return true; var it=_chatIsToday(c.conv_inserted_at); if(_CHAT_MODE==='new_today')return it; if(_CHAT_MODE==='dao')return !it; if(_CHAT_MODE==='nocrm')return !(c.in_crm||c.status==='added'); return true; }
+function _chatModeOk(c){ if(!_CHAT_MODE)return true; var it=_chatIsToday(c.conv_inserted_at); if(_CHAT_MODE==='new_today')return it; if(_CHAT_MODE==='dao')return !it; if(_CHAT_MODE==='nocrm')return !(c.in_crm||c.status==='added'); if(_CHAT_MODE==='unread')return !!c.unread; return true; }
 function _chatBasisDate(c){ return (_CHAT_MODE==='dao')?(c.last_at||c.conv_inserted_at):c.conv_inserted_at; }
 function _daoToday(c){ return !_chatIsToday(c.conv_inserted_at) && _chatIsToday(c.last_at||c.conv_inserted_at); }
 function _daoRecent(c){ return !_chatIsToday(c.conv_inserted_at) && _chatDateOk(c.last_at||c.conv_inserted_at); }
-function _chatModeCounts(){ var a={new_today:0,dao:0,nocrm:0}; (_CHAT_CONVS||[]).forEach(function(c){ var it=_chatIsToday(c.conv_inserted_at); if(it)a.new_today++; if(_daoToday(c))a.dao++; if(!(c.in_crm||c.status==='added'))a.nocrm++; }); return a; }
-function _chatPaintModebar(){ var b=document.getElementById('chat-modebar'); if(!b)return; var ct=_chatModeCounts(); var ps=[['','Tất cả',null],['new_today','🆕 Mới hôm nay',ct.new_today],['dao','♻️ Khách đào',ct.dao],['nocrm','📥 Chưa vào CRM',ct.nocrm]];
+function _chatModeCounts(){ var a={new_today:0,dao:0,nocrm:0,unread:0}; (_CHAT_CONVS||[]).forEach(function(c){ var it=_chatIsToday(c.conv_inserted_at); if(it)a.new_today++; if(_daoToday(c))a.dao++; if(!(c.in_crm||c.status==='added'))a.nocrm++; if(c.unread)a.unread++; }); return a; }
+function _chatPaintModebar(){ var b=document.getElementById('chat-modebar'); if(!b)return; var ct=_chatModeCounts(); var ps=[['','Tất cả',null],['unread','🔴 Chưa đọc',ct.unread],['new_today','🆕 Mới hôm nay',ct.new_today],['dao','♻️ Khách đào',ct.dao],['nocrm','📥 Chưa vào CRM',ct.nocrm]];
  b.innerHTML=ps.map(function(p){ var on=_CHAT_MODE===p[0]; var lbl=p[1]+(p[2]!=null?(' ('+p[2]+')'):''); return '<span onclick="_chatSetMode(\''+p[0]+'\')" style="cursor:pointer;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;'+(on?'background:#1F6F54;color:#fff':'background:#eef1f0;color:#6b7c76')+'">'+lbl+'</span>'; }).join(' '); }
 function _chatSetMode(m){ _CHAT_MODE=m; if(m==='dao'&&!_CHAT_DP){ _CHAT_DP='today'; var _ds=document.getElementById('chat-date-sel'); if(_ds)_ds.value='today'; } _chatPaintModebar(); _chatPaintList(); }
 function _chatPaintTagFilter(){ var b=document.getElementById('chat-tagfilter'); if(!b)return;
