@@ -124,6 +124,11 @@
     #v-chat.show-thread .chat-c-list{display:none!important}
     #v-chat.show-thread .chat-c-thread{display:flex!important}
     .chat-mobile-back{display:flex!important}
+    #chat-send-input{order:1;flex:1 1 100%!important;min-height:62px;width:100%}
+    #chat-trg{order:2;flex-wrap:wrap}
+    #chat-img-btn{order:3}
+    #chat-tr-btn{order:4}
+    #chat-send-btn{order:5;flex:1 1 auto}
     .login-card{width:90vw;max-width:360px;padding:28px 22px}
   }
 </style>
@@ -509,7 +514,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-bj';
+const APP_VERSION='2026-10-29-bk';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4117,7 +4122,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div class="chat-c-thread" style="flex:1;display:flex;flex-direction:column;background:#f7faf8;min-width:240px">'+'<div class="chat-mobile-back" onclick="_chatMobileBack()" style="display:none;align-items:center;gap:6px;padding:9px 12px;border-bottom:1px solid #e9efec;background:#fff;color:#1F6F54;font-weight:700;cursor:pointer;font-size:13px">← Danh sách hội thoại</div>'
      +'<div id="chat-thread" style="flex:1;overflow:auto;padding:14px"><div style="color:#9aa8a3;text-align:center;margin-top:40px">← Chọn một hội thoại để xem tin nhắn.</div></div>'
      +'<div id="chat-tagbar"></div>'
-     +'<div style="border-top:1px solid #e9efec;padding:8px 12px 10px;background:#fff;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="chat-pv-note" style="display:none;flex-basis:100%;font-size:11.5px;color:#1F6F54;line-height:1.4"></div><span id="chat-trg" style="display:flex;gap:3px;white-space:nowrap"></span><textarea id="chat-send-input" rows="1" placeholder="Nhập tin trả lời khách… (Enter gửi · Shift+Enter xuống dòng · kéo góc để rộng)" oninput="_chatClearPv()" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:16px;padding:9px 14px;font-size:13px;resize:vertical;min-height:40px;max-height:260px;font-family:inherit;line-height:1.45"></textarea><button id="chat-img-btn" onclick="openChatImgPicker()" title="Gửi ảnh từ thư viện (đồng bộ Pancake)" style="border:1px solid #d2e8bd;background:#eef7e6;color:#1F6F54;border-radius:20px;padding:8px 12px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">📷</button><button id="chat-tr-btn" onclick="chatPreviewTranslate()" title="Dịch nội dung đang soạn sang ngôn ngữ đã chọn để xem trước" style="border:1px solid #c9d6e8;background:#eef2fb;color:#3b4ba8;border-radius:20px;padding:8px 13px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">🔄 Dịch</button><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
+     +'<div style="border-top:1px solid #e9efec;padding:8px 12px 10px;background:#fff;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="chat-pv-note" style="display:none;flex-basis:100%;font-size:11.5px;color:#1F6F54;line-height:1.4"></div><span id="chat-trg" style="display:flex;gap:3px;white-space:nowrap"></span><textarea id="chat-send-input" rows="2" placeholder="Nhập tin trả lời khách… (Enter gửi · Shift+Enter xuống dòng · kéo góc để rộng)" oninput="_chatClearPv()" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:16px;padding:11px 15px;font-size:14px;resize:vertical;min-height:62px;max-height:300px;font-family:inherit;line-height:1.5"></textarea><button id="chat-img-btn" onclick="openChatImgPicker()" title="Gửi ảnh từ thư viện (đồng bộ Pancake)" style="border:1px solid #d2e8bd;background:#eef7e6;color:#1F6F54;border-radius:20px;padding:8px 12px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">📷</button><button id="chat-tr-btn" onclick="chatPreviewTranslate()" title="Dịch nội dung đang soạn sang ngôn ngữ đã chọn để xem trước" style="border:1px solid #c9d6e8;background:#eef2fb;color:#3b4ba8;border-radius:20px;padding:8px 13px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">🔄 Dịch</button><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
    +'</div>'
    +'<div class="chat-c-note" style="flex:0 0 250px;max-width:28%;border-left:1px solid #e9efec;background:#fff;overflow:auto"><div id="chat-notepanel" style="padding:12px"><div style="color:#9aa8a3;font-size:12px;text-align:center;margin-top:30px">Chọn hội thoại để xem thông tin.</div></div></div>'
    +'</div></div>';
