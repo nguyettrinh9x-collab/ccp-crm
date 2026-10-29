@@ -517,7 +517,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-bo';
+const APP_VERSION='2026-10-30-bq';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4019,7 +4019,7 @@ function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=
  var items=list.slice(0,80).map(function(c){ var op=_CHAT_OPEN&&_CHAT_OPEN.cid===c.conv_id; var bg=op?'#eaf4ef':(c.unread?'#fff4f4':'transparent');
   return '<div onclick="chatOpen(\''+encodeURIComponent(c.conv_id)+'\',\''+encodeURIComponent(c.page_id)+'\')" onmouseover="this.style.background=\'#f2f6f4\'" onmouseout="this.style.background=\''+bg+'\'" style="display:flex;gap:10px;align-items:center;padding:8px 9px;border-radius:10px;cursor:pointer;background:'+bg+'">'
    +_chatAva(c.ten,c.platform)
-   +'<div style="flex:1;min-width:0"><div style="font-weight:'+(c.unread?'800':'600')+';font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc(c.ten||'(không tên)')+(c.sale?' <span style="font-weight:400;color:#9aa8a3;font-size:11px">· '+_mvEsc(c.sale)+'</span>':'')+'</div>'
+   +'<div style="flex:1;min-width:0"><div style="font-weight:'+(c.unread?'800':'600')+';font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc(c.ten||'(không tên)')+(c.sale?' <span style="font-weight:400;color:#9aa8a3;font-size:11px">· '+_mvEsc(c.sale)+'</span>':'')+((c.in_crm||c.status==='added')?' <span style="font-weight:700;font-size:9px;background:#d8f3e3;color:#0a7a44;padding:1px 6px;border-radius:8px;vertical-align:middle">✓ Đã thêm CRM</span>':'')+'</div>'
    +'<div style="font-size:12px;color:'+(c.unread?'#55403f':'#8a978f')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc((c.snippet||'').slice(0,60))+'</div>'+_chatTags(c.tags)+'</div>'+(c.unread?'<span title="Chưa đọc" style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:#e23d3d;margin-left:2px"></span>':'')+'</div>'; }).join('');
  lc.innerHTML=items||'<div style="color:#6b7c76;padding:10px">Không có hội thoại.</div>';
 }
@@ -4214,9 +4214,22 @@ async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComp
 }
 var _CHAT_TRG=(function(){try{return localStorage.getItem('chat_trg')||'';}catch(e){return '';}})();
 var _CHAT_TRGOPTS=[['','🇻🇳 Việt','#6b7c76'],['en','🇬🇧 Anh','#2d7dd2'],['fr','🇫🇷 Pháp','#7a5cc0'],['auto','🌐 Tự động','#1F6F54']];
-function _chatTrgLabel(t){ var m={en:'tiếng Anh',fr:'tiếng Pháp',auto:'tiếng khách'}; return m[t]||''; }
+var _CHAT_LANGS=[['en','tiếng Anh'],['fr','tiếng Pháp'],['es','tiếng Tây Ban Nha'],['pt','tiếng Bồ Đào Nha'],['ht','tiếng Creole Haiti'],['ar','tiếng Ả Rập'],['de','tiếng Đức'],['it','tiếng Ý'],['ru','tiếng Nga'],['zh-CN','tiếng Trung'],['ja','tiếng Nhật'],['ko','tiếng Hàn'],['hi','tiếng Hindi'],['th','tiếng Thái'],['id','tiếng Indonesia'],['ms','tiếng Mã Lai'],['tl','tiếng Philippines'],['nl','tiếng Hà Lan'],['pl','tiếng Ba Lan'],['tr','tiếng Thổ Nhĩ Kỳ'],['sw','tiếng Swahili'],['so','tiếng Somali'],['uk','tiếng Ukraina'],['ro','tiếng Rumani'],['vi','tiếng Việt']];
+function _chatTrgLabel(t){ var m={en:'tiếng Anh',fr:'tiếng Pháp',auto:'tiếng khách'}; if(m[t])return m[t]; for(var i=0;i<_CHAT_LANGS.length;i++){ if(_CHAT_LANGS[i][0]===t)return _CHAT_LANGS[i][1]; } return t||''; }
+function chatLangPicker(){ var ex=document.getElementById('chat-lang-pop'); if(ex){ex.remove();return;} var b=document.getElementById('chat-trg'); if(!b)return;
+ var pop=document.createElement('div'); pop.id='chat-lang-pop'; pop.style.cssText='position:absolute;bottom:46px;left:8px;z-index:50;background:#fff;border:1px solid #d9e2dd;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);width:250px;max-height:300px;display:flex;flex-direction:column;overflow:hidden';
+ pop.innerHTML='<div style="padding:8px"><input id="chat-lang-q" oninput="_chatLangFilter(this.value)" placeholder="🔎 Tìm ngôn ngữ…" style="width:100%;border:1px solid #e3ece7;border-radius:16px;padding:6px 12px;font-size:12.5px"></div><div id="chat-lang-list" style="flex:1;overflow:auto;padding:0 6px 8px"></div>';
+ var wrap=b.parentElement; wrap.style.position='relative'; wrap.appendChild(pop);
+ _chatLangFilter(''); setTimeout(function(){ var q=document.getElementById('chat-lang-q'); if(q)q.focus(); },50);
+ setTimeout(function(){ document.addEventListener('click',_chatLangOutside); },60);
+}
+function _chatLangOutside(e){ var pop=document.getElementById('chat-lang-pop'); if(pop && !pop.contains(e.target) && e.target.id!=='chat-lang-morebtn'){ pop.remove(); document.removeEventListener('click',_chatLangOutside); } }
+function _chatLangFilter(q){ var L=document.getElementById('chat-lang-list'); if(!L)return; q=(q||'').toLowerCase(); var list=_CHAT_LANGS.filter(function(x){ return !q || x[1].toLowerCase().indexOf(q)>=0 || x[0].toLowerCase().indexOf(q)>=0; });
+ L.innerHTML=list.map(function(x){ var on=_CHAT_TRG===x[0]; return '<div onclick="chatPickLang(\''+x[0]+'\')" style="cursor:pointer;padding:7px 9px;border-radius:8px;font-size:12.5px;'+(on?'background:#1F6F54;color:#fff':'color:#2b3a33')+'">'+_mvEsc(x[1])+' <span style="opacity:.6;font-size:11px">('+x[0]+')</span></div>'; }).join('')||'<div style="color:#9aa8a3;padding:10px;font-size:12px">Không thấy ngôn ngữ.</div>';
+}
+function chatPickLang(code){ var pop=document.getElementById('chat-lang-pop'); if(pop)pop.remove(); try{document.removeEventListener('click',_chatLangOutside);}catch(e){} chatSetTrg(code); }
 function _chatPaintTrg(){ var b=document.getElementById('chat-trg'); if(!b)return;
- b.innerHTML=_CHAT_TRGOPTS.map(function(o){ var on=_CHAT_TRG===o[0]; return '<button type="button" onclick="chatSetTrg(\''+o[0]+'\')" title="'+(o[0]?('Gõ tiếng Việt → tự dịch sang '+_chatTrgLabel(o[0])+' khi gửi'):'Gửi nguyên văn, không dịch')+'" style="border:none;border-radius:14px;padding:6px 9px;font-size:11.5px;cursor:pointer;font-weight:700;white-space:nowrap;background:'+(on?o[2]:'#eef1f0')+';color:'+(on?'#fff':'#6b7c76')+'">'+o[1]+'</button>'; }).join('');
+ var _custOn=_CHAT_TRG&&['','en','fr','auto'].indexOf(_CHAT_TRG)<0; b.innerHTML=_CHAT_TRGOPTS.map(function(o){ var on=_CHAT_TRG===o[0]; return '<button type="button" onclick="chatSetTrg(\''+o[0]+'\')" title="'+(o[0]?('Gõ tiếng Việt → tự dịch sang '+_chatTrgLabel(o[0])+' khi gửi'):'Gửi nguyên văn, không dịch')+'" style="border:none;border-radius:14px;padding:6px 9px;font-size:11.5px;cursor:pointer;font-weight:700;white-space:nowrap;background:'+(on?o[2]:'#eef1f0')+';color:'+(on?'#fff':'#6b7c76')+'">'+o[1]+'</button>'; }).join('')+'<button type="button" id="chat-lang-morebtn" onclick="chatLangPicker()" title="Chọn ngôn ngữ khác để dịch" style="border:none;border-radius:14px;padding:6px 9px;font-size:11.5px;cursor:pointer;font-weight:700;white-space:nowrap;background:'+(_custOn?'#c0587e':'#eef1f0')+';color:'+(_custOn?'#fff':'#6b7c76')+'">🌍 '+(_custOn?_mvEsc(_chatTrgLabel(_CHAT_TRG)):'Khác ▾')+'</button>';
  var inp=document.getElementById('chat-send-input'); if(inp)inp.placeholder=_CHAT_TRG?('Gõ tiếng Việt — tự dịch sang '+_chatTrgLabel(_CHAT_TRG)+' khi gửi'):'Nhập tin trả lời khách… (Enter để gửi)';
 }
 function chatSetTrg(t){ _CHAT_TRG=t; try{localStorage.setItem('chat_trg',t);}catch(e){} _chatPaintTrg(); var inp=document.getElementById('chat-send-input'); if(inp)inp.focus(); }
