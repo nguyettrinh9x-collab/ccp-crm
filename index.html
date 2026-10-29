@@ -127,13 +127,12 @@
 <div id="login">
   <div class="login-card">
     <div class="logo">CCP CRM<small>Hệ thống chăm sóc khách hàng chủ động</small></div>
-    <input id="u" type="email" name="email" placeholder="Email" autocomplete="username">
-    <input id="p" type="password" name="password" placeholder="Mật khẩu" autocomplete="current-password">
-    <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#64746e;margin-top:12px;cursor:pointer;text-align:left"><input type="checkbox" id="rmb" style="width:auto;margin:0"> Ghi nhớ đăng nhập (chỉ dùng trên máy riêng)</label><button onclick="login()">Đăng nhập</button>
+    <input id="u" placeholder="Tài khoản" autocomplete="off">
+    <input id="p" type="password" placeholder="Mật khẩu">
+    <button onclick="login()">Đăng nhập</button>
   </div>
 </div>
 
-<script>try{var _r=localStorage.getItem("ccp_remember");var _u=document.getElementById("u"),_p=document.getElementById("p"),_c=document.getElementById("rmb");if(_r){var _o=JSON.parse(_r);if(_u&&_o.e)_u.value=_o.e;if(_p&&_o.p)_p.value=decodeURIComponent(escape(atob(_o.p)));if(_c)_c.checked=true;}else{var _e=localStorage.getItem("ccp_email");if(_e&&_u&&!_u.value)_u.value=_e;}}catch(_){}</script>
 <!-- ============ APP ============ -->
 <div id="app">
   <button id="navtoggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
@@ -499,7 +498,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-af';
+const APP_VERSION='2026-10-29-ag';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1723,6 +1722,7 @@ async function quickAddTask(id){
   alert('✅ Đã giao việc cho "'+c.ten+'". Xem ở mục Việc cần làm.');
 }
 function renderAdd(){
+  try{window._CHAT_PENDING_LEAD=null;}catch(e){}
   const opt=(o)=>Object.entries(o).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
   document.getElementById('v-add').innerHTML=`
     <div class="card" style="margin-bottom:16px">
@@ -2190,7 +2190,7 @@ function renderToday(){
         const khachCell=tc?`<b style="cursor:pointer;color:var(--teal-dark)" title="${custTitle(tc)}" onclick="editCustomer('${tc.id}')">${tc.ten}</b>`:(cn?`<b>${cn}</b>`:'<span style="color:var(--muted)">—</span>');
         return `<tr style="background:#eefaf3"><td><span class="pill" style="background:var(--cream);color:var(--teal-dark)">${TASK_LOAI[t.loai]||t.loai}</span></td><td>${khachCell}</td><td>${t.noi_dung||''}</td><td>${t.han||'—'}</td><td>${SALES[t.owner]||'—'}</td><td style="text-align:center;white-space:nowrap"><span style="cursor:pointer;color:var(--teal-dark);font-weight:700" onclick="reactivateTask('${t.id}')">🔄 Kích hoạt lại</span></td></tr>`; };
       const dFil=`<div class="filters" style="margin:8px 0 10px"><input id="dn-q" class="search" value="${(DONE_Q||'').replace(/"/g,'&quot;')}" oninput="setDoneQ(this.value)" placeholder="🔎 Lọc tên khách / nội dung..." style="max-width:300px"><select onchange="setDoneSale(this.value)" style="width:auto"><option value="">Tất cả sale</option>${Object.entries(SALES).map(([k,v])=>`<option value="${k}" ${DONE_SALE===k?'selected':''}>${v}</option>`).join('')}</select><span style="font-size:12px;color:var(--muted)">Đến hạn:</span><input type="date" value="${DONE_FROM}" onchange="setDoneFrom(this.value)" title="Từ ngày" style="width:auto"><span style="color:var(--muted)">→</span><input type="date" value="${DONE_TO}" onchange="setDoneTo(this.value)" title="Đến ngày" style="width:auto">${(DONE_Q||DONE_SALE||DONE_FROM||DONE_TO)?`<button class="btn ghost" type="button" style="padding:4px 10px;font-size:12px" onclick="clearDoneFilters()">Xoá lọc</button>`:''}</div>`;
-const dToggleBtn=`<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;margin-left:10px;vertical-align:middle" onclick="toggleDone()">${DONE_HIDE?'👁️ Hiện':'🙈 Ẩn'}</button>`+(doneAll.length?`<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;margin-left:8px;vertical-align:middle;color:#e23d3d;border-color:#f0c3c3" onclick="deleteAllDoneTasks()">🗑️ Xoá tất cả đã xong</button>`:'');
+      const dToggleBtn=`<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;margin-left:10px;vertical-align:middle" onclick="toggleDone()">${DONE_HIDE?'👁️ Hiện':'🙈 Ẩn'}</button>`+(doneAll.length?`<button class="btn ghost" type="button" style="padding:4px 12px;font-size:12px;margin-left:8px;vertical-align:middle;color:#e23d3d;border-color:#f0c3c3" onclick="deleteAllDoneTasks()">🗑️ Xoá tất cả đã xong</button>`:'');
       html+=`<h2 class="sec" style="margin-top:18px;color:var(--won)">✅ Việc đã hoàn thành (${done.length}${done.length!==doneAll.length?' / '+doneAll.length:''})${dToggleBtn}</h2>`;
       if(DONE_HIDE){
         html+=`<p style="color:var(--muted);font-size:12px;margin:-6px 0 8px">Đang ẩn để đỡ rối. Bấm <b>👁️ Hiện</b> để xem danh sách việc đã xong.</p>`;
@@ -2324,7 +2324,7 @@ function renderReport(){
 try{if(typeof PERMS!=='undefined'&&PERMS['owner']&&PERMS['owner'].indexOf('tongbill')<0)PERMS['owner'].push('tongbill');}catch(e){}
 /* ============ TỔNG BILL (dòng tiền theo khách đã chốt) ============ */
 let BILL_MONTH=(new Date()).toISOString().slice(0,7); // YYYY-MM đang xem
-function setBillMonth(v){ BILL_MONTH=v; renderTongBill(); }
+function setBillMonth(v){ BILL_MONTH=v; window.__BILL_PAGE=1; renderTongBill(); }
 function billFilter(v){ const q=(v||'').toLowerCase().trim(); let n=0; document.querySelectorAll('#v-tongbill tr[data-s]').forEach(tr=>{ const show=!q||tr.getAttribute('data-s').includes(q); tr.style.display=show?'':'none'; if(show)n++; }); const el=document.getElementById('bill-search-count'); if(el)el.textContent=q?('· '+n+' kết quả'):''; }
 /* Tỷ giá theo quốc gia (chị sửa số ở đây nếu tỷ giá thay đổi) */
 function tyGiaBill(c){
@@ -2337,13 +2337,6 @@ function tyGiaBill(c){
   if(g==='US') return 23500; if(g==='Canada') return 16000; if(g==='Euro') return 24500; // EUR
   return 0;
 }
-var __BILLS=null;
-function reloadBills(){ __BILLS=null; renderTongBill(); }
-var __BILLS=null;
-function reloadBills(){ __BILLS=null; renderTongBill(); }
-var __BILLS=null;
-function reloadBills(){ __BILLS=null; renderTongBill(); }
-function billAllToggle(){ window.__BILL_ALL=!window.__BILL_ALL; renderTongBill(); }
 var __BILLS=null;
 function reloadBills(){ __BILLS=null; renderTongBill(); }
 function billAllToggle(){ window.__BILL_ALL=!window.__BILL_ALL; window.__BILL_PAGE=1; renderTongBill(); }
@@ -3447,7 +3440,7 @@ async function login(){
     }
     _reset(); alert('Đăng nhập lỗi: '+error.message); return;
   }
-  _reset(); try{var _rb=document.getElementById('rmb'); if(_rb&&_rb.checked){localStorage.setItem('ccp_remember',JSON.stringify({e:email,p:btoa(unescape(encodeURIComponent(pass)))}));}else{localStorage.removeItem('ccp_remember');} localStorage.setItem('ccp_email',email);}catch(_){}
+  _reset();
   if(!await ensureMFA()){ await sb.auth.signOut(); return; }
   await afterLogin();
 }
@@ -3538,6 +3531,7 @@ async function saveCustomer(e){
       if(rec.follow) upd.follow=rec.follow;
       if((''+(rec.ghi||'')).trim()) upd.ghi=((dup.ghi?dup.ghi+'\n':'')+rec.ghi);
       await sb.from('customers').update(upd).eq('id',dup.id);
+      if(window._CHAT_PENDING_LEAD){ try{ var _pc=window._CHAT_PENDING_LEAD; window._CHAT_PENDING_LEAD=null; sb.from('pancake_leads').update({status:'added',in_crm:true}).eq('conv_id',_pc); if(typeof _chatLead==='function'){ var _l=_chatLead(_pc); if(_l){ _l.in_crm=true; _l.status='added'; } } var _h=document.getElementById('add-from-chat-hint'); if(_h)_h.remove(); }catch(e){} }
       e.target.reset(); await loadAll(); renderAll(); go('list');
       alert(`✅ Đã đồng bộ vào khách "${dup.ten}" — giờ có ${rec.dt>0?nLan+1:nLan} lần mua. Không tạo bản ghi trùng.`);
       return;
@@ -3550,7 +3544,8 @@ async function saveCustomer(e){
     await sb.from('tasks').insert({ owner:rec.owner, customer_id:ins.id, loai:'cham_chua',
       noi_dung:'Chăm sóc khách mới: '+rec.ten, han:(rec.follow||D(1)), xong:false });
   }
-  e.target.reset(); await loadAll(); renderAll(); go('add');
+  if(window._CHAT_PENDING_LEAD){ try{ var _pc=window._CHAT_PENDING_LEAD; window._CHAT_PENDING_LEAD=null; sb.from('pancake_leads').update({status:'added',in_crm:true}).eq('conv_id',_pc); if(typeof _chatLead==='function'){ var _l=_chatLead(_pc); if(_l){ _l.in_crm=true; _l.status='added'; } } var _h=document.getElementById('add-from-chat-hint'); if(_h)_h.remove(); }catch(e){} }
+      e.target.reset(); await loadAll(); renderAll(); go('add');
   alert('✅ Đã lưu khách "'+rec.ten+'". Khách đã hiện ở danh sách bên dưới — có thể thêm khách tiếp ngay.');
 }
 async function markCared(id){ const c=findC(id); if(!c)return;
@@ -3824,16 +3819,21 @@ async function chatSaveNote(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; var 
  try{ var e=await sb.from('pancake_leads').update({note:v}).eq('conv_id',cid); if(e&&e.error)throw e.error; var ld=_chatLead(cid); if(ld)ld.note=v; if(btn){btn.textContent='✓ Đã lưu';setTimeout(function(){if(btn){btn.textContent='💾 Lưu ghi chú';btn.disabled=false;}},1500);} }catch(err){ if(btn){btn.textContent='💾 Lưu ghi chú';btn.disabled=false;} alert('Lỗi lưu ghi chú: '+((err&&err.message)||err)); }
 }
 async function chatAddCrm(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; var ld=_chatLead(cid); if(!ld){alert('Không tìm thấy dữ liệu khách.');return;}
- if((ld.in_crm||ld.status==='added') && !confirm('Khách này có thể đã có trong CRM. Vẫn thêm mới?'))return;
- var btn=document.getElementById('chat-addcrm'); if(btn){btn.textContent='⏳ Đang thêm…';btn.disabled=true;}
- try{ var rec=(typeof pkLeadToRec==='function')?pkLeadToRec(ld):{ten:ld.ten||'(không tên)',phone:ld.phone||'',owner:(typeof revFind==='function'?revFind(SALES,(ld.sale||'').split('/')[0].trim()):null)||(window.ME&&ME.id)||null,nguon:'pancake',tt:'tuong_tac'};
-  var ins=await sb.from('customers').insert(rec).select('id').single(); if(ins&&ins.error)throw ins.error;
-  await sb.from('pancake_leads').update({status:'added',in_crm:true}).eq('conv_id',cid);
-  ld.in_crm=true; ld.status='added';
-  if(typeof toast==='function')toast('✓ Đã thêm "'+(ld.ten||'')+'" vào CRM'); else alert('✓ Đã thêm vào CRM');
-  _chatRenderThread();
-  if(typeof loadAll==='function'){ loadAll(); }
- }catch(err){ if(btn){btn.textContent='➕ Thêm vào CRM';btn.disabled=false;} alert('Lỗi thêm khách: '+((err&&err.message)||err)); }
+ if(typeof go==='function') go('add');
+ setTimeout(function(){ try{
+   window._CHAT_PENDING_LEAD=cid;
+   var S=function(id,v){ var e=document.getElementById(id); if(e&&v!=null&&v!=='') e.value=v; };
+   S('f-ten', ld.ten||''); S('f-phone', ld.phone||'');
+   if(ld.email) S('f-email', ld.email);
+   if(ld.quoc_gia){ var qg=document.getElementById('f-qg'); if(qg){ var up=(''+ld.quoc_gia).toUpperCase(); for(var i=0;i<qg.options.length;i++){ if(qg.options[i].value===up){ qg.value=up; break; } } } }
+   var ng=document.getElementById('f-nguon'); if(ng) ng.value='pancake';
+   var sid=(typeof revFind==='function'&&ld.sale)?revFind(SALES,(''+ld.sale).split('/')[0].trim()):null; if(sid){ var ow=document.getElementById('f-owner'); if(ow) ow.value=sid; }
+   if(ld.note) S('f-ghi', ld.note);
+   var tEl=document.getElementById('f-ten'); if(tEl){ try{tEl.focus();}catch(_){} }
+   if(typeof checkDupAdd==='function') checkDupAdd();
+   if(!document.getElementById('add-from-chat-hint')){ var host=document.getElementById('v-add'); if(host){ var d=document.createElement('div'); d.id='add-from-chat-hint'; d.style.cssText='background:#eaf4ef;border:1px solid #cfe7db;color:#1F6F54;border-radius:8px;padding:8px 12px;font-size:13px;margin:0 0 12px'; d.textContent='➕ Thêm từ Hội thoại: thông tin đã điền sẵn — chị kiểm tra/sửa rồi bấm 💾 Lưu khách hàng.'; host.insertBefore(d, host.firstChild); } }
+   var card=document.getElementById('v-add'); if(card) card.scrollIntoView({behavior:'smooth',block:'start'});
+ }catch(e){} }, 140);
 }
 function _chatSetPage(p){ _CHAT_PAGE=p; _chatPaintList(); }
 function _chatChips(){ var pages=[]; _CHAT_CONVS.forEach(function(c){ if(c.page_name&&pages.indexOf(c.page_name)<0)pages.push(c.page_name); });
@@ -3874,7 +3874,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #e9efec;background:#3b4ba8;color:#fff"><span style="font-size:17px;font-weight:700">💬 Hội thoại</span><span style="font-size:12px;opacity:.85">Gộp mọi page Pancake · tự làm mới ~45s</span></div>'
    +'<div style="display:flex;height:850px;max-height:88vh">'
    +'<div style="flex:0 0 340px;max-width:44%;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
-     +'<div style="padding:10px 12px 4px"><input id="chat-q" oninput="_CHAT_Q=this.value;_chatPaintList()" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
+     +'<div style="padding:10px 12px 4px"><input id="chat-q" oninput="_chatQInput(this.value)" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
      +'<div id="chat-modebar" style="padding:2px 12px 5px;display:flex;flex-wrap:wrap;gap:4px"></div>'
      +'<div id="chat-datebar" style="padding:0 12px 5px;display:flex;flex-wrap:wrap;gap:4px"></div>'
      +'<div id="chat-tagfilter" style="padding:0 12px 5px"></div>'
@@ -3894,7 +3894,9 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
  _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
-var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_TRN={}, _CHAT_SHOWTR=false, _CHAT_AUTOTR=(function(){try{return localStorage.getItem('chat_autotr')!=='0';}catch(e){return true;}})();
+var _CHAT_THREADCACHE={}; var _CHAT_QT=null;
+function _chatQInput(v){ _CHAT_Q=v; if(_CHAT_QT)clearTimeout(_CHAT_QT); _CHAT_QT=setTimeout(function(){ try{_chatPaintList();}catch(e){} }, 160); }
+var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_TRN={}, _CHAT_SHOWTR=false, _CHAT_AUTOTR=(function(){try{return localStorage.getItem('chat_autotr')==='1';}catch(e){return false;}})();
 function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if(!box||!_CHAT_CUR)return; var d=_CHAT_CUR; var cid=d.cid, pid=d.pid; var tr=_CHAT_TR[cid]||null; var on=_CHAT_SHOWTR&&tr;
  var btn='<span onclick="chatMarkUnread()" title="Đánh dấu hội thoại này là chưa đọc" style="cursor:pointer;color:#e23d3d;font-size:12px;margin-right:14px">🔴 Chưa đọc</span><span onclick="chatTranslate()" style="cursor:pointer;color:#1F6F54;font-size:12px;margin-right:14px">'+(on?'🌐 Tắt dịch':'🌐 Dịch tiếng Việt')+'</span>';
  var h='<div style="font-weight:700;margin-bottom:12px;position:sticky;top:-14px;background:#f7faf8;padding:4px 0;border-bottom:1px solid #e9efec">'+_mvEsc(d.page||'')+' <span style="font-weight:400;color:#9aa8a3;font-size:12px">· '+d.count+' tin</span> <span style="float:right">'+btn+'<span onclick="chatOpen(\''+encodeURIComponent(cid)+'\',\''+encodeURIComponent(pid)+'\')" style="cursor:pointer;color:#1F6F54;font-size:12px">🔄 Làm mới</span></span></div>';
@@ -3948,9 +3950,10 @@ async function chatTranslate(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; if(
  }catch(e){ var l2=document.getElementById('chat-tr-load'); if(l2)l2.remove(); alert('Lỗi dịch: '+((e&&e.message)||e)); }
 }
 async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComponent(pid); _CHAT_OPEN={cid:cid,pid:pid}; _CHAT_SHOWTR=false; chatMarkRead(cid); _chatPaintList(); var box=document.getElementById('chat-thread'); if(!box)return; box.innerHTML='<div style="color:#9aa8a3;text-align:center;margin-top:40px">⏳ Đang tải tin nhắn…</div>';
+ if(_CHAT_THREADCACHE[cid]){ try{ var _cc=_CHAT_THREADCACHE[cid]; _CHAT_CUR={cid:cid,pid:pid,page:_cc.page,count:_cc.count,messages:_cc.messages}; _chatRenderThread(); }catch(e){} }
  try{ var res=await sb.functions.invoke('pancake-thread',{body:{page_id:pid,conv_id:cid}}); var d=(res&&res.data)||{};
    if(!d.ok){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Chưa tải được tin nhắn'+(d.reason?(' ('+d.reason+')'):'')+'. Thử lại sau.</div>'; return; }
-   _CHAT_CUR={cid:cid,pid:pid,page:d.page||'',count:d.count,messages:d.messages||[]};
+   _CHAT_CUR={cid:cid,pid:pid,page:d.page||'',count:d.count,messages:d.messages||[]}; try{ _CHAT_THREADCACHE[cid]={page:_CHAT_CUR.page,count:_CHAT_CUR.count,messages:_CHAT_CUR.messages}; }catch(e){}
    if(_CHAT_TR[cid] && _CHAT_TRN[cid]!==_CHAT_CUR.messages.length){ delete _CHAT_TR[cid]; }
    _chatRenderThread();
    if(_CHAT_AUTOTR){ try{ chatTranslate(); }catch(e){} }
