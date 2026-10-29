@@ -514,7 +514,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-bl';
+const APP_VERSION='2026-10-30-bm';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4127,7 +4127,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div class="chat-c-note" style="flex:0 0 250px;max-width:28%;border-left:1px solid #e9efec;background:#fff;overflow:auto"><div id="chat-notepanel" style="padding:12px"><div style="color:#9aa8a3;font-size:12px;text-align:center;margin-top:30px">Chọn hội thoại để xem thông tin.</div></div></div>'
    +'</div></div>';
  }
- _chatPaintDatebar(); _chatPaintTagFilter(); _chatPaintTrg(); await _chatLoad(); _chatPaintList(); var _dsel=document.getElementById('chat-date-sel'); if(_dsel)_dsel.value=_CHAT_DP||'';
+ _chatPaintDatebar(); _chatPaintTagFilter(); _chatPaintTrg(); if((_CHAT_CONVS||[]).length){ _chatPaintList(); var _sig0=_CHAT_SIG; _chatLoad().then(function(){ if(_CHAT_SIG!==_sig0){ try{ _chatPaintList(); }catch(e){} } }); } else { await _chatLoad(); _chatPaintList(); } var _dsel=document.getElementById('chat-date-sel'); if(_dsel)_dsel.value=_CHAT_DP||'';
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
  _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
