@@ -502,7 +502,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-be';
+const APP_VERSION='2026-10-29-bf';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4046,30 +4046,47 @@ async function renderImgLib(){ var el=document.getElementById('v-imglib'); if(!e
 /* ---- Bộ chọn ảnh để GỬI trong Hội thoại ---- */
 async function openChatImgPicker(){ if(!_CHAT_CUR){ alert('Hãy mở một hội thoại trước.'); return; }
  await imgLibLoadFolders();
+ _IMGPICK_PICKED={}; _IMGPICK_SEL=null; _IMGPICK_Q='';
  var m=document.getElementById('imgpick-modal'); if(m)m.remove();
  m=document.createElement('div'); m.id='imgpick-modal'; m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px';
- m.innerHTML='<div style="background:#fff;border-radius:14px;width:920px;max-width:97vw;height:84vh;display:flex;flex-direction:column;overflow:hidden" onclick="event.stopPropagation()">'
-  +'<div style="padding:12px 16px;border-bottom:1px solid #e9efec;display:flex;align-items:center;gap:10px;background:#1F6F54;color:#fff"><b>📷 Gửi ảnh cho khách</b><span style="font-size:12px;opacity:.85">Chọn thư mục rồi bấm ảnh để gửi vào hội thoại</span><span onclick="var x=document.getElementById(&quot;imgpick-modal&quot;);if(x)x.remove()" style="margin-left:auto;cursor:pointer;font-size:18px">✕</span></div>'
+ m.innerHTML='<div style="background:#fff;border-radius:14px;width:1040px;max-width:97vw;height:86vh;display:flex;flex-direction:column;overflow:hidden" onclick="event.stopPropagation()">'
+  +'<div style="padding:12px 16px;border-bottom:1px solid #e9efec;display:flex;align-items:center;gap:10px;background:#1F6F54;color:#fff"><b>📷 Gửi ảnh cho khách</b><span style="font-size:12px;opacity:.85">Bấm vào ảnh để chọn (nhiều ảnh), rồi bấm Gửi</span><span onclick="var x=document.getElementById(&quot;imgpick-modal&quot;);if(x)x.remove()" style="margin-left:auto;cursor:pointer;font-size:18px">✕</span></div>'
   +'<div style="flex:1;display:flex;min-height:0">'
-    +'<div style="flex:0 0 250px;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
+    +'<div style="flex:0 0 230px;width:230px;min-width:230px;max-width:230px;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
       +'<div style="padding:9px 10px"><input id="imgpick-q" oninput="imgPickSearch(this.value)" placeholder="🔎 Tìm thư mục…" style="width:100%;border:1px solid #e3ece7;border-radius:16px;padding:7px 12px;font-size:12.5px"></div>'
       +'<div id="imgpick-folders" style="flex:1;overflow:auto;padding:4px 6px">⏳</div>'
     +'</div>'
-    +'<div id="imgpick-grid" style="flex:1;overflow:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:9px;align-content:start;background:#fafcfb"><div style="color:#9aa8a3">← Chọn thư mục bên trái để xem ảnh…</div></div>'
+    +'<div id="imgpick-grid" style="flex:1 1 auto;min-width:0;overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;align-content:start;background:#fafcfb"><div style="color:#9aa8a3">← Chọn thư mục bên trái để xem ảnh…</div></div>'
   +'</div>'
+  +'<div style="padding:10px 16px;border-top:1px solid #e9efec;display:flex;align-items:center;gap:12px;background:#fff"><span id="imgpick-count" style="font-size:13px;color:#6b7c76;font-weight:600">Chưa chọn ảnh</span><button onclick="imgPickClear()" style="border:1px solid #e3ece7;background:#fff;border-radius:8px;padding:7px 12px;font-size:12.5px;cursor:pointer">Bỏ chọn</button><button id="imgpick-send" onclick="chatSendSelected(this)" style="margin-left:auto;border:none;background:#3b4ba8;color:#fff;border-radius:8px;padding:9px 22px;font-size:13.5px;cursor:pointer;font-weight:700">Gửi ảnh</button></div>'
  +'</div>';
  m.onclick=function(){ m.remove(); };
  document.body.appendChild(m);
- _IMGPICK_SEL=null; _IMGPICK_Q=''; imgPickPaintFolders();
+ imgPickPaintFolders(); imgPickPaintBar();
 }
-var _IMGPICK_Q='', _IMGPICK_SEL=null;
+var _IMGPICK_Q='', _IMGPICK_SEL=null, _IMGPICK_PICKED={};
 function imgPickSearch(v){ _IMGPICK_Q=v; imgPickPaintFolders(); }
 function imgPickPaintFolders(){ var b=document.getElementById('imgpick-folders'); if(!b)return; var q=(_IMGPICK_Q||'').toLowerCase(); var list=(IMGLIB_FOLDERS||[]).filter(function(f){ return !q||(f.name||'').toLowerCase().indexOf(q)>=0; });
  b.innerHTML=list.map(function(f){ var on=_IMGPICK_SEL===f.id; return '<div onclick="imgPickSelectFolder(\''+f.id+'\')" style="cursor:pointer;padding:7px 9px;border-radius:8px;font-size:12px;display:flex;justify-content:space-between;gap:6px;'+(on?'background:#1F6F54;color:#fff':'color:#2b3a33')+'"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_mvEsc(f.name)+'</span><span style="opacity:.7;font-size:11px">'+(f.total||0)+'</span></div>'; }).join('')||'<div style="color:#9aa8a3;padding:10px;font-size:12px">Không có thư mục.</div>';
 }
+function imgPickCountSel(){ return Object.keys(_IMGPICK_PICKED).length; }
+function imgPickPaintBar(){ var c=document.getElementById('imgpick-count'); var n=imgPickCountSel(); if(c)c.textContent=n?('✅ Đã chọn '+n+' ảnh'):'Chưa chọn ảnh'; var sb=document.getElementById('imgpick-send'); if(sb){ sb.textContent=n?('Gửi '+n+' ảnh'):'Gửi ảnh'; sb.style.opacity=n?'1':'.6'; } }
+function imgPickClear(){ _IMGPICK_PICKED={}; if(_IMGPICK_SEL)imgPickSelectFolder(_IMGPICK_SEL); imgPickPaintBar(); }
+function imgPickToggle(id,url,el){ if(_IMGPICK_PICKED[id]){ delete _IMGPICK_PICKED[id]; } else { _IMGPICK_PICKED[id]=url; } var on=!!_IMGPICK_PICKED[id];
+ if(el){ el.style.outline=on?'3px solid #3b4ba8':'none'; el.style.outlineOffset='-3px'; var bd=el.querySelector('.imgpick-badge'); if(bd)bd.style.display=on?'flex':'none'; }
+ imgPickPaintBar();
+}
 async function imgPickSelectFolder(fid){ _IMGPICK_SEL=fid; imgPickPaintFolders(); var g=document.getElementById('imgpick-grid'); if(!g)return; g.innerHTML='<div style="color:#9aa8a3">⏳ Đang tải…</div>';
  var items=await imgLibItems(fid);
- g.innerHTML=items.map(function(it){ var u=it.url.replace(/'/g,"\\'"); var iid=String(it.id||'').replace(/'/g,"\\'"); return '<div style="border:1px solid #eef2f0;border-radius:9px;overflow:hidden;background:#fff"><img src="'+_mvEsc(it.url)+'" loading="lazy" onclick="imgLibOpen(\''+u+'\')" style="width:100%;height:110px;object-fit:cover;display:block;cursor:zoom-in"><button onclick="chatSendImage(\''+u+'\',\''+iid+'\',this)" style="width:100%;border:0;border-top:1px solid #eef2f0;background:#1F6F54;color:#fff;padding:6px;font-size:11.5px;cursor:pointer;font-weight:700">Gửi</button></div>'; }).join('')||'<div style="color:#9aa8a3">Thư mục trống.</div>';
+ g.innerHTML=items.map(function(it){ var u=it.url.replace(/'/g,"\\'"); var iid=String(it.id||'').replace(/'/g,"\\'"); var on=!!_IMGPICK_PICKED[it.id]; return '<div onclick="imgPickToggle(\''+iid+'\',\''+u+'\',this)" style="position:relative;border:1px solid #eef2f0;border-radius:10px;overflow:hidden;background:#fff;cursor:pointer;'+(on?'outline:3px solid #3b4ba8;outline-offset:-3px':'')+'"><div class="imgpick-badge" style="position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:#3b4ba8;color:#fff;align-items:center;justify-content:center;font-size:13px;font-weight:700;display:'+(on?'flex':'none')+'">✓</div><img src="'+_mvEsc(it.url)+'" loading="lazy" style="width:100%;height:190px;object-fit:cover;display:block"></div>'; }).join('')||'<div style="color:#9aa8a3">Thư mục trống.</div>';
+}
+async function chatSendSelected(btn){ var urls=Object.keys(_IMGPICK_PICKED).map(function(id){return {id:id,url:_IMGPICK_PICKED[id]};}); if(!urls.length){ alert('Chọn ít nhất 1 ảnh để gửi.'); return; } if(!_CHAT_CUR)return;
+ if(btn){ btn.disabled=true; } var sent=0, fail=0;
+ for(var i=0;i<urls.length;i++){ if(btn)btn.textContent='⏳ Đang gửi '+(i+1)+'/'+urls.length;
+  try{ var res=await sb.functions.invoke('pancake-send',{body:{page_id:_CHAT_CUR.pid,conv_id:_CHAT_CUR.cid,image_url:urls[i].url,content_ids:[urls[i].id]}}); var d=(res&&res.data)||{}; if(d.ok){ sent++; try{ _CHAT_CUR.messages.push({sender:'Shop',from_page:true,text:'[Đã gửi ảnh]',at:new Date().toISOString().slice(0,19).replace('T',' ')}); }catch(e){} } else { fail++; } }catch(e){ fail++; } }
+ try{ _chatRenderThread(); }catch(e){}
+ if(typeof toast==='function') toast('✓ Đã gửi '+sent+' ảnh'+(fail?(' · '+fail+' lỗi'):'')); else alert('Đã gửi '+sent+' ảnh'+(fail?(', '+fail+' lỗi'):''));
+ if(!fail){ var m=document.getElementById('imgpick-modal'); if(m)m.remove(); } else { if(btn){btn.disabled=false;} imgPickPaintBar(); if(btn)btn.textContent='Gửi lại ('+fail+' lỗi)'; }
 }
 async function chatSendImage(url,iid,btn){ if(!_CHAT_CUR)return; if(btn){btn.disabled=true;btn.textContent='⏳';}
  try{ var body={page_id:_CHAT_CUR.pid,conv_id:_CHAT_CUR.cid,image_url:url}; if(iid)body.content_ids=[iid]; var res=await sb.functions.invoke('pancake-send',{body:body}); var d=(res&&res.data)||{};
