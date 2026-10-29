@@ -500,7 +500,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-as';
+const APP_VERSION='2026-10-29-at';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3989,6 +3989,7 @@ function _chatTags(tagStr){ var ts=(tagStr||'').split(',').map(function(x){retur
  return '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">'+ts.map(function(t){var col=_chatTagColor(t);return '<span style="font-size:9.5px;line-height:1.3;padding:2px 7px;border-radius:9px;background:'+col[0]+';color:'+col[1]+';white-space:nowrap;font-weight:600">'+_mvEsc(t)+'</span>';}).join('')+'</div>'; }
 function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=document.getElementById('chat-list'); if(!lc) return;
  _chatPaintModebar();
+ var _db=document.getElementById('chat-dao-break'); if(_db){ if(_CHAT_MODE==='dao'){ var _bs={}; _CHAT_CONVS.forEach(function(c){ if(c.unread && !_chatIsToday(c.conv_inserted_at)){ var s=((c.sale||'').trim())||'(chưa gán)'; _bs[s]=(_bs[s]||0)+1; } }); var _tot=0; var _pt=Object.keys(_bs).sort(function(a,b){return _bs[b]-_bs[a];}).map(function(s){ _tot+=_bs[s]; return '<b>'+_mvEsc(s)+'</b> '+_bs[s]; }); _db.innerHTML=_pt.length?('\u267b\ufe0f Khách đào theo sale ('+_tot+'): '+_pt.join(' \u00b7 ')):''; } else { _db.innerHTML=''; } }
  var _ps=document.getElementById('chat-page-sel'); if(_ps){ var _pg={}; _CHAT_CONVS.forEach(function(c){ if(c.page_name)_pg[c.page_name]=(_pg[c.page_name]||0)+1; }); var _o='<option value="">Tất cả page ('+_CHAT_CONVS.length+')</option>'; Object.keys(_pg).sort().forEach(function(p){ _o+='<option value="'+_mvEsc(p)+'"'+(_CHAT_PAGE===p?' selected':'')+'>'+_mvEsc(p)+' ('+_pg[p]+')</option>'; }); _ps.innerHTML=_o; }
  var q=(_CHAT_Q||'').toLowerCase();
  var list=_CHAT_CONVS.filter(function(c){ if(_CHAT_PAGE&&c.page_name!==_CHAT_PAGE)return false; if(!_chatModeOk(c))return false; if(!_chatDateOk(c.conv_inserted_at))return false; if(q&&((c.ten||'')+' '+(c.snippet||'')).toLowerCase().indexOf(q)<0)return false; if(_CHAT_FTAGS.length){ var tg=','+(c.tags||'').split(',').map(function(x){return x.trim();}).join(',')+','; for(var k=0;k<_CHAT_FTAGS.length;k++){ if(tg.indexOf(','+_CHAT_FTAGS[k]+',')<0)return false; } } return true; });
@@ -4010,6 +4011,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
      +'<div style="padding:10px 12px 4px"><input id="chat-q" oninput="_chatQInput(this.value)" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
      +'<div style="padding:0 12px 6px;display:flex;gap:6px"><select id="chat-page-sel" onchange="_chatSetPage(this.value)" style="flex:1;min-width:0;border:1px solid #e3ece7;border-radius:8px;padding:6px 8px;font-size:12px;background:#fff"><option>⏳</option></select><select id="chat-date-sel" onchange="_chatSetDate(this.value)" style="border:1px solid #e3ece7;border-radius:8px;padding:6px 8px;font-size:12px;background:#fff"><option value="">Mọi lúc</option><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7d">7 ngày</option><option value="month">Tháng này</option></select></div>'
      +'<div id="chat-modebar" style="padding:0 12px 6px;display:flex;flex-wrap:wrap;gap:4px"></div>'
+     +'<div id="chat-dao-break" style="padding:0 12px 6px;font-size:11px;color:#6b7c76;line-height:1.6"></div>'
      +'<div id="chat-datebar" style="display:none"></div>'
      +'<div id="chat-tagfilter" style="padding:0 12px 6px"></div>'
      +'<div id="chat-count" style="padding:2px 14px 4px;font-size:11px;color:#9aa8a3"></div>'
