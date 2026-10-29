@@ -97,7 +97,7 @@
   #app.appmax .main{margin-left:0}
   #app.appmax #navtoggle{display:flex;align-items:center;justify-content:center}
   #app.navcollapse .sidebar{display:none}
-  #app.navcollapse .main{margin-left:0}
+  #app.navcollapse .main{margin-left:0;padding-left:66px}
   #app.navcollapse #navtoggle{display:flex;align-items:center;justify-content:center}
   .hscroll-top{overflow-x:auto;overflow-y:hidden;height:16px;position:sticky;top:0;z-index:6;background:var(--cream,#f6f2e9);border-radius:8px 8px 0 0}
   .hscroll-top::-webkit-scrollbar{height:12px}
@@ -526,7 +526,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-by';
+const APP_VERSION='2026-10-30-bz';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
