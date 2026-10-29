@@ -306,6 +306,7 @@ let MKTREP = [];  // báo cáo marketing (mkt_reports): {owner,ngay,tien,sl_mes,
 let SCORES = [];  // điểm AI chấm chat (sale_scores): {sale,week_start,score_total,s_speed,s_needs,s_product,compliance_flag,weaknesses,worst_quote,strengths}
 let TASKS = [];   // việc cần làm / nhắc việc
 let PLEADS = [];  // khách mới từ Pancake chờ duyệt (bảng pancake_leads, status='new')
+async function loadPleads(force){ if(window.__pleadsLoaded && !force) return; try{ var r=await sb.from('pancake_leads').select('*').eq('status','new').order('conv_inserted_at',{ascending:false}); PLEADS=(r&&r.data)||[]; window.__pleadsLoaded=true; }catch(e){} }
 let TARGETS = {}; // mục tiêu DT theo tháng: { 'owner|YYYY-MM': muc_tieu }
 let REPORT_MONTH = (new Date()).toISOString().slice(0,7); // tháng đang xem ở Báo cáo
 let TASK_Q = '';  // bộ lọc tên khách ở trang Việc cần làm
@@ -499,7 +500,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-ap';
+const APP_VERSION='2026-10-29-aq';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -912,6 +913,7 @@ function pkFindCrm(r){ /* tìm khách CRM trùng với lead (theo SĐT rồi tê
 function renderPancake(){
   const el=document.getElementById('v-pancake'); if(!el) return;
   if(!(canPancake()||(PERMS[ME.uname]||[]).includes('pancake'))){ el.innerHTML='<div class="card empty">Bạn chưa được cấp quyền xem mục này. Liên hệ Admin để cấp ở trang Tài khoản.</div>'; return; }
+  if(!window.__pleadsLoaded){ el.innerHTML='<div style="padding:40px;text-align:center;color:#6b7c76">⏳ Đang tải khách mới từ Pancake…</div>'; loadPleads().then(function(){ try{renderPancake();}catch(e){} }); return; }
   const rows=pkFilteredRows();
   const totalAll=(PLEADS||[]).length, dupN=(PLEADS||[]).filter(r=>window.__custFull?pkFindCrm(r):(r.in_crm||r.status==='added')).length;
   const saleOpts=Array.from(new Set((PLEADS||[]).map(r=>r.sale).filter(Boolean))).sort();
@@ -3373,7 +3375,7 @@ async function loadAll(skipCust){
   /* Tải SONG SONG tất cả bảng (trước đây tải lần lượt -> rất chậm) */
   const _SB=(p)=>p.then(r=>r).catch(e=>({data:[],error:e}));
   const _FA=(t,o,a)=>fetchAllRows(t,o,a).catch(()=>[]);
-  const [cs, spdr, ss, imgsr, od, tkr, tgr, mrr, plr] = await Promise.all([
+  const [cs, spdr, ss, imgsr, od, tkr, tgr, mrr] = await Promise.all([
     (skipCust?Promise.resolve(null):_FA('customers','ngay_tao',false)),
     _SB(sb.from('marketing_spend').select('*')),
     _FA('sale_scores'),
@@ -3381,8 +3383,7 @@ async function loadAll(skipCust){
     _FA('orders'),
     _SB(sb.from('tasks').select('*')),
     _SB(sb.from('sale_targets').select('*')),
-    _SB(sb.from('mkt_reports').select('*')),
-    _SB(sb.from('pancake_leads').select('*').eq('status','new').order('conv_inserted_at',{ascending:false}))
+    _SB(sb.from('mkt_reports').select('*'))
   ]);
   if(!skipCust){ const allc = (cs||[]).map(normCust); DATA = allc.filter(c=>!c.da_xoa); TRASH = allc.filter(c=>c.da_xoa); window.__custLoaded=true; }
   SPEND = ((spdr&&spdr.data)||[]).map(s=>({ngay:(s.ngay||'').slice(0,10), nguon:s.nguon, mkt:s.mkt, chi_phi:Number(s.chi_phi)||0}));
@@ -3399,7 +3400,7 @@ async function loadAll(skipCust){
     tien:Number(r.tien)||0, sl_mes:Number(r.sl_mes)||0, so_cmt:Number(r.so_cmt)||0, mes_tt:Number(r.mes_tt)||0, sd_chot:Number(r.sd_chot)||0, da_xoa:!!r.da_xoa}));
   MREPORTS=_mall.filter(r=>!r.da_xoa); MTRASH=_mall.filter(r=>r.da_xoa);
   MKTREP = MREPORTS.map(r=>({owner:r.owner, ngay:r.ngay, tien:r.tien, sl_mes:r.sl_mes, so_cmt:r.so_cmt, mes_tt:r.mes_tt, sd_chot:r.sd_chot}));
-  PLEADS=((plr&&plr.data)||[]);
+  PLEADS=PLEADS||[]; /* pancake_leads tải trễ khi mở mục Khách mới (giảm đơ lúc mở app) */
   return true;
 }
 /* ---- Việc cần làm / nhắc việc (Supabase) ---- */
