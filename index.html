@@ -504,7 +504,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-ai';
+const APP_VERSION='2026-10-29-aj';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3897,7 +3897,7 @@ function _chatTags(tagStr){ var ts=(tagStr||'').split(',').map(function(x){retur
  return '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">'+ts.map(function(t){var col=_chatTagColor(t);return '<span style="font-size:9.5px;line-height:1.3;padding:2px 7px;border-radius:9px;background:'+col[0]+';color:'+col[1]+';white-space:nowrap;font-weight:600">'+_mvEsc(t)+'</span>';}).join('')+'</div>'; }
 function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=document.getElementById('chat-list'); if(!lc) return;
  _chatPaintModebar();
- if(ch) ch.innerHTML=_chatChips();
+ var _ps=document.getElementById('chat-page-sel'); if(_ps){ var _pg={}; _CHAT_CONVS.forEach(function(c){ if(c.page_name)_pg[c.page_name]=(_pg[c.page_name]||0)+1; }); var _o='<option value="">Tất cả page ('+_CHAT_CONVS.length+')</option>'; Object.keys(_pg).sort().forEach(function(p){ _o+='<option value="'+_mvEsc(p)+'"'+(_CHAT_PAGE===p?' selected':'')+'>'+_mvEsc(p)+' ('+_pg[p]+')</option>'; }); _ps.innerHTML=_o; }
  var q=(_CHAT_Q||'').toLowerCase();
  var list=_CHAT_CONVS.filter(function(c){ if(_CHAT_PAGE&&c.page_name!==_CHAT_PAGE)return false; if(!_chatModeOk(c))return false; if(!_chatDateOk(c.conv_inserted_at))return false; if(q&&((c.ten||'')+' '+(c.snippet||'')).toLowerCase().indexOf(q)<0)return false; if(_CHAT_FTAGS.length){ var tg=','+(c.tags||'').split(',').map(function(x){return x.trim();}).join(',')+','; for(var k=0;k<_CHAT_FTAGS.length;k++){ if(tg.indexOf(','+_CHAT_FTAGS[k]+',')<0)return false; } } return true; });
  var _unc=0; for(var _j=0;_j<list.length;_j++){if(list[_j].unread)_unc++;}
@@ -3916,11 +3916,11 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div style="display:flex;height:850px;max-height:88vh">'
    +'<div style="flex:0 0 340px;max-width:44%;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
      +'<div style="padding:10px 12px 4px"><input id="chat-q" oninput="_chatQInput(this.value)" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
-     +'<div id="chat-modebar" style="padding:2px 12px 5px;display:flex;flex-wrap:wrap;gap:4px"></div>'
-     +'<div id="chat-datebar" style="padding:0 12px 5px;display:flex;flex-wrap:wrap;gap:4px"></div>'
-     +'<div id="chat-tagfilter" style="padding:0 12px 5px"></div>'
-     +'<div id="chat-chips" style="padding:0 12px 6px;line-height:2;max-height:72px;overflow:auto">⏳</div>'
-     +'<div id="chat-count" style="padding:2px 14px;font-size:11px;color:#9aa8a3"></div>'
+     +'<div style="padding:0 12px 6px;display:flex;gap:6px"><select id="chat-page-sel" onchange="_chatSetPage(this.value)" style="flex:1;min-width:0;border:1px solid #e3ece7;border-radius:8px;padding:6px 8px;font-size:12px;background:#fff"><option>⏳</option></select><select id="chat-date-sel" onchange="_chatSetDate(this.value)" style="border:1px solid #e3ece7;border-radius:8px;padding:6px 8px;font-size:12px;background:#fff"><option value="">Mọi lúc</option><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7d">7 ngày</option><option value="month">Tháng này</option></select></div>'
+     +'<div id="chat-modebar" style="padding:0 12px 6px;display:flex;flex-wrap:wrap;gap:4px"></div>'
+     +'<div id="chat-datebar" style="display:none"></div>'
+     +'<div id="chat-tagfilter" style="padding:0 12px 6px"></div>'
+     +'<div id="chat-count" style="padding:2px 14px 4px;font-size:11px;color:#9aa8a3"></div>'
      +'<div id="chat-list" style="flex:1;overflow:auto;padding:4px 8px 10px">⏳ Đang tải…</div>'
    +'</div>'
    +'<div style="flex:1;display:flex;flex-direction:column;background:#f7faf8;min-width:240px">'
@@ -3931,7 +3931,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div style="flex:0 0 250px;max-width:28%;border-left:1px solid #e9efec;background:#fff;overflow:auto"><div id="chat-notepanel" style="padding:12px"><div style="color:#9aa8a3;font-size:12px;text-align:center;margin-top:30px">Chọn hội thoại để xem thông tin.</div></div></div>'
    +'</div></div>';
  }
- _chatPaintDatebar(); _chatPaintTagFilter(); if(_CHAT_VNMODE){var _vb=document.getElementById('chat-vn-btn');if(_vb){_vb.style.background='#e23d3d';_vb.style.color='#fff';}var _vi=document.getElementById('chat-send-input');if(_vi)_vi.placeholder='Gõ tiếng Việt — tự dịch sang tiếng khách khi gửi';} await _chatLoad(); _chatPaintList();
+ _chatPaintDatebar(); _chatPaintTagFilter(); if(_CHAT_VNMODE){var _vb=document.getElementById('chat-vn-btn');if(_vb){_vb.style.background='#e23d3d';_vb.style.color='#fff';}var _vi=document.getElementById('chat-send-input');if(_vi)_vi.placeholder='Gõ tiếng Việt — tự dịch sang tiếng khách khi gửi';} await _chatLoad(); _chatPaintList(); var _dsel=document.getElementById('chat-date-sel'); if(_dsel)_dsel.value=_CHAT_DP||'';
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
  _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
