@@ -249,7 +249,7 @@ function addSpPick(){ const p=document.getElementById('f-sppick'); const q=docum
 const ALL_MODULES = [
   ['dashboard','Dashboard'],['care','Trung tâm chăm sóc'],['add','Thêm khách'],
   ['list','Danh sách khách'],['today','Việc cần làm'],['report','Báo cáo'],
-  ['marketing','BC Marketing'],['tongbill','Tổng Bill'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['lichlam_log','Lịch sử đăng ký lịch'],['pancake','Khách mới (Pancake)'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
+  ['marketing','BC Marketing'],['tongbill','Tổng Bill'],['team','Sale team'],['lichlam','Đăng ký lịch làm'],['lichlam_log','Lịch sử đăng ký lịch'],['pancake','Khách mới (Pancake)'],['chat','💬 Hội thoại'],['danhgia','📊 Đánh giá Sale/MKT'],['brain','🧠 Bộ não CSKH'],['feedback','💬 Góp ý'],['appt','📅 Lịch hẹn'],['pay','💵 Lương tạm tính'],['integ','🔌 Tích hợp'],['ailog','🤖 Nhật ký AI'],['settings','Cài đặt'],['perms','Phân quyền'],['trash','Thùng rác'],
 ];
 // Quyền mặc định theo VAI TRÒ (dùng khi tạo tài khoản mới)
 const DEFAULT_PERMS = {
@@ -493,18 +493,13 @@ function applyMenu(){
   const allowed=PERMS[ME.uname]||[];
   document.querySelectorAll('#nav a').forEach(a=>{
     let v=a.dataset.v; if(v==='list_chot'||v==='list_chua'||v==='list_all') v='list';
-    if(v==='pancake'){ a.style.display=(canPancake()||allowed.includes('pancake'))?'flex':'none'; return; }
-    if(v==='danhgia'){ a.style.display=canPancake()?'flex':'none'; return; } /* chỉ Nguyệt/Admin */
-    if(v==='integ'||v==='ailog'||v==='pay'){ a.style.display=canPancake()?'flex':'none'; return; } /* mục mới admin-only */
-    if(v==='brain'){ a.style.display='flex'; return; } /* bộ não: cả team xem */
-    if(v==='feedback'){ a.style.display=canPancake()?'flex':'none'; return; } /* góp ý: admin */
-    if(v==='appt'||v==='chat'){ a.style.display='flex'; return; } /* mục mới cho mọi vai trò */
+    if(['pancake','chat','danhgia','brain','feedback','appt','pay','integ','ailog'].indexOf(v)>=0){ a.style.display=(canPancake()||allowed.includes(v))?'flex':'none'; return; } /* admin luôn thấy; người khác theo phân quyền */
     a.style.display=allowed.includes(v)?'flex':'none';
   });
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-ak';
+const APP_VERSION='2026-10-29-al';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
