@@ -500,7 +500,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-ar';
+const APP_VERSION='2026-10-29-as';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1367,7 +1367,7 @@ async function _renderDashQuick(){
   el.innerHTML='<div id="my-pk-recon"></div>'+h;
 }
 function renderDash(){
-  if(!window.__custFull){ _renderDashQuick(); try{ ensureCustomers().then(function(){ try{ renderDash(); }catch(e){} }); }catch(e){} return; }
+  if(!window.__custFull){ if(!(window.ME&&ME.role==='sale')){ _renderDashQuick(); } else { var _de=document.getElementById('v-dashboard'); if(_de)_de.innerHTML='<div class="card">⏳ Đang tải tổng quan…</div>'; } try{ ensureCustomers().then(function(){ try{ renderDash(); }catch(e){} }); }catch(e){} return; }
   const d=myData();
   const isAdmin=ME.role==='admin';
   const paid=c=>['facebook','tiktok','pancake','whatsapp'].includes(c.nguon);
@@ -3370,7 +3370,7 @@ async function reloadCustomer(id){ if(!window.sb||id==null) return; try{
 /* Nạp lại danh sách việc (nhẹ) */
 async function reloadTasks(){ if(!window.sb) return; try{ const { data:tk }=await sb.from('tasks').select('*'); TASKS=(tk||[]).map(t=>({id:t.id, owner:t.owner, customer_id:t.customer_id, loai:t.loai, noi_dung:t.noi_dung, han:(t.han||'').slice(0,10), xong:!!t.xong})); }catch(e){} }
 async function loadCustomers(){ /* tải TẤT CẢ khách */
-  try{ const cs=await fetchAllRows('customers','ngay_tao',false); const allc=(cs||[]).map(normCust); DATA=allc.filter(c=>!c.da_xoa); TRASH=allc.filter(c=>c.da_xoa); window.__custLoaded=true; window.__custFull=true; }catch(e){}
+  try{ var cs; if(window.ME && ME.role==='sale'){ const r=await sb.from('customers').select('*').eq('owner',ME.id); cs=(r&&r.data)||[]; } else { cs=await fetchAllRows('customers','ngay_tao',false); } const allc=(cs||[]).map(normCust); DATA=allc.filter(c=>!c.da_xoa); TRASH=allc.filter(c=>c.da_xoa); window.__custLoaded=true; window.__custFull=true; }catch(e){}
 }
 async function loadTaskCustomers(){ /* CHỈ tải khách có trong danh sách việc — đủ cho "Việc cần làm", không kéo hết 8.047 */
   try{ var ids=[...new Set((TASKS||[]).map(t=>t.customer_id).filter(x=>x!=null).map(String))]; if(!ids.length){ DATA=DATA||[]; return; } var out=[]; for(var i=0;i<ids.length;i+=250){ var r=await sb.from('customers').select('*').in('id',ids.slice(i,i+250)); if(r&&r.data) out=out.concat(r.data); } var allc=out.map(normCust); DATA=allc.filter(c=>!c.da_xoa); TRASH=[]; window.__custFull=false; }catch(e){}
@@ -3401,7 +3401,7 @@ async function loadAll(skipCust){
   const _SB=(p)=>p.then(r=>r).catch(e=>({data:[],error:e}));
   const _FA=(t,o,a)=>fetchAllRows(t,o,a).catch(()=>[]);
   const [cs, spdr, ss, imgsr, od, tkr, tgr, mrr] = await Promise.all([
-    (skipCust?Promise.resolve(null):_FA('customers','ngay_tao',false)),
+    (skipCust?Promise.resolve(null):((window.ME&&ME.role==='sale')? sb.from('customers').select('*').eq('owner',ME.id).then(function(r){return ((r&&r.data)||[]);}).catch(function(){return [];}) : _FA('customers','ngay_tao',false))),
     _SB(sb.from('marketing_spend').select('*')),
     _FA('sale_scores'),
     _SB(sb.from('app_images').select('*')),
