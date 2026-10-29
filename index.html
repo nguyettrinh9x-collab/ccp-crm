@@ -500,7 +500,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-ay';
+const APP_VERSION='2026-10-29-az';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4038,7 +4038,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
 }
 var _CHAT_THREADCACHE={}; var _CHAT_QT=null;
 function _chatQInput(v){ _CHAT_Q=v; if(_CHAT_QT)clearTimeout(_CHAT_QT); _CHAT_QT=setTimeout(function(){ try{_chatPaintList();}catch(e){} }, 160); }
-var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_TRN={}, _CHAT_SHOWTR=false, _CHAT_AUTOTR=(function(){try{return localStorage.getItem('chat_autotr2')!=='0';}catch(e){return true;}})();
+var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_TRN={}, _CHAT_SHOWTR=false, _CHAT_AUTOTR=true;
 function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if(!box||!_CHAT_CUR)return; var d=_CHAT_CUR; var cid=d.cid, pid=d.pid; var tr=_CHAT_TR[cid]||null; var on=_CHAT_SHOWTR&&tr;
  var btn='<span onclick="chatMarkUnread()" title="Đánh dấu hội thoại này là chưa đọc" style="cursor:pointer;color:#e23d3d;font-size:12px;margin-right:14px">🔴 Chưa đọc</span><span onclick="chatTranslate()" style="cursor:pointer;color:#1F6F54;font-size:12px;margin-right:14px">'+(on?'🌐 Tắt dịch':'🌐 Dịch tiếng Việt')+'</span>';
  var h='<div style="font-weight:700;margin-bottom:12px;position:sticky;top:-14px;background:#f7faf8;padding:4px 0;border-bottom:1px solid #e9efec">'+_mvEsc(d.page||'')+' <span style="font-weight:400;color:#9aa8a3;font-size:12px">· '+d.count+' tin</span> <span style="float:right">'+btn+'<span onclick="chatOpen(\''+encodeURIComponent(cid)+'\',\''+encodeURIComponent(pid)+'\')" style="cursor:pointer;color:#1F6F54;font-size:12px">🔄 Làm mới</span></span></div>';
@@ -4085,7 +4085,16 @@ function _chatDateOk(iso){ if(!_CHAT_DP)return true; if(!iso)return false; var d
  if(_CHAT_DP==='month')return d>=new Date(now.getFullYear(),now.getMonth(),1);
  return true;
 }
-async function chatTranslate(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; if(_CHAT_TR[cid]){ _CHAT_SHOWTR=!_CHAT_SHOWTR; _CHAT_AUTOTR=_CHAT_SHOWTR; try{localStorage.setItem('chat_autotr2',_CHAT_AUTOTR?'1':'0');}catch(e){} _chatRenderThread(); return; }
+async function _chatAutoShowVi(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid;
+ if(!_CHAT_TR[cid]){
+  try{ var msgs=_CHAT_CUR.messages||[]; var idxs=[],texts=[]; msgs.forEach(function(m,i){ if(!m.from_page&&String(m.text||'').trim()){ idxs.push(i); texts.push(String(m.text)); } });
+   if(texts.length){ var res=await sb.functions.invoke('translate',{body:{texts:texts}}); var d=(res&&res.data)||{}; if(d.ok&&Array.isArray(d.vi)){ var full=msgs.map(function(){return '';}); d.vi.forEach(function(v,k){ if(idxs[k]!=null)full[idxs[k]]=v; }); _CHAT_TR[cid]=full; _CHAT_TRN[cid]=msgs.length; } else { return; } }
+   else { _CHAT_TR[cid]=msgs.map(function(){return '';}); _CHAT_TRN[cid]=msgs.length; }
+  }catch(e){ return; }
+ }
+ if(_CHAT_CUR&&_CHAT_CUR.cid===cid){ _CHAT_SHOWTR=true; _chatRenderThread(); }
+}
+async function chatTranslate(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; if(_CHAT_TR[cid]){ _CHAT_SHOWTR=!_CHAT_SHOWTR; _chatRenderThread(); return; }
  var box=document.getElementById('chat-thread'); if(box){ var old=box.innerHTML; box.insertAdjacentHTML('afterbegin','<div id="chat-tr-load" style="color:#1F6F54;font-size:12px;text-align:center;padding:4px">⏳ Đang dịch…</div>'); }
  try{ var msgs=_CHAT_CUR.messages||[]; var idxs=[],texts=[]; msgs.forEach(function(m,i){ if(!m.from_page && String(m.text||'').trim()){ idxs.push(i); texts.push(String(m.text)); } });
   if(!texts.length){ _CHAT_TR[cid]=msgs.map(function(){return '';}); _CHAT_TRN[cid]=msgs.length; _CHAT_SHOWTR=true; _chatRenderThread(); return; }
@@ -4101,7 +4110,7 @@ async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComp
    _CHAT_CUR={cid:cid,pid:pid,page:d.page||'',count:d.count,messages:d.messages||[]}; try{ _CHAT_THREADCACHE[cid]={page:_CHAT_CUR.page,count:_CHAT_CUR.count,messages:_CHAT_CUR.messages}; }catch(e){}
    if(_CHAT_TR[cid] && _CHAT_TRN[cid]!==_CHAT_CUR.messages.length){ delete _CHAT_TR[cid]; }
    _chatRenderThread();
-   if(_CHAT_AUTOTR){ try{ chatTranslate(); }catch(e){} }
+   if(_CHAT_AUTOTR){ try{ _chatAutoShowVi(); }catch(e){} }
  }catch(e){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Lỗi: '+_mvEsc((e&&e.message)||e)+'</div>'; }
 }
 var _CHAT_TRG=(function(){try{return localStorage.getItem('chat_trg')||'';}catch(e){return '';}})();
