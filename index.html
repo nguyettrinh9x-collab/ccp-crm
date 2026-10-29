@@ -93,6 +93,12 @@
   #v-chat.chat-max .chat-c-list{display:none}
   #v-chat.chat-max .chat-c-note{display:none}
   #v-chat.chat-max .chat-c-thread{flex:1 1 auto}
+  #app.appmax .sidebar{display:none}
+  #app.appmax .main{margin-left:0}
+  #app.appmax #navtoggle{display:flex;align-items:center;justify-content:center}
+  #app.navcollapse .sidebar{display:none}
+  #app.navcollapse .main{margin-left:0}
+  #app.navcollapse #navtoggle{display:flex;align-items:center;justify-content:center}
   .hscroll-top{overflow-x:auto;overflow-y:hidden;height:16px;position:sticky;top:0;z-index:6;background:var(--cream,#f6f2e9);border-radius:8px 8px 0 0}
   .hscroll-top::-webkit-scrollbar{height:12px}
   .hscroll-top::-webkit-scrollbar-thumb{background:#9bb3a8;border-radius:6px}
@@ -156,7 +162,7 @@
   <button id="navtoggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
   <div id="navmask" onclick="toggleSidebar()"></div>
   <div class="sidebar">
-    <div class="logo">CCP CRM</div>
+    <div class="logo" style="display:flex;align-items:center;justify-content:space-between"><span>CCP CRM</span><button onclick="toggleSidebar()" title="Thu gọn menu" style="background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:8px;width:30px;height:30px;font-size:16px;cursor:pointer;line-height:1">«</button></div>
     <nav class="nav" id="nav">
       <a data-v="today" class="active">Việc cần làm</a>
       <a data-v="care">Chăm sóc khách</a>
@@ -520,7 +526,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-bw';
+const APP_VERSION='2026-10-30-by';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -536,7 +542,7 @@ async function checkAppVersion(){
   }catch(e){}
 }
 try{ setInterval(checkAppVersion, 150000); window.addEventListener('focus', checkAppVersion); setTimeout(checkAppVersion, 12000); }catch(e){}
-function toggleSidebar(){ document.getElementById('app').classList.toggle('navopen'); }
+function toggleSidebar(){ var a=document.getElementById('app'); if(window.innerWidth<=820){ a.classList.toggle('navopen'); } else { a.classList.toggle('navcollapse'); } }
 function hideGuide(){ try{localStorage.setItem('ccp_guide_hidden','1');}catch(e){} renderToday(); }
 function showGuide(){ try{localStorage.removeItem('ccp_guide_hidden');}catch(e){} renderToday(); }
 
@@ -3949,7 +3955,8 @@ async function chatSaveNote(){ if(!_CHAT_CUR)return; var cid=_CHAT_CUR.cid; var 
 function chatAddCrm(){ if(!_CHAT_CUR){ alert('Chọn hội thoại trước.'); return; } openQuickAdd(_CHAT_CUR.cid); }
 function openQuickAdd(cid){ var ld=_chatLead(cid); if(!ld){ alert('Không tìm thấy dữ liệu khách.'); return; } window._QA_CID=cid;
   var sel=function(map,cur){ return Object.keys(map).map(function(k){ return '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+map[k]+'</option>'; }).join(''); };
-  var qg=(''+(ld.quoc_gia||'US')).toUpperCase(); if(['US','CAD','EU'].indexOf(qg)<0) qg='US';
+  var qg=(''+(ld.quoc_gia||'')).toUpperCase(); if(['US','CAD','EU'].indexOf(qg)<0){ var _pc=(typeof _phoneCountry==='function')?_phoneCountry(ld.phone):''; if(_pc==='Canada')qg='CAD'; else if(_pc==='M\u1ef9'||_pc==='M\u1ef9/Canada')qg='US'; else if(['Ph\xe1p','\u0110\u1ee9c','\xdd','T\xe2y Ban Nha','B\u1ed3 \u0110\xe0o Nha','B\u1ec9','Th\u1ee5y S\u0129','Anh'].indexOf(_pc)>=0)qg='EU'; else qg='US'; }
+  var _src=(/whats/i.test(ld.platform||''))?'whatsapp':'facebook';
   var sid=(typeof revFind==='function'&&ld.sale)?revFind(SALES,(''+ld.sale).split('/')[0].trim()):'';
   var ex=document.getElementById('qa-modal'); if(ex)ex.remove();
   var m=document.createElement('div'); m.id='qa-modal'; m.style.cssText='position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto';
@@ -3962,7 +3969,7 @@ function openQuickAdd(cid){ var ld=_chatLead(cid); if(!ld){ alert('Không tìm t
   H+='<div><label style="'+lb+'">SĐT / WhatsApp</label><input id="qa-phone" value="'+_mvEsc(ld.phone||'')+'" style="'+ip+'"></div>';
   H+='<div><label style="'+lb+'">Quốc gia</label><select id="qa-qg" style="'+ip+'"><option value="US"'+(qg==='US'?' selected':'')+'>🇺🇸 US</option><option value="CAD"'+(qg==='CAD'?' selected':'')+'>🇨🇦 CAD</option><option value="EU"'+(qg==='EU'?' selected':'')+'>🇪🇺 EU</option></select></div>';
   H+='<div><label style="'+lb+'">Sale chăm</label><select id="qa-owner" style="'+ip+'">'+sel(SALES,sid)+'</select></div>';
-  H+='<div><label style="'+lb+'">Nguồn</label><select id="qa-nguon" style="'+ip+'">'+sel(NGUON,'pancake')+'</select></div>';
+  H+='<div><label style="'+lb+'">Nguồn</label><select id="qa-nguon" style="'+ip+'">'+sel(NGUON,_src)+'</select></div>';
   H+='<div><label style="'+lb+'">Mức độ</label><select id="qa-muc" style="'+ip+'"><option value="nong">🔥 Nóng</option><option value="am" selected>☀️ Ấm</option><option value="lanh">❄️ Lạnh</option></select></div>';
   H+='<div><label style="'+lb+'">Trạng thái</label><select id="qa-tt" style="'+ip+'">'+sel(STATUS,'tuong_tac')+'</select></div>';
   H+='<div style="grid-column:1/3"><label style="'+lb+'">Bệnh / nhu cầu</label><input id="qa-benh" placeholder="VD: U xơ, AMH thấp, muốn có thai..." style="'+ip+'"></div>';
@@ -3975,11 +3982,11 @@ function openQuickAdd(cid){ var ld=_chatLead(cid); if(!ld){ alert('Không tìm t
   m.innerHTML=H; document.body.appendChild(m);
   setTimeout(function(){ var t=document.getElementById('qa-ten'); if(t){ t.focus(); try{t.setSelectionRange(t.value.length,t.value.length);}catch(_){} } },60);
 }
-async function quickAddSave(){ var g=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+async function quickAddSave(){ var g=function(id){ var e=document.getElementById(id); return e?e.value:''; }; var _qld=(typeof _chatLead==='function')?(_chatLead(window._QA_CID)||{}):{}; var _src=(/whats/i.test(_qld.platform||''))?'whatsapp':'facebook';
   var ten=(g('qa-ten')||'').trim(); if(!ten){ alert('Nhập tên khách nhé.'); return; }
   var btn=document.getElementById('qa-save'); if(btn){ btn.textContent='⏳ Đang lưu…'; btn.disabled=true; }
   var owner=(ME.role==='sale')?ME.id:(g('qa-owner')||ME.id);
-  var rec={owner:owner, mkt:null, ten:ten, phone:g('qa-phone'), has_wa:false, email:'', quoc_gia:g('qa-qg'), dia_chi:null, nguon:g('qa-nguon')||'pancake', benh:'khac', benh_list:(g('qa-benh')||'').trim(), sp:(g('qa-sp')||'').trim()||'—', muc:g('qa-muc'), tt:g('qa-tt'), follow:g('qa-follow')||null, ghi:g('qa-ghi'), dt:0, ngay_chot:D(0), ly:'', khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
+  var rec={owner:owner, mkt:null, ten:ten, phone:g('qa-phone'), has_wa:(/whats/i.test(_qld.platform||'')), email:'', quoc_gia:g('qa-qg'), dia_chi:null, nguon:g('qa-nguon')||_src, benh:'khac', benh_list:(g('qa-benh')||'').trim(), sp:(g('qa-sp')||'').trim()||'—', muc:g('qa-muc'), tt:g('qa-tt'), follow:g('qa-follow')||null, ghi:g('qa-ghi'), dt:0, ngay_chot:D(0), ly:'', khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
   if(rec.tt==='kcnc'||rec.tt==='khach_chan') rec.follow=null; else if(!isChot(rec.tt) && (!rec.follow||rec.follow<=D(0))) rec.follow=D(1);
   var _dig=function(s){ return (''+(s||'')).replace(/\D/g,''); }; var _ph=_dig(rec.phone);
   try{
@@ -4111,7 +4118,7 @@ async function chatSendImage(url,iid,btn){ if(!_CHAT_CUR)return; if(btn){btn.dis
 
 function _chatMobileBack(){ var v=document.getElementById('v-chat'); if(v)v.classList.remove('show-thread'); }
 function qcCheck(v){ var out=document.getElementById('qc-result'); if(!out)return; var d=(''+(v||'')).replace(/\D/g,''); if(d.length<6){ out.innerHTML=''; return; } var ctry=_phoneCountry(d)||'?'; var wa='https://wa.me/'+d; out.innerHTML='🌍 <b>'+_mvEsc(ctry)+'</b> · <a href="'+wa+'" target="_blank" style="background:#25d366;color:#fff;padding:3px 10px;border-radius:12px;text-decoration:none;font-weight:700;font-size:11.5px">🟢 Mở WhatsApp</a>'; }
-function _chatToggleMax(){ var v=document.getElementById('v-chat'); if(v)v.classList.toggle('chat-max'); }
+function _chatToggleMax(){ var v=document.getElementById('v-chat'); if(v)v.classList.toggle('chat-max'); var app=document.getElementById('app'); if(app)app.classList.toggle('appmax'); }
 async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) return;
  if(!document.getElementById('chat-list')){
   el.innerHTML='<div class="card" style="padding:0;overflow:hidden">'
@@ -4150,6 +4157,12 @@ function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if
   h+='<div style="display:flex;justify-content:'+(me?'flex-end':'flex-start')+';margin-bottom:7px"><div style="max-width:78%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.45;color:#1f2d28;background:'+(me?'#e4f3d4':'#fff')+';border:1px solid '+(me?'#d2e8bd':'#e3ece7')+'"><div style="font-size:10.5px;'+(me?'color:#6f8a5e':'color:#9aa8a3')+';margin-bottom:2px">'+_mvEsc(mm.sender)+' · '+_mvEsc(mm.at)+'</div>'+_mvEsc(mm.text)+(showVi?'<div style="margin-top:4px;padding-top:4px;border-top:1px dashed '+(me?'#cfe3bd':'#f0d0d0')+';font-size:12.5px;font-weight:600;color:#e23d3d">🇻🇳 '+_mvEsc(vi)+'</div>':'')+'</div></div>'; });
  box.innerHTML=h; box.scrollTop=box.scrollHeight; _chatPaintTagbar(); _chatPaintNote();
 }
+async function chatOpenCrmCust(cid){ cid=decodeURIComponent(cid); var ld=_chatLead(cid); if(!ld){alert('Không tìm thấy khách.');return;} var ph=(''+(ld.phone||'')).replace(/\D/g,''); var cust=null;
+ try{ if(ph.length>=8){ var r=await sb.from('customers').select('*').neq('da_xoa',true).ilike('phone','%'+ph.slice(-9)+'%').limit(1); cust=(r.data&&r.data[0])||null; }
+  if(!cust && ld.ten){ var r2=await sb.from('customers').select('*').neq('da_xoa',true).ilike('ten',(''+ld.ten).trim()).limit(1); cust=(r2.data&&r2.data[0])||null; } }catch(e){}
+ if(!cust){ alert('Không tìm thấy hồ sơ khách trong CRM (có thể trùng tên/SĐT nhưng chưa khớp chính xác).'); return; }
+ try{ if(!DATA.find(function(x){return String(x.id)===String(cust.id);})) DATA.push(cust); window.__custFull=window.__custFull; }catch(e){}
+ try{ editCustomer(cust.id); }catch(e){ alert('Lỗi mở hồ sơ: '+((e&&e.message)||e)); } }
 var _WA_PHONES=null;
 async function _chatLoadWA(){ if(_WA_PHONES)return; _WA_PHONES={}; try{ var r=await sb.from('pancake_leads').select('phone').ilike('platform','%whats%'); (r.data||[]).forEach(function(x){ var d=(''+(x.phone||'')).replace(/\D/g,''); if(d.length>=8)_WA_PHONES[d.slice(-9)]=1; }); }catch(e){} }
 function _hasWA(ld){ if(/whats/i.test(ld.platform||''))return true; var d=(''+(ld.phone||'')).replace(/\D/g,''); if(d.length>=8 && _WA_PHONES && _WA_PHONES[d.slice(-9)])return true; return false; }
@@ -4160,7 +4173,7 @@ async function _chatLoadCRMKeys(force){ if(_CRM_KEYS&&!force)return; var ph={},n
 function _crmHas(c){ if(!c)return false; if(c.in_crm||c.status==='added')return true; if(!_CRM_KEYS)return false; var pp=(''+(c.phone||'')).replace(/\D/g,''); if(pp.length>=8 && _CRM_KEYS.ph[pp.slice(-9)])return true; var nn=(typeof _pkNormName==='function')?_pkNormName(c.ten):(''+(c.ten||'')).toLowerCase().trim(); if(nn&&nn.length>=4 && _CRM_KEYS.nm[nn])return true; return false; }
 function _chatPaintNote(){ var np=document.getElementById('chat-notepanel'); if(!np)return; if(!_CHAT_CUR){ np.innerHTML='<div style="color:#9aa8a3;font-size:12px;text-align:center;margin-top:30px">Chọn hội thoại để xem thông tin.</div>'; return; }
  var ld=_chatLead(_CHAT_CUR.cid)||{}; var inCrm=_crmHas(ld); var exTa=document.getElementById('chat-note'); var noteVal=exTa?exTa.value:(ld.note||'');
- var crmBtn=inCrm?'<span style="font-size:11px;color:#1F6F54;background:#eaf6f0;padding:4px 11px;border-radius:12px;display:inline-block">✓ Đã trong CRM</span>':'<span id="chat-addcrm" onclick="chatAddCrm()" style="cursor:pointer;font-size:12px;color:#fff;background:#1F6F54;padding:6px 13px;border-radius:12px;display:inline-block;font-weight:600">➕ Thêm vào CRM</span>';
+ var crmBtn=inCrm?'<span onclick="chatOpenCrmCust(\''+encodeURIComponent(_CHAT_CUR.cid)+'\')" title="Mở sửa hồ sơ khách trong CRM" style="cursor:pointer;font-size:11px;color:#fff;background:#1F6F54;padding:5px 12px;border-radius:12px;display:inline-block;font-weight:600">✓ Đã trong CRM · ✏️ Sửa</span>':'<span id="chat-addcrm" onclick="chatAddCrm()" style="cursor:pointer;font-size:12px;color:#fff;background:#1F6F54;padding:6px 13px;border-radius:12px;display:inline-block;font-weight:600">➕ Thêm vào CRM</span>';
  var tags=(ld.tags||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
  np.innerHTML='<div style="font-weight:700;font-size:14px;margin-bottom:3px">'+_chatIcon(_CHAT_CUR.messages&&_CHAT_CUR.messages[0]?'':'')+_mvEsc(ld.ten||_CHAT_CUR.page||'Khách')+'</div>'
   +'<div style="font-size:12px;color:#9aa8a3;margin-bottom:8px">'+(ld.sale?('Sale: '+_mvEsc(ld.sale)):'')+'</div>'
