@@ -520,7 +520,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-bv';
+const APP_VERSION='2026-10-30-bw';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4022,7 +4022,7 @@ function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=
  var items=list.slice(0,80).map(function(c){ var op=_CHAT_OPEN&&_CHAT_OPEN.cid===c.conv_id; var bg=op?'#eaf4ef':(c.unread?'#fff4f4':'transparent');
   return '<div onclick="chatOpen(\''+encodeURIComponent(c.conv_id)+'\',\''+encodeURIComponent(c.page_id)+'\')" onmouseover="this.style.background=\'#f2f6f4\'" onmouseout="this.style.background=\''+bg+'\'" style="display:flex;gap:10px;align-items:center;padding:8px 9px;border-radius:10px;cursor:pointer;background:'+bg+'">'
    +_chatAva(c.ten,c.platform)
-   +'<div style="flex:1;min-width:0"><div style="font-weight:'+(c.unread?'800':'600')+';font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc(c.ten||'(không tên)')+(c.sale?' <span style="font-weight:400;color:#9aa8a3;font-size:11px">· '+_mvEsc(c.sale)+'</span>':'')+(!_crmHas(c)?' <span style="font-weight:700;font-size:9px;background:#1F6F54;color:#fff;padding:1px 7px;border-radius:8px;vertical-align:middle">➕ Thêm vào CRM</span>':'')+'</div>'
+   +'<div style="flex:1;min-width:0"><div style="font-weight:'+(c.unread?'800':'600')+';font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc(c.ten||'(không tên)')+(c.sale?' <span style="font-weight:400;color:#9aa8a3;font-size:11px">· '+_mvEsc(c.sale)+'</span>':'')+(!_crmHas(c)?' <span style="font-weight:700;font-size:9px;background:#1F6F54;color:#fff;padding:1px 6px;border-radius:8px;vertical-align:middle">+CRM</span>':'')+'</div>'
    +'<div style="font-size:12px;color:'+(c.unread?'#55403f':'#8a978f')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc((c.snippet||'').slice(0,60))+'</div>'+_chatTags(c.tags)+'</div>'+(c.unread?'<span title="Chưa đọc" style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:#e23d3d;margin-left:2px"></span>':'')+'</div>'; }).join('');
  lc.innerHTML=items||'<div style="color:#6b7c76;padding:10px">Không có hội thoại.</div>';
 }
