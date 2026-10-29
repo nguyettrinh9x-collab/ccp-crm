@@ -500,7 +500,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-au';
+const APP_VERSION='2026-10-29-aw';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -941,7 +941,7 @@ function renderPancake(){
   // thao tác hàng loạt trên danh sách đang lọc
   if(rows.length){ h+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">';
     h+=`<span style="font-size:12px;color:var(--muted);font-weight:700">Hàng loạt (${rows.length} đang lọc):</span>`;
-    h+=`<button class="btn" type="button" onclick="pancakeBulkAdd()" ${PK_BUSY?'disabled':''} style="padding:5px 12px">➕ Thêm tất cả vào CRM</button>`;
+    h+=`<button class="btn" type="button" onclick="pancakeBulkAdd()" ${PK_BUSY?'disabled':''} style="padding:5px 12px" title="Thêm khách mới vào CRM và tự động bỏ qua khách đã trùng">✅ Thêm tất cả (tự bỏ trùng)</button>`;
     h+=`<button class="btn ghost" type="button" onclick="pancakeBulkIgnore()" ${PK_BUSY?'disabled':''} style="padding:5px 12px;color:#b3261e;border-color:#f0b4ad">🗑 Bỏ tất cả</button>`;
     const _dupN=rows.filter(r=>r._crm).length;
     if(_dupN) h+=`<button class="btn ghost" type="button" onclick="pancakeIgnoreDup()" ${PK_BUSY?'disabled':''} title="Chỉ bỏ các khách ĐÃ CÓ trong CRM (trùng) khỏi danh sách chờ duyệt" style="padding:5px 12px;color:#8a5b00;border-color:#f0d19a">🚫 Bỏ khách trùng (${_dupN})</button>`;
@@ -1050,15 +1050,22 @@ async function pancakeBulkIgnore(){
 async function pancakeBulkAdd(){
   if(!window.sb) return;
   const rows=pkFilteredRows(); if(!rows.length){ alert('Không có khách nào đang lọc.'); return; }
-  const dup=rows.filter(r=>r._crm).length;
-  if(!confirm('Thêm TẤT CẢ '+rows.length+' khách đang lọc vào CRM?'+(dup?('\\n⚠ Trong đó '+dup+' khách CÓ THỂ đã có trong CRM (sẽ tạo thêm bản ghi mới).'):''))) return;
+  const dupRows=rows.filter(r=>r._crm); const newRows=rows.filter(r=>!r._crm);
+  if(!newRows.length){ if(!confirm(dupRows.length+' khách đang lọc đều ĐÃ CÓ trong CRM.\\nBỏ qua tất cả khỏi danh sách chờ duyệt?')) return; }
+  else if(!confirm('Thêm '+newRows.length+' khách MỚI vào CRM'+(dupRows.length?(' và tự động BỎ QUA '+dupRows.length+' khách trùng'):'')+'?')) return;
   PK_BUSY=true; renderPancake();
-  const recs=rows.map(pkLeadToRec); const ids=rows.map(r=>r.conv_id);
   let ok=0;
-  for(let i=0;i<recs.length;i+=100){ const chunk=recs.slice(i,i+100); const {error}=await sb.from('customers').insert(chunk); if(error){ alert('Lỗi thêm khách: '+error.message); break; } ok+=chunk.length; }
-  for(let i=0;i<ids.length;i+=200){ const chunk=ids.slice(i,i+200); await sb.from('pancake_leads').update({status:'added'}).in('conv_id',chunk); }
-  PLEADS=PLEADS.filter(x=>!ids.includes(x.conv_id));
-  PK_BUSY=false; await loadAll(); toast('✓ Đã thêm '+ok+' khách vào CRM'); renderPancake();
+  if(newRows.length){ const recs=newRows.map(pkLeadToRec);
+    for(let i=0;i<recs.length;i+=100){ const chunk=recs.slice(i,i+100); const {error}=await sb.from('customers').insert(chunk); if(error){ alert('Lỗi thêm khách: '+error.message); PK_BUSY=false; renderPancake(); return; } ok+=chunk.length; }
+    const nids=newRows.map(r=>r.conv_id);
+    for(let i=0;i<nids.length;i+=200){ const chunk=nids.slice(i,i+200); await sb.from('pancake_leads').update({status:'added'}).in('conv_id',chunk); }
+  }
+  let skipped=0;
+  if(dupRows.length){ const dids=dupRows.map(r=>r.conv_id); skipped=dids.length;
+    for(let i=0;i<dids.length;i+=200){ const chunk=dids.slice(i,i+200); await sb.from('pancake_leads').update({status:'ignored'}).in('conv_id',chunk); }
+  }
+  const allids=rows.map(r=>r.conv_id); PLEADS=PLEADS.filter(x=>!allids.includes(x.conv_id));
+  PK_BUSY=false; await loadAll(); toast('✓ Đã thêm '+ok+' khách mới'+(skipped?(' · bỏ qua '+skipped+' trùng'):'')); renderPancake();
 }
 
 /* ============ ĐĂNG KÝ LỊCH LÀM ============ */
@@ -4020,12 +4027,12 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div style="flex:1;display:flex;flex-direction:column;background:#f7faf8;min-width:240px">'
      +'<div id="chat-thread" style="flex:1;overflow:auto;padding:14px"><div style="color:#9aa8a3;text-align:center;margin-top:40px">← Chọn một hội thoại để xem tin nhắn.</div></div>'
      +'<div id="chat-tagbar"></div>'
-     +'<div style="border-top:1px solid #e9efec;padding:10px 12px;background:#fff;display:flex;gap:8px;align-items:center"><button id="chat-vn-btn" onclick="chatToggleVN()" title="Gõ tiếng Việt, tự dịch sang tiếng khách khi gửi" style="border:none;background:#eef1f0;color:#6b7c76;border-radius:16px;padding:7px 11px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap">🌐 VN</button><input id="chat-send-input" placeholder="Nhập tin trả lời khách… (Enter để gửi)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:20px;padding:8px 14px;font-size:13px"><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
+     +'<div style="border-top:1px solid #e9efec;padding:10px 12px;background:#fff;display:flex;gap:8px;align-items:center"><span id="chat-trg" style="display:flex;gap:3px;white-space:nowrap"></span><input id="chat-send-input" placeholder="Nhập tin trả lời khách… (Enter để gửi)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:20px;padding:8px 14px;font-size:13px"><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
    +'</div>'
    +'<div style="flex:0 0 250px;max-width:28%;border-left:1px solid #e9efec;background:#fff;overflow:auto"><div id="chat-notepanel" style="padding:12px"><div style="color:#9aa8a3;font-size:12px;text-align:center;margin-top:30px">Chọn hội thoại để xem thông tin.</div></div></div>'
    +'</div></div>';
  }
- _chatPaintDatebar(); _chatPaintTagFilter(); if(_CHAT_VNMODE){var _vb=document.getElementById('chat-vn-btn');if(_vb){_vb.style.background='#e23d3d';_vb.style.color='#fff';}var _vi=document.getElementById('chat-send-input');if(_vi)_vi.placeholder='Gõ tiếng Việt — tự dịch sang tiếng khách khi gửi';} await _chatLoad(); _chatPaintList(); var _dsel=document.getElementById('chat-date-sel'); if(_dsel)_dsel.value=_CHAT_DP||'';
+ _chatPaintDatebar(); _chatPaintTagFilter(); _chatPaintTrg(); await _chatLoad(); _chatPaintList(); var _dsel=document.getElementById('chat-date-sel'); if(_dsel)_dsel.value=_CHAT_DP||'';
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
  _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
@@ -4097,11 +4104,17 @@ async function chatOpen(cid,pid){ cid=decodeURIComponent(cid); pid=decodeURIComp
    if(_CHAT_AUTOTR){ try{ chatTranslate(); }catch(e){} }
  }catch(e){ box.innerHTML='<div style="color:#d94848;text-align:center;margin-top:40px">Lỗi: '+_mvEsc((e&&e.message)||e)+'</div>'; }
 }
-var _CHAT_VNMODE=(function(){try{return localStorage.getItem('chat_vnmode')==='1';}catch(e){return false;}})();
-function chatToggleVN(){ _CHAT_VNMODE=!_CHAT_VNMODE; try{localStorage.setItem('chat_vnmode',_CHAT_VNMODE?'1':'0');}catch(e){} var b=document.getElementById('chat-vn-btn'); if(b){ b.style.background=_CHAT_VNMODE?'#e23d3d':'#eef1f0'; b.style.color=_CHAT_VNMODE?'#fff':'#6b7c76'; } var inp=document.getElementById('chat-send-input'); if(inp)inp.placeholder=_CHAT_VNMODE?'Gõ tiếng Việt — tự dịch sang tiếng khách khi gửi':'Nhập tin trả lời khách… (Enter để gửi)'; }
+var _CHAT_TRG=(function(){try{return localStorage.getItem('chat_trg')||'';}catch(e){return '';}})();
+var _CHAT_TRGOPTS=[['','🇻🇳 Việt','#6b7c76'],['en','🇬🇧 Anh','#2d7dd2'],['fr','🇫🇷 Pháp','#7a5cc0'],['auto','🌐 Tự động','#1F6F54']];
+function _chatTrgLabel(t){ var m={en:'tiếng Anh',fr:'tiếng Pháp',auto:'tiếng khách'}; return m[t]||''; }
+function _chatPaintTrg(){ var b=document.getElementById('chat-trg'); if(!b)return;
+ b.innerHTML=_CHAT_TRGOPTS.map(function(o){ var on=_CHAT_TRG===o[0]; return '<button type="button" onclick="chatSetTrg(\''+o[0]+'\')" title="'+(o[0]?('Gõ tiếng Việt → tự dịch sang '+_chatTrgLabel(o[0])+' khi gửi'):'Gửi nguyên văn, không dịch')+'" style="border:none;border-radius:14px;padding:6px 9px;font-size:11.5px;cursor:pointer;font-weight:700;white-space:nowrap;background:'+(on?o[2]:'#eef1f0')+';color:'+(on?'#fff':'#6b7c76')+'">'+o[1]+'</button>'; }).join('');
+ var inp=document.getElementById('chat-send-input'); if(inp)inp.placeholder=_CHAT_TRG?('Gõ tiếng Việt — tự dịch sang '+_chatTrgLabel(_CHAT_TRG)+' khi gửi'):'Nhập tin trả lời khách… (Enter để gửi)';
+}
+function chatSetTrg(t){ _CHAT_TRG=t; try{localStorage.setItem('chat_trg',t);}catch(e){} _chatPaintTrg(); var inp=document.getElementById('chat-send-input'); if(inp)inp.focus(); }
 async function chatSend(){ if(!_CHAT_CUR)return; var inp=document.getElementById('chat-send-input'); if(!inp)return; var txt=String(inp.value||'').trim(); if(!txt)return; var btn=document.getElementById('chat-send-btn'); if(btn){btn.disabled=true;btn.textContent='⏳';} inp.disabled=true;
  try{ var sendTxt=txt;
-  if(_CHAT_VNMODE){ var sample=''; var ms=_CHAT_CUR.messages||[]; for(var i=ms.length-1;i>=0;i--){ if(!ms[i].from_page&&ms[i].text){ sample=ms[i].text; break; } } var tr=await sb.functions.invoke('translate',{body:{reply_vi:txt,sample:sample}}); var td=(tr&&tr.data)||{}; if(td.ok&&td.out){ sendTxt=td.out; } else { alert('Chưa dịch được câu trả lời, thử lại.'); if(btn){btn.disabled=false;btn.textContent='Gửi';} inp.disabled=false; return; } }
+  if(_CHAT_TRG){ var sample=''; var ms=_CHAT_CUR.messages||[]; for(var i=ms.length-1;i>=0;i--){ if(!ms[i].from_page&&ms[i].text){ sample=ms[i].text; break; } } var tr=await sb.functions.invoke('translate',{body:{reply_vi:txt,sample:sample,target:_CHAT_TRG}}); var td=(tr&&tr.data)||{}; if(td.ok&&td.out){ sendTxt=td.out; } else { alert('Chưa dịch được câu trả lời, thử lại.'); if(btn){btn.disabled=false;btn.textContent='Gửi';} inp.disabled=false; return; } }
   try{ await loadBrain(); var _hit=brainScan(txt).concat(brainScan(sendTxt)); _hit=_hit.filter(function(x,i){return _hit.indexOf(x)===i;}); if(_hit.length){ if(!confirm('⚠️ Tin nhắn có thể chứa từ nhạy cảm (health-claim):\n• '+_hit.join(', ')+'\n\nVẫn gửi?')){ if(btn){btn.disabled=false;btn.textContent='Gửi';} inp.disabled=false; inp.focus(); return; } } }catch(_e){}
   var res=await sb.functions.invoke('pancake-send',{body:{page_id:_CHAT_CUR.pid,conv_id:_CHAT_CUR.cid,message:sendTxt}}); var d=(res&&res.data)||{};
   if(d.ok){ inp.value=''; var ld=_chatLead(_CHAT_CUR.cid)||{}; _CHAT_CUR.messages.push({sender:(d.page||ld.page_name||'Shop'),from_page:true,text:sendTxt,at:new Date().toISOString().slice(0,19).replace('T',' ')}); _CHAT_CUR.count=(_CHAT_CUR.count||0)+1; _chatRenderThread(); }
