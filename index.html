@@ -499,7 +499,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-an';
+const APP_VERSION='2026-10-29-ao';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -2391,11 +2391,11 @@ function renderTongBill(){
     <button class="btn ghost" type="button" onclick="billAllToggle()" style="padding:6px 12px;font-size:12px;${window.__BILL_ALL?'background:#1F6F54;color:#fff':''}">${window.__BILL_ALL?'📅 Đang xem TẤT CẢ':'📅 Xem tất cả tháng'}</button><button class="btn ghost" type="button" onclick="reloadBills()" style="padding:6px 12px;font-size:12px">🔄 Tải lại từ sheet</button><button class="btn ghost" type="button" onclick="billRepeatToggle()" style="padding:6px 12px;font-size:12px;${window.__BILL_REPEAT?'background:#1F6F54;color:#fff':''}">🔁 Khách mua nhiều lần</button>
     <span style="font-size:12px;color:var(--muted)">Nguồn: Google Sheet (ốp trực tiếp) · tổng ${__BILLS.length} đơn</span></div>`;
   if(window.__BILL_REPEAT){
-    const grp={}; rows.forEach(b=>{ const key=((b.ten||'').trim().toLowerCase().replace(/\s+/g,' '))||'(trống)'; const g=grp[key]||(grp[key]={ten:b.ten||'(trống)',n:0,ds:0,dathu:0,no:0,usd:0,sale:b.sale||'',mas:[]}); g.n++; g.ds+=Number(b.doanh_thu_vnd)||0; g.dathu+=Number(b.da_thu_vnd)||0; g.no+=Number(b.no_vnd)||0; g.usd+=Number(b.tien_goc)||0; if(b.ma_don)g.mas.push(b.ma_don); });
+    const grp={}; (__BILLS||[]).forEach(b=>{ const key=((b.ten||'').trim().toLowerCase().replace(/\s+/g,' '))||'(trống)'; const g=grp[key]||(grp[key]={ten:b.ten||'(trống)',n:0,ds:0,dathu:0,no:0,usd:0,sale:b.sale||'',mas:[]}); g.n++; g.ds+=Number(b.doanh_thu_vnd)||0; g.dathu+=Number(b.da_thu_vnd)||0; g.no+=Number(b.no_vnd)||0; g.usd+=Number(b.tien_goc)||0; if(b.ma_don)g.mas.push(b.ma_don); });
     let list=Object.keys(grp).map(k=>grp[k]).filter(g=>g.n>=2).sort((a,b)=>(b.n-a.n)||(b.ds-a.ds));
-    let rh=`<h2 class="sec">🔁 Khách mua nhiều lần — ${_PER} (${list.length} khách)</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Gộp theo tên khách, chỉ hiện khách có ≥2 đơn. Bấm lại nút để tắt.</p>`;
+    let rh=`<h2 class="sec">🔁 Khách mua nhiều lần — toàn bộ các tháng (${list.length} khách)</h2><p style="color:var(--muted);font-size:12px;margin:-6px 0 10px">Gộp theo tên khách, chỉ hiện khách có ≥2 đơn. Bấm lại nút để tắt.</p>`;
     rh+='<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Khách</th><th>Số đơn</th><th>Tổng $</th><th>Tổng doanh số (VNĐ)</th><th>Đã thu (VNĐ)</th><th>Còn nợ (VNĐ)</th><th>Sale</th><th>Mã đơn</th></tr>';
-    if(!list.length) rh+=`<tr><td colspan="8" class="empty">Không có khách mua ≥2 lần trong ${_PER}.</td></tr>`;
+    if(!list.length) rh+=`<tr><td colspan="8" class="empty">Không có khách mua ≥2 lần.</td></tr>`;
     let GR={n:0,ds:0,dathu:0,no:0,usd:0};
     list.forEach(g=>{ GR.n+=g.n;GR.ds+=g.ds;GR.dathu+=g.dathu;GR.no+=g.no;GR.usd+=g.usd; rh+='<tr><td><b>'+(g.ten.replace(/[<>]/g,''))+'</b></td><td style="text-align:center"><span style="background:#1F6F54;color:#fff;border-radius:10px;padding:1px 9px;font-weight:700">'+g.n+'</span></td><td style="text-align:center">$'+g.usd.toLocaleString('en-US')+'</td><td><b>'+money(g.ds)+'</b></td><td style="color:var(--won)">'+money(g.dathu)+'</td><td style="color:'+(g.no?'var(--over)':'inherit')+'">'+money(g.no)+'</td><td>'+(g.sale||'—')+'</td><td style="font-size:11px;color:var(--muted);max-width:220px">'+g.mas.join(', ')+'</td></tr>'; });
     if(list.length) rh+='<tr style="background:var(--cream);font-weight:800"><td>TỔNG '+list.length+' khách</td><td style="text-align:center">'+GR.n+' đơn</td><td style="text-align:center">$'+GR.usd.toLocaleString('en-US')+'</td><td>'+money(GR.ds)+'</td><td>'+money(GR.dathu)+'</td><td>'+money(GR.no)+'</td><td colspan="2"></td></tr>';
