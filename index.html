@@ -499,7 +499,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-al';
+const APP_VERSION='2026-10-29-am';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1449,8 +1449,42 @@ function renderDash(){
   </div>
   <p style="margin-top:12px"><button class="btn ghost" onclick="go('today')">→ Mở "Việc cần làm hôm nay"</button></p>`;
 
-  document.getElementById('v-dashboard').innerHTML='<div id="my-pk-recon"></div>'+html;
+  document.getElementById('v-dashboard').innerHTML='<div id="my-pk-recon"></div>'+_ktStudioBlock()+html;
   loadMyPkRecon();
+}
+function _ktStudioBlock(){
+  try{
+    var base=(ME&&ME.role==='sale')?myData():(DATA||[]).filter(function(c){return !c.da_xoa;});
+    var tong=base.length;
+    var chot=base.filter(function(c){return isChot(c.tt);}).length;
+    var dt=base.filter(function(c){return isChot(c.tt);}).reduce(function(s,c){return s+(Number(c.dt)||0);},0);
+    var ktt=base.filter(function(c){return c.tt==='ktt';}).length;
+    var cut=D(-30);
+    var moi30=base.filter(function(c){return (c.ngay_tao||'')>=cut;}).length;
+    var tyle=tong?(100*chot/tong):0;
+    var kttPct=tong?Math.round(100*ktt/tong):0;
+    var card=function(num,lbl,red){return '<div class="card" style="text-align:left"><div class="val" style="font-size:26px'+(red?';color:var(--over)':'')+'">'+num+'</div><div class="lbl">'+lbl+'</div></div>';};
+    var h='<h2 class="sec" style="margin-top:0">🎯 Bảng điều khiển tối ưu doanh nghiệp</h2>';
+    h+='<div class="grid" style="grid-template-columns:repeat(3,1fr)">';
+    h+=card(tong.toLocaleString('vi-VN'),'Tổng khách');
+    h+=card(chot.toLocaleString('vi-VN'),'Đã chốt');
+    h+=card(tyle.toFixed(1)+'%','Tỷ lệ chốt');
+    h+=card('$'+Math.round(dt).toLocaleString('en-US'),'Doanh thu (đã chốt)');
+    h+=card(ktt.toLocaleString('vi-VN')+' <span style="font-size:14px;color:var(--muted)">('+kttPct+'%)</span>','KTT tồn',true);
+    h+=card(moi30.toLocaleString('vi-VN'),'Khách mới 30 ngày');
+    h+='</div>';
+    if(!(ME&&ME.role==='sale')){
+      var byS={};
+      base.forEach(function(c){ var nm=SALES[c.owner]||MKT[c.owner]||'(chưa gán)'; var o=byS[nm]=byS[nm]||{ktt:0,total:0}; o.total++; if(c.tt==='ktt')o.ktt++; });
+      var rows=Object.keys(byS).map(function(nm){return {sale:nm,ktt:byS[nm].ktt,total:byS[nm].total,pct:byS[nm].total?Math.round(100*byS[nm].ktt/byS[nm].total):0};}).filter(function(r){return r.ktt>0;}).sort(function(a,b){return b.ktt-a.ktt;});
+      var maxK=Math.max.apply(null,rows.map(function(r){return r.ktt;}).concat([1]));
+      h+='<h2 class="sec">🔴 Lead "chưa tương tác" (KTT) tồn theo sale</h2>';
+      h+='<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Sale</th><th>Lead chưa chạm (KTT)</th><th style="text-align:right">/ tổng lead</th></tr>';
+      rows.forEach(function(r){ h+='<tr><td><b>'+_mvEsc(r.sale)+'</b></td><td><b>'+r.ktt.toLocaleString('vi-VN')+'</b><div class="bar" style="max-width:320px"><div style="width:'+Math.round(100*r.ktt/maxK)+'%"></div></div></td><td style="text-align:right"><b>'+r.pct+'%</b></td></tr>'; });
+      h+='</table></div>';
+    }
+    return h;
+  }catch(e){ return ''; }
 }
 function countBy(field,map){const m={};DATA.forEach(c=>m[c[field]]=(m[c[field]]||0)+1);
   return Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[map[k]||k,v]);}
