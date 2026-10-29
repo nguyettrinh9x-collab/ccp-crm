@@ -162,6 +162,8 @@
       <a data-v="pay">💵 Lương tạm tính 🆕</a>
       <a data-v="integ">🔌 Tích hợp & tự động hóa 🆕</a>
       <a data-v="ailog">🤖 Nhật ký AI & chi phí 🆕</a>
+      <a data-v="brain">🧠 Bộ não CSKH 🆕</a>
+      <a data-v="feedback">💬 Góp ý</a>
     </nav>
     <div class="foot">
       Đăng nhập: <b id="who"></b><br><span id="role"></span>
@@ -209,6 +211,8 @@
     <div class="view" id="v-pay"></div>
     <div class="view" id="v-integ"></div>
     <div class="view" id="v-ailog"></div>
+    <div class="view" id="v-brain"></div>
+    <div class="view" id="v-feedback"></div>
     <div class="view" id="v-chat"></div>
   </div>
 </div>
@@ -492,13 +496,15 @@ function applyMenu(){
     if(v==='pancake'){ a.style.display=(canPancake()||allowed.includes('pancake'))?'flex':'none'; return; }
     if(v==='danhgia'){ a.style.display=canPancake()?'flex':'none'; return; } /* chỉ Nguyệt/Admin */
     if(v==='integ'||v==='ailog'||v==='pay'){ a.style.display=canPancake()?'flex':'none'; return; } /* mục mới admin-only */
+    if(v==='brain'){ a.style.display='flex'; return; } /* bộ não: cả team xem */
+    if(v==='feedback'){ a.style.display=canPancake()?'flex':'none'; return; } /* góp ý: admin */
     if(v==='appt'||v==='chat'){ a.style.display='flex'; return; } /* mục mới cho mọi vai trò */
     a.style.display=allowed.includes(v)?'flex':'none';
   });
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-ag';
+const APP_VERSION='2026-10-29-ah';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3745,7 +3751,7 @@ if(typeof renderDanhGia==='function'){var _o=renderDanhGia;renderDanhGia=functio
 </script>
 <script>
 /* ===== MỤC MỚI — chỉ THÊM, giữ nguyên phần cũ (28/10/2026) ===== */
-try{ if(typeof TITLES==='object') Object.assign(TITLES,{appt:'📅 Lịch hẹn',pay:'💵 Lương tạm tính (demo)',integ:'🔌 Tích hợp & tự động hóa',ailog:'🤖 Nhật ký AI & chi phí',chat:'💬 Hội thoại'}); }catch(e){}
+try{ if(typeof TITLES==='object') Object.assign(TITLES,{appt:'📅 Lịch hẹn',pay:'💵 Lương tạm tính (demo)',integ:'🔌 Tích hợp & tự động hóa',ailog:'🤖 Nhật ký AI & chi phí',chat:'💬 Hội thoại',brain:'🧠 Bộ não CSKH',feedback:'💬 Góp ý'}); }catch(e){}
 function _mvEsc(s){return (''+(s==null?'':s)).replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function _mvTable(head,rows){ var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr>'; head.forEach(function(x){h+='<th style="padding:7px 9px;border-bottom:1px solid #e3ece7;background:#eef4f1;text-align:left;font-size:12px">'+x+'</th>';}); h+='</tr>'; rows.forEach(function(r){ h+='<tr>'; r.forEach(function(c){ h+='<td style="padding:7px 9px;border-bottom:1px solid #eef2f0">'+c+'</td>'; }); h+='</tr>'; }); h+='</table></div>'; return h; }
 function _mvNote(t){ return '<div style="background:#eef4f1;border-left:3px solid #1F6F54;border-radius:0 8px 8px 0;padding:8px 12px;font-size:12.5px;margin:8px 0">'+t+'</div>'; }
@@ -3964,6 +3970,7 @@ function chatToggleVN(){ _CHAT_VNMODE=!_CHAT_VNMODE; try{localStorage.setItem('c
 async function chatSend(){ if(!_CHAT_CUR)return; var inp=document.getElementById('chat-send-input'); if(!inp)return; var txt=String(inp.value||'').trim(); if(!txt)return; var btn=document.getElementById('chat-send-btn'); if(btn){btn.disabled=true;btn.textContent='⏳';} inp.disabled=true;
  try{ var sendTxt=txt;
   if(_CHAT_VNMODE){ var sample=''; var ms=_CHAT_CUR.messages||[]; for(var i=ms.length-1;i>=0;i--){ if(!ms[i].from_page&&ms[i].text){ sample=ms[i].text; break; } } var tr=await sb.functions.invoke('translate',{body:{reply_vi:txt,sample:sample}}); var td=(tr&&tr.data)||{}; if(td.ok&&td.out){ sendTxt=td.out; } else { alert('Chưa dịch được câu trả lời, thử lại.'); if(btn){btn.disabled=false;btn.textContent='Gửi';} inp.disabled=false; return; } }
+  try{ await loadBrain(); var _hit=brainScan(txt).concat(brainScan(sendTxt)); _hit=_hit.filter(function(x,i){return _hit.indexOf(x)===i;}); if(_hit.length){ if(!confirm('⚠️ Tin nhắn có thể chứa từ nhạy cảm (health-claim):\n• '+_hit.join(', ')+'\n\nVẫn gửi?')){ if(btn){btn.disabled=false;btn.textContent='Gửi';} inp.disabled=false; inp.focus(); return; } } }catch(_e){}
   var res=await sb.functions.invoke('pancake-send',{body:{page_id:_CHAT_CUR.pid,conv_id:_CHAT_CUR.cid,message:sendTxt}}); var d=(res&&res.data)||{};
   if(d.ok){ inp.value=''; var ld=_chatLead(_CHAT_CUR.cid)||{}; _CHAT_CUR.messages.push({sender:(d.page||ld.page_name||'Shop'),from_page:true,text:sendTxt,at:new Date().toISOString().slice(0,19).replace('T',' ')}); _CHAT_CUR.count=(_CHAT_CUR.count||0)+1; _chatRenderThread(); }
   else { var rs=d.reason||'lỗi không rõ'; var hint=''; if(/token/.test(rs))hint='\\nPage này chưa cấp quyền gửi (thiếu token).'; else if(/24|window|outside|session/i.test(rs))hint='\\nWhatsApp đã quá 24h — khách cần nhắn lại trước khi mình gửi.'; alert('Chưa gửi được: '+rs+hint); }
@@ -3978,7 +3985,52 @@ function _chatPaintTagbar(){ var bar=document.getElementById('chat-tagbar'); if(
 async function chatToggleTag(t){ if(!_CHAT_CUR)return; var ld=_chatLead(_CHAT_CUR.cid); if(!ld)return; var cur=(ld.tags||'').split(',').map(function(x){return x.trim();}).filter(Boolean); var i=cur.indexOf(t); if(i>=0)cur.splice(i,1); else cur.push(t); var ns=cur.join(', '); ld.tags=ns; _chatPaintTagbar(); _chatPaintList();
  try{ var e=await sb.from('pancake_leads').update({tags:ns}).eq('conv_id',_CHAT_CUR.cid); if(e&&e.error)throw e.error; }catch(err){ alert('Lỗi lưu thẻ: '+((err&&err.message)||err)); }
 }
-(function(){ var NV={integ:renderInteg,ailog:renderAiLog,appt:renderAppt,pay:renderPay,chat:renderChat};
+/* ====== BỘ NÃO CSKH + BỘ LỌC HEALTH-CLAIM + GÓP Ý ====== */
+var _BRAIN=null;
+async function loadBrain(force){ if(_BRAIN && !force) return _BRAIN; try{ var r=await sb.from('csk_brain').select('*').eq('id',1).maybeSingle(); _BRAIN=r.data||{}; }catch(e){ _BRAIN=_BRAIN||{}; } return _BRAIN; }
+function _brainWords(){ var s=(_BRAIN&&_BRAIN.camtu)||''; return s.split(/[,\n;]+/).map(function(x){return x.trim().toLowerCase();}).filter(function(x){return x.length>=2;}); }
+function brainScan(text){ var t=(''+(text||'')).toLowerCase(); var hits=[]; _brainWords().forEach(function(w){ if(w && t.indexOf(w)>=0 && hits.indexOf(w)<0) hits.push(w); }); return hits; }
+async function renderBrain(){ var el=document.getElementById('v-brain'); if(!el) return; el.innerHTML='<div class="card">⏳ Đang tải Bộ não…</div>'; await loadBrain(true); var b=_BRAIN||{}; var adm=(typeof isAdmin==='function')?isAdmin():false; var ro=adm?'':' readonly';
+  var fld=function(id,label,val,ph,rows){ return '<div style="margin-bottom:12px"><label style="font-weight:600;display:block;margin-bottom:4px">'+label+'</label><textarea id="brain-'+id+'"'+ro+' rows="'+(rows||3)+'" placeholder="'+ph+'" style="width:100%;border:1px solid #e3ece7;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;box-sizing:border-box;'+(adm?'':'background:#f7f9f8')+'">'+_mvEsc(val||'')+'</textarea></div>'; };
+  var h='<div class="card"><h2 class="sec" style="margin-top:0">🧠 Bộ não CSKH</h2><p style="color:var(--muted);font-size:13px;margin:-4px 0 14px">Nguồn kiến thức chung cho cả team: sản phẩm, giá, combo, cách tư vấn, và <b>từ cấm (health-claim)</b> dùng cho bộ lọc khi nhắn khách. '+(adm?'Chị sửa rồi bấm Lưu.':'Chỉ Admin sửa được.')+'</p>';
+  h+=fld('sanpham','Sản phẩm',b.sanpham,'Danh sách sản phẩm + mô tả ngắn...',4);
+  h+=fld('gia','Bảng giá',b.gia,'Giá từng sản phẩm / combo...',4);
+  h+=fld('combo','Combo & quà tặng',b.combo,'Các combo, quà kèm...',3);
+  h+=fld('ship','Phí ship / vận chuyển',b.ship,'US / CAD / EU...',2);
+  h+=fld('tuvan','Cách tư vấn theo nhu cầu khách',b.tuvan,'Khách hiếm muộn / IVF / ... tư vấn ra sao...',5);
+  h+=fld('camtu','⛔ Từ cấm / câu không được nói (health-claim)',b.camtu,'cách nhau bằng dấu phẩy',3);
+  if(adm) h+='<div style="text-align:right"><button class="btn" type="button" id="brain-save" onclick="saveBrain()">💾 Lưu Bộ não</button></div>';
+  h+='<div style="font-size:11px;color:var(--muted);margin-top:8px">Cập nhật: '+(b.updated_at?(''+b.updated_at).slice(0,16).replace('T',' '):'—')+(b.updated_by?(' · '+_mvEsc(b.updated_by)):'')+'</div></div>';
+  el.innerHTML=h;
+}
+async function saveBrain(){ if(!(typeof isAdmin==='function'&&isAdmin())){ alert('Chỉ Admin sửa được.'); return; } var g=function(id){ var e=document.getElementById('brain-'+id); return e?e.value:''; }; var btn=document.getElementById('brain-save'); if(btn){btn.textContent='⏳ Đang lưu…';btn.disabled=true;}
+  var upd={sanpham:g('sanpham'),gia:g('gia'),combo:g('combo'),ship:g('ship'),tuvan:g('tuvan'),camtu:g('camtu'),updated_at:new Date().toISOString(),updated_by:(window.ME&&(ME.name||ME.uname))||''};
+  try{ var e=await sb.from('csk_brain').update(upd).eq('id',1); if(e&&e.error)throw e.error; _BRAIN=Object.assign(_BRAIN||{},upd); if(typeof toast==='function')toast('✓ Đã lưu Bộ não'); else alert('✓ Đã lưu Bộ não'); }catch(err){ alert('Lỗi lưu: '+((err&&err.message)||err)); } if(btn){btn.textContent='💾 Lưu Bộ não';btn.disabled=false;}
+}
+async function renderFeedback(){ var el=document.getElementById('v-feedback'); if(!el)return; if(!(typeof isAdmin==='function'&&isAdmin())){ el.innerHTML='<div class="card empty">Chỉ Admin xem được góp ý.</div>'; return; } el.innerHTML='<div class="card">⏳ Đang tải…</div>';
+  try{ var r=await sb.from('feedback').select('*').order('created_at',{ascending:false}).limit(300); var rows=r.data||[];
+   var nNew=rows.filter(function(f){return f.trang_thai!=='done';}).length;
+   var h='<div class="card"><h2 class="sec" style="margin-top:0">💬 Góp ý / Báo lỗi ('+rows.length+(nNew?(' · '+nNew+' mới'):'')+')</h2>';
+   if(!rows.length) h+='<div class="empty">Chưa có góp ý nào.</div>';
+   else { h+='<div style="overflow:auto"><table style="width:100%;font-size:13px;border-collapse:collapse"><tr><th style="text-align:left;padding:6px">Ngày</th><th style="text-align:left;padding:6px">Người</th><th style="text-align:left;padding:6px">Màn hình</th><th style="text-align:left;padding:6px">Nội dung</th><th style="padding:6px">Trạng thái</th></tr>';
+    rows.forEach(function(f){ var done=f.trang_thai==='done'; h+='<tr style="border-top:1px solid #eef1f0"><td style="padding:6px;white-space:nowrap;vertical-align:top">'+(''+(f.created_at||'')).slice(0,16).replace('T',' ')+'</td><td style="padding:6px;vertical-align:top">'+_mvEsc(f.nguoi||'')+'</td><td style="padding:6px;vertical-align:top">'+_mvEsc(f.man_hinh||'')+'</td><td style="padding:6px;vertical-align:top">'+_mvEsc(f.noi_dung||'')+'</td><td style="padding:6px;text-align:center;vertical-align:top"><span onclick="fbToggle('+f.id+','+(done?'false':'true')+')" style="cursor:pointer;font-size:11px;padding:3px 9px;border-radius:10px;font-weight:600;white-space:nowrap;'+(done?'background:#eaf6f0;color:#1F6F54':'background:#fff4f4;color:#e23d3d')+'">'+(done?'✓ Đã xử lý':'● Mới')+'</span></td></tr>'; });
+    h+='</table></div>'; }
+   h+='</div>'; el.innerHTML=h;
+  }catch(err){ el.innerHTML='<div class="card empty">Lỗi: '+_mvEsc((err&&err.message)||err)+'</div>'; }
+}
+async function fbToggle(id,done){ try{ var e=await sb.from('feedback').update({trang_thai:done?'done':'new'}).eq('id',id); if(e&&e.error)throw e.error; renderFeedback(); }catch(err){ alert('Lỗi: '+((err&&err.message)||err)); } }
+function openFeedback(){ var ex=document.getElementById('fb-modal'); if(ex){ex.style.display='flex';var t0=document.getElementById('fb-text');if(t0)t0.focus();return;}
+  var m=document.createElement('div'); m.id='fb-modal'; m.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px';
+  m.innerHTML='<div style="background:#fff;border-radius:14px;max-width:460px;width:100%;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="font-weight:700;font-size:16px;margin-bottom:4px">💬 Góp ý / Báo lỗi</div><div style="font-size:12px;color:#8a978f;margin-bottom:10px">Mô tả chỗ chưa ổn hoặc ý tưởng — Agent tổng sẽ đọc &amp; đề xuất sửa.</div><textarea id="fb-text" rows="5" placeholder="VD: Mục Hội thoại tải chậm khi... / Muốn thêm nút..." style="width:100%;border:1px solid #e3ece7;border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;box-sizing:border-box"></textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button type="button" onclick="var x=document.getElementById(&quot;fb-modal&quot;);if(x)x.style.display=&quot;none&quot;" style="border:1px solid #e3ece7;background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">Huỷ</button><button type="button" id="fb-send" onclick="submitFeedback()" style="border:none;background:#1F6F54;color:#fff;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-weight:600">Gửi góp ý</button></div></div>';
+  document.body.appendChild(m); setTimeout(function(){var t=document.getElementById('fb-text');if(t)t.focus();},60);
+}
+async function submitFeedback(){ var t=document.getElementById('fb-text'); var v=t?(''+t.value).trim():''; if(!v){ alert('Chị/em nhập nội dung góp ý nhé.'); return; } var btn=document.getElementById('fb-send'); if(btn){btn.textContent='⏳';btn.disabled=true;}
+  var cur=''; try{ var ids=['dashboard','care','list','today','report','marketing','tongbill','team','danhgia','lichlam','settings','trash','pancake','chat','brain','feedback','appt','pay','integ','ailog','add']; for(var i=0;i<ids.length;i++){ var el=document.getElementById('v-'+ids[i]); if(el&&el.offsetParent!==null){cur=ids[i];break;} } }catch(e){}
+  try{ var e=await sb.from('feedback').insert({nguoi:(window.ME&&(ME.name||ME.uname))||'',man_hinh:cur,noi_dung:v}); if(e&&e.error)throw e.error; var m=document.getElementById('fb-modal'); if(m)m.style.display='none'; if(t)t.value=''; if(typeof toast==='function')toast('✓ Đã gửi góp ý, cảm ơn!'); else alert('✓ Đã gửi góp ý'); }catch(err){ alert('Lỗi gửi: '+((err&&err.message)||err)); } if(btn){btn.textContent='Gửi góp ý';btn.disabled=false;}
+}
+(function(){ function mk(){ try{ if(window.__fbFab) return; if(!document.body){ setTimeout(mk,400); return; } window.__fbFab=1; var b=document.createElement('button'); b.id='feedback-fab'; b.type='button'; b.title='Góp ý / Báo lỗi'; b.textContent='💬'; b.style.cssText='position:fixed;right:16px;bottom:70px;z-index:9998;width:44px;height:44px;border-radius:50%;border:none;background:#3b4ba8;color:#fff;font-size:18px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer'; b.onclick=openFeedback; document.body.appendChild(b); }catch(e){} } mk(); })();
+
+(function(){ var NV={integ:renderInteg,ailog:renderAiLog,appt:renderAppt,pay:renderPay,chat:renderChat,brain:renderBrain,feedback:renderFeedback};
  try{ if(typeof go==='function' && !window.__mvGo){ window.__mvGo=1; var _g=go; window.go=function(v){ var r=_g.apply(this,arguments); try{ if(NV[v]) NV[v](); }catch(e){} return r; }; } }catch(e){}
 })();
 </script>
