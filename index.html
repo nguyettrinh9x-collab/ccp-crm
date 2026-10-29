@@ -526,7 +526,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-bz';
+const APP_VERSION='2026-10-30-ca';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4306,13 +4306,14 @@ async function renderBrain(){ var el=document.getElementById('v-brain'); if(!el)
   h+=fld('combo','Combo & quà tặng',b.combo,'Các combo, quà kèm...',3);
   h+=fld('ship','Phí ship / vận chuyển',b.ship,'US / CAD / EU...',2);
   h+=fld('tuvan','Cách tư vấn theo nhu cầu khách',b.tuvan,'Khách hiếm muộn / IVF / ... tư vấn ra sao...',5);
+  h+=fld('kienthuc','📚 Kiến thức sinh sản & bệnh lý (nam + nữ)',b.kienthuc,'Khái niệm / biểu hiện / nguyên nhân / hậu quả / nhóm sản phẩm hỗ trợ...',14);
   h+=fld('camtu','⛔ Từ cấm / câu không được nói (health-claim)',b.camtu,'cách nhau bằng dấu phẩy',3);
   if(adm) h+='<div style="text-align:right"><button class="btn" type="button" id="brain-save" onclick="saveBrain()">💾 Lưu Bộ não</button></div>';
   h+='<div style="font-size:11px;color:var(--muted);margin-top:8px">Cập nhật: '+(b.updated_at?(''+b.updated_at).slice(0,16).replace('T',' '):'—')+(b.updated_by?(' · '+_mvEsc(b.updated_by)):'')+'</div></div>';
   el.innerHTML=h;
 }
 async function saveBrain(){ if(!(typeof isAdmin==='function'&&isAdmin())){ alert('Chỉ Admin sửa được.'); return; } var g=function(id){ var e=document.getElementById('brain-'+id); return e?e.value:''; }; var btn=document.getElementById('brain-save'); if(btn){btn.textContent='⏳ Đang lưu…';btn.disabled=true;}
-  var upd={sanpham:g('sanpham'),gia:g('gia'),combo:g('combo'),ship:g('ship'),tuvan:g('tuvan'),camtu:g('camtu'),updated_at:new Date().toISOString(),updated_by:(window.ME&&(ME.name||ME.uname))||''};
+  var upd={sanpham:g('sanpham'),gia:g('gia'),combo:g('combo'),ship:g('ship'),tuvan:g('tuvan'),kienthuc:g('kienthuc'),camtu:g('camtu'),updated_at:new Date().toISOString(),updated_by:(window.ME&&(ME.name||ME.uname))||''};
   try{ var e=await sb.from('csk_brain').update(upd).eq('id',1); if(e&&e.error)throw e.error; _BRAIN=Object.assign(_BRAIN||{},upd); if(typeof toast==='function')toast('✓ Đã lưu Bộ não'); else alert('✓ Đã lưu Bộ não'); }catch(err){ alert('Lỗi lưu: '+((err&&err.message)||err)); } if(btn){btn.textContent='💾 Lưu Bộ não';btn.disabled=false;}
 }
 async function renderFeedback(){ var el=document.getElementById('v-feedback'); if(!el)return; if(!(typeof isAdmin==='function'&&isAdmin())){ el.innerHTML='<div class="card empty">Chỉ Admin xem được góp ý.</div>'; return; } el.innerHTML='<div class="card">⏳ Đang tải…</div>';
