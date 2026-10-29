@@ -509,7 +509,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-29-bi';
+const APP_VERSION='2026-10-29-bj';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3995,10 +3995,9 @@ function _chatChips(){ var pages=[]; _CHAT_CONVS.forEach(function(c){ if(c.page_
 function _chatAva(name,plat){ var n=(name||'?').trim(); var c=n?n[0].toUpperCase():'?'; var cl=['#1F6F54','#2d7dd2','#c0587e','#d98e32','#7a5cc0','#3a9e8c','#c94f4f']; var i=0; for(var k=0;k<n.length;k++)i=(i+n.charCodeAt(k))%cl.length; var b=/whats/i.test(plat||'')?'🟢':(/face/i.test(plat||'')?'💬':''); return '<div style="position:relative;flex:0 0 40px;width:40px;height:40px;border-radius:50%;background:'+cl[i]+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px">'+_mvEsc(c)+(b?'<span style="position:absolute;right:-3px;bottom:-3px;font-size:13px">'+b+'</span>':'')+'</div>'; }
 var _PK_TAGCOLORS={"Đang Care":"#0d5aff","Đợi CK":"#38a6f4","Đã Chốt":"#009344","Bỏ qua":"#ff061d","Khách Chặn":"#ff7a45","web":"#e909ac","whatsapp":"#b1b00d","SĐT":"#13c2c2","Nguyệt":"#08bdfd","Hoè":"#1cae67","Việt":"#13c2c2","Tuấn":"#cec700","Bảo":"#bd2727","Duy":"#38a6f4","Page EU":"#1890ff","Hùng":"#009344","Ngàn":"#cec700","Nghĩa":"#13c2c2","T.Tiên":"#1550c6","Page Mỹ":"#fa8c16","Phúc":"#822ba1","Tiên":"#ff7a45","Hạnh":"#9254de","Page Cad":"#9254de","Yến":"#0d5aff","KTT":"#1cae67","Thắm":"#ffc53d","Mai":"#b68632","Page C.":"#9254de"};
 var _PK_TAGCOLORS_LC=(function(){var m={};for(var k in _PK_TAGCOLORS){m[k.toLowerCase().trim()]=_PK_TAGCOLORS[k];}return m;})();
-function _chatTagColor(t){ var k=(t||'').trim(); var lc=k.toLowerCase();
- if(_PK_TAGCOLORS_LC[lc]) return [_PK_TAGCOLORS_LC[lc],'#fff'];
- var pal=['#0d5aff','#009344','#ff7a45','#9254de','#13c2c2','#bd2727','#fa8c16','#1cae67','#e909ac','#1890ff','#cec700','#822ba1','#b68632','#38a6f4','#08bdfd','#1550c6'];
- var h=0; for(var i=0;i<lc.length;i++){ h=(h*31+lc.charCodeAt(i))>>>0; } return [pal[h%pal.length],'#fff']; }
+function _hexA(hex,a){ var h=(hex||'').replace('#',''); if(h.length===3)h=h.split('').map(function(c){return c+c;}).join(''); var r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),bb=parseInt(h.slice(4,6),16); if(isNaN(r))return 'rgba(120,120,120,'+a+')'; return 'rgba('+r+','+g+','+bb+','+a+')'; }
+function _chatSolid(t){ var lc=(t||'').trim().toLowerCase(); if(_PK_TAGCOLORS_LC[lc])return _PK_TAGCOLORS_LC[lc]; var pal=['#0d5aff','#009344','#ff7a45','#9254de','#13c2c2','#bd2727','#fa8c16','#1cae67','#e909ac','#1890ff','#cec700','#822ba1','#b68632','#38a6f4','#08bdfd','#1550c6']; var h=0; for(var i=0;i<lc.length;i++){ h=(h*31+lc.charCodeAt(i))>>>0; } return pal[h%pal.length]; }
+function _chatTagColor(t){ var c=_chatSolid(t); return [_hexA(c,0.16), c]; }
 function _chatTags(tagStr){ var ts=(tagStr||'').split(',').map(function(x){return x.trim();}).filter(Boolean).slice(0,5); if(!ts.length)return '';
  return '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">'+ts.map(function(t){var col=_chatTagColor(t);return '<span style="font-size:9.5px;line-height:1.3;padding:2px 7px;border-radius:9px;background:'+col[0]+';color:'+col[1]+';white-space:nowrap;font-weight:600">'+_mvEsc(t)+'</span>';}).join('')+'</div>'; }
 function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=document.getElementById('chat-list'); if(!lc) return;
@@ -4238,7 +4237,7 @@ async function chatSend(){ if(!_CHAT_CUR)return; var inp=document.getElementById
 var _CHAT_TAGLIST=['Phúc','Tiên','Hạnh','Page Cad','Yến','KTT','Thẩm','Mai','Việt','Tuấn','Bảo','Duy','Page EU','Hùng','Ngàn','Nghĩa','T.Tiên','Page Mỹ','Đang Care','Đợi CK','Đã Chốt','Bỏ qua','Khách Chặn','web','whatsapp','SĐT','Nguyệt','Hoè'];
 function _chatPaintTagbar(){ var bar=document.getElementById('chat-tagbar'); if(!bar)return; if(!_CHAT_CUR){ bar.innerHTML=''; return; }
  var ld=_chatLead(_CHAT_CUR.cid)||{}; var cur=(ld.tags||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
- bar.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:4px;padding:6px 10px;border-top:1px solid #e9efec;background:#fafbfc;max-height:92px;overflow:auto">'+_CHAT_TAGLIST.map(function(t){ var on=cur.indexOf(t)>=0; var col=_chatTagColor(t); var te=t.replace(/'/g,"\\'"); return '<span onclick="chatToggleTag(\''+te+'\')" title="Gắn/bỏ thẻ" style="cursor:pointer;font-size:10px;line-height:1.4;padding:3px 6px;border-radius:6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;background:'+col[0]+';color:'+col[1]+';'+(on?'box-shadow:inset 0 0 0 2px rgba(0,0,0,.3)':'')+'">'+(on?'● ':'')+_mvEsc(t)+'</span>'; }).join('')+'</div>';
+ bar.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:3px;padding:5px 10px;border-top:1px solid #e9efec;background:#fafbfc;max-height:84px;overflow:auto">'+_CHAT_TAGLIST.map(function(t){ var on=cur.indexOf(t)>=0; var col=_chatTagColor(t); var te=t.replace(/'/g,"\\'"); return '<span onclick="chatToggleTag(\''+te+'\')" title="Gắn/bỏ thẻ" style="cursor:pointer;font-size:9.5px;line-height:1.35;padding:2px 5px;border-radius:5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;background:'+col[0]+';color:'+col[1]+';'+(on?'box-shadow:inset 0 0 0 2px '+col[1]:'')+'">'+(on?'● ':'')+_mvEsc(t)+'</span>'; }).join('')+'</div>';
 }
 async function chatToggleTag(t){ if(!_CHAT_CUR)return; var ld=_chatLead(_CHAT_CUR.cid); if(!ld)return; var cur=(ld.tags||'').split(',').map(function(x){return x.trim();}).filter(Boolean); var i=cur.indexOf(t); var adding=(i<0); if(i>=0)cur.splice(i,1); else cur.push(t); var ns=cur.join(', '); ld.tags=ns; _chatPaintTagbar(); _chatPaintList();
  try{ var e=await sb.from('pancake_leads').update({tags:ns}).eq('conv_id',_CHAT_CUR.cid); if(e&&e.error)throw e.error; }catch(err){ alert('Lỗi lưu thẻ: '+((err&&err.message)||err)); }
