@@ -526,7 +526,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-cb';
+const APP_VERSION='2026-10-30-cc';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4137,7 +4137,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div class="chat-c-thread" style="flex:1;display:flex;flex-direction:column;background:#f7faf8;min-width:240px">'+'<div class="chat-mobile-back" onclick="_chatMobileBack()" style="display:none;align-items:center;gap:6px;padding:9px 12px;border-bottom:1px solid #e9efec;background:#fff;color:#1F6F54;font-weight:700;cursor:pointer;font-size:13px">← Danh sách hội thoại</div>'
      +'<div id="chat-thread" style="flex:1;overflow:auto;padding:14px"><div style="color:#9aa8a3;text-align:center;margin-top:40px">← Chọn một hội thoại để xem tin nhắn.</div></div>'
      +'<div id="chat-tagbar"></div>'
-     +'<div style="border-top:1px solid #e9efec;padding:8px 12px 10px;background:#fff;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="chat-pv-note" style="display:none;flex-basis:100%;font-size:11.5px;color:#1F6F54;line-height:1.4"></div><span id="chat-trg" style="display:flex;gap:3px;white-space:nowrap"></span><textarea id="chat-send-input" rows="2" placeholder="Nhập tin trả lời khách… (Enter gửi · Shift+Enter xuống dòng · kéo góc để rộng)" oninput="_chatClearPv()" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:16px;padding:11px 15px;font-size:14px;resize:vertical;min-height:62px;max-height:300px;font-family:inherit;line-height:1.5"></textarea><button id="chat-img-btn" onclick="openChatImgPicker()" title="Gửi ảnh từ thư viện (đồng bộ Pancake)" style="border:1px solid #d2e8bd;background:#eef7e6;color:#1F6F54;border-radius:20px;padding:8px 12px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">📷</button><button id="chat-tr-btn" onclick="chatPreviewTranslate()" title="Dịch nội dung đang soạn sang ngôn ngữ đã chọn để xem trước" style="border:1px solid #c9d6e8;background:#eef2fb;color:#3b4ba8;border-radius:20px;padding:8px 13px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">🔄 Dịch</button><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
+     +'<div style="border-top:1px solid #e9efec;padding:8px 12px 10px;background:#fff;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div id="chat-pv-note" style="display:none;flex-basis:100%;font-size:11.5px;color:#1F6F54;line-height:1.4"></div><div id="chat-ai-sug" style="display:none;flex-basis:100%"></div><span id="chat-trg" style="display:flex;gap:3px;white-space:nowrap"></span><textarea id="chat-send-input" rows="2" placeholder="Nhập tin trả lời khách… (Enter gửi · Shift+Enter xuống dòng · kéo góc để rộng)" oninput="_chatClearPv()" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();chatSend();}" style="flex:1;border:1px solid #e3ece7;border-radius:16px;padding:11px 15px;font-size:14px;resize:vertical;min-height:62px;max-height:300px;font-family:inherit;line-height:1.5"></textarea><button id="chat-img-btn" onclick="openChatImgPicker()" title="Gửi ảnh từ thư viện (đồng bộ Pancake)" style="border:1px solid #d2e8bd;background:#eef7e6;color:#1F6F54;border-radius:20px;padding:8px 12px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">📷</button><button id="chat-ai-btn" onclick="chatAiSuggest()" title="AI gợi ý câu trả lời dựa trên Bộ não CSKH + nội dung hội thoại" style="border:1px solid #e0cdf0;background:#f6edfc;color:#822ba1;border-radius:20px;padding:8px 13px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">🤖 Gợi ý</button><button id="chat-tr-btn" onclick="chatPreviewTranslate()" title="Dịch nội dung đang soạn sang ngôn ngữ đã chọn để xem trước" style="border:1px solid #c9d6e8;background:#eef2fb;color:#3b4ba8;border-radius:20px;padding:8px 13px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap">🔄 Dịch</button><button id="chat-send-btn" onclick="chatSend()" style="border:none;background:#3b4ba8;color:#fff;border-radius:20px;padding:8px 18px;font-size:13px;cursor:pointer;font-weight:600">Gửi</button></div>'
    +'</div>'
    +'<div class="chat-c-note" style="flex:0 0 250px;max-width:28%;border-left:1px solid #e9efec;background:#fff;overflow:auto"><div id="chat-notepanel" style="padding:12px"><div style="color:#9aa8a3;font-size:12px;text-align:center;margin-top:30px">Chọn hội thoại để xem thông tin.</div></div></div>'
    +'</div></div>';
@@ -4272,6 +4272,25 @@ async function chatPreviewTranslate(){ var inp=document.getElementById('chat-sen
   else { alert('Ch\u01b0a d\u1ecbch \u0111\u01b0\u1ee3c, th\u1eed l\u1ea1i.'); }
  }catch(e){ alert('L\u1ed7i d\u1ecbch: '+((e&&e.message)||e)); }
  finally{ if(tb){tb.disabled=false;tb.textContent='\ud83d\udd04 D\u1ecbch';} }
+}
+window._CHAT_SUG=[];
+function _chatSugEsc(s){ return (''+(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function chatUseSug(i){ var s=window._CHAT_SUG[i]; if(!s)return; var inp=document.getElementById('chat-send-input'); if(inp){ inp.value=s.vi||s.en||''; _chatClearPv&&_chatClearPv(); inp.focus(); } var p=document.getElementById('chat-ai-sug'); if(p)p.style.display='none'; }
+async function chatAiSuggest(){ if(!_CHAT_CUR)return; var ab=document.getElementById('chat-ai-btn'); var panel=document.getElementById('chat-ai-sug'); if(!panel)return;
+ var ms=(_CHAT_CUR.messages)||[]; if(!ms.length){ alert('Ch\u01b0a c\xf3 n\u1ed9i dung h\u1ed9i tho\u1ea1i \u0111\u1ec3 g\u1ee3i \xfd.'); return; }
+ var convo=ms.slice(-10).map(function(mm){ return {who: mm.from_page?'shop':'customer', text: String(mm.text||'').slice(0,500)}; }).filter(function(x){return x.text;});
+ if(!convo.length){ alert('Ch\u01b0a c\xf3 n\u1ed9i dung v\u0103n b\u1ea3n \u0111\u1ec3 g\u1ee3i \xfd.'); return; }
+ if(ab){ab.disabled=true;ab.textContent='\u23f3 \u0110ang ngh\u0129\u2026';}
+ panel.style.display='block'; panel.innerHTML='<div style="font-size:11.5px;color:#822ba1;padding:4px 2px">\ud83e\udd16 AI \u0111ang \u0111\u1ecdc B\u1ed9 n\xe3o + h\u1ed9i tho\u1ea1i\u2026</div>';
+ try{ var r=await sb.functions.invoke('chat-suggest',{body:{convo:convo}}); var d=(r&&r.data)||{};
+  if(d&&Array.isArray(d.suggestions)&&d.suggestions.length){ window._CHAT_SUG=d.suggestions;
+   var h='<div style="font-size:11px;color:#822ba1;font-weight:700;margin:2px 2px 5px">\ud83e\udd16 G\u1ee3i \xfd tr\u1ea3 l\u1eddi (b\u1ea5m \u0111\u1ec3 ch\xe8n v\xe0o \xf4 so\u1ea1n, s\u1eeda l\u1ea1i tr\u01b0\u1edbc khi g\u1eedi)'+(d.intent?(' \xb7 \xdd kh\xe1ch: '+_chatSugEsc(d.intent)):'')+'</div>';
+   d.suggestions.forEach(function(s,i){ h+='<div onclick="chatUseSug('+i+')" style="cursor:pointer;background:#faf5fe;border:1px solid #ecdcf7;border-radius:10px;padding:8px 11px;margin-bottom:6px;font-size:12.5px;line-height:1.5"><div style="font-weight:600;color:#1f2d28">'+_chatSugEsc(s.vi||'')+'</div>'+(s.en?('<div style="color:#8a6fa0;font-size:11.5px;margin-top:3px">\ud83c\uddec\ud83c\udde7 '+_chatSugEsc(s.en)+'</div>'):'')+'</div>'; });
+   h+='<div style="text-align:right"><span onclick="document.getElementById(\'chat-ai-sug\').style.display=\'none\'" style="cursor:pointer;font-size:11px;color:#9aa8a3">\u2715 \u0111\xf3ng</span></div>';
+   panel.innerHTML=h;
+  } else { panel.innerHTML='<div style="font-size:11.5px;color:#c0587e;padding:4px 2px">Ch\u01b0a t\u1ea1o \u0111\u01b0\u1ee3c g\u1ee3i \xfd (AI b\u1eadn ho\u1eb7c l\u1ed7i). Th\u1eed l\u1ea1i sau gi\xe2y l\xe1t. <span onclick="document.getElementById(\'chat-ai-sug\').style.display=\'none\'" style="cursor:pointer;color:#9aa8a3">\u2715</span></div>'; }
+ }catch(e){ panel.innerHTML='<div style="font-size:11.5px;color:#c0587e;padding:4px 2px">L\u1ed7i g\u1ee3i \xfd: '+_chatSugEsc((e&&e.message)||e)+' <span onclick="document.getElementById(\'chat-ai-sug\').style.display=\'none\'" style="cursor:pointer;color:#9aa8a3">\u2715</span></div>'; }
+ finally{ if(ab){ab.disabled=false;ab.textContent='\ud83e\udd16 G\u1ee3i \xfd';} }
 }
 async function chatSend(){ if(!_CHAT_CUR)return; var inp=document.getElementById('chat-send-input'); if(!inp)return; var txt=String(inp.value||'').trim(); if(!txt)return; var btn=document.getElementById('chat-send-btn'); if(btn){btn.disabled=true;btn.textContent='⏳';} inp.disabled=true;
  try{ var sendTxt=txt;
