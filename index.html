@@ -526,7 +526,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-ce';
+const APP_VERSION='2026-10-30-cf';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1036,7 +1036,7 @@ async function pancakeAdd(cid){
   const owner=revFind(SALES, saleName) || (ME&&ME.id) || Object.keys(SALES)[0] || null;
   const nguon = r.platform==='whatsapp' ? 'whatsapp' : (r.platform==='facebook' ? 'facebook' : 'pancake');
   const rec={ ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
-    ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
+    ghi:(function(nt){nt=(''+(nt||'')).trim();return (!nt||nt.indexOf('[auto:')>=0)?'':nt.slice(0,800);})(r.note),
     follow:D(1), ngay_tao:D(0), ngay_capnhat:D(0) };
   const { data:ins, error }=await sb.from('customers').insert(rec).select('id').single();
   if(error){ alert('Lỗi thêm khách: '+error.message); return; }
@@ -1052,7 +1052,7 @@ function pkLeadToRec(r){
   const owner=revFind(SALES, saleName) || (ME&&ME.id) || Object.keys(SALES)[0] || null;
   const nguon = r.platform==='whatsapp' ? 'whatsapp' : (r.platform==='facebook' ? 'facebook' : 'pancake');
   return { ten:r.ten||'(không tên)', phone:r.phone||'', owner, nguon, tt:'tuong_tac',
-    ghi:('[Pancake] '+(r.page_name||'')+(r.note?(' · Tình trạng: '+r.note):'')+(r.snippet?(' · '+r.snippet):'')).slice(0,800),
+    ghi:(function(nt){nt=(''+(nt||'')).trim();return (!nt||nt.indexOf('[auto:')>=0)?'':nt.slice(0,800);})(r.note),
     follow:D(1), ngay_tao:D(0), ngay_capnhat:D(0) };
 }
 async function pancakeIgnoreDup(){
@@ -3433,6 +3433,7 @@ async function loadAll(skipCust){
   });
   const myp = (profs||[]).find(p=>p.id===user.id) || {id:user.id, ten:user.email, role:'sale', quyen:[]};
   ME = {id:user.id, name:myp.ten, role:myp.role, uname:user.id, mail:user.email||'', quyen:myp.quyen||PERMS[user.id]||[]};
+  try{ window.ME = ME; }catch(e){}
   /* Tải SONG SONG tất cả bảng (trước đây tải lần lượt -> rất chậm) */
   const _SB=(p)=>p.then(r=>r).catch(e=>({data:[],error:e}));
   const _FA=(t,o,a)=>fetchAllRows(t,o,a).catch(()=>[]);
@@ -4002,7 +4003,7 @@ async function quickAddSave(){ var g=function(id){ var e=document.getElementById
   }catch(err){ alert('Lỗi thêm khách: '+((err&&err.message)||err)); if(btn){ btn.textContent='💾 Lưu vào CRM'; btn.disabled=false; } }
 }
 function qaFull(){ var cid=window._QA_CID; var m=document.getElementById('qa-modal'); if(m)m.remove(); if(typeof go==='function') go('add');
-  setTimeout(function(){ try{ var ld=_chatLead(cid); if(!ld)return; window._CHAT_PENDING_LEAD=cid; var S=function(id,v){ var e=document.getElementById(id); if(e&&v!=null&&v!=='') e.value=v; }; S('f-ten',ld.ten||''); S('f-phone',ld.phone||''); if(ld.quoc_gia){ var qg=document.getElementById('f-qg'); if(qg){ var up=(''+ld.quoc_gia).toUpperCase(); for(var i=0;i<qg.options.length;i++){ if(qg.options[i].value===up){ qg.value=up; break; } } } } var ng=document.getElementById('f-nguon'); if(ng)ng.value='pancake'; var sid=(typeof revFind==='function'&&ld.sale)?revFind(SALES,(''+ld.sale).split('/')[0].trim()):null; if(sid){ var ow=document.getElementById('f-owner'); if(ow)ow.value=sid; } if(ld.note) S('f-ghi',ld.note); var c=document.getElementById('v-add'); if(c)c.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }, 150);
+  setTimeout(function(){ try{ var ld=_chatLead(cid); if(!ld)return; window._CHAT_PENDING_LEAD=cid; var S=function(id,v){ var e=document.getElementById(id); if(e&&v!=null&&v!=='') e.value=v; }; S('f-ten',ld.ten||''); S('f-phone',ld.phone||''); if(ld.quoc_gia){ var qg=document.getElementById('f-qg'); if(qg){ var up=(''+ld.quoc_gia).toUpperCase(); for(var i=0;i<qg.options.length;i++){ if(qg.options[i].value===up){ qg.value=up; break; } } } } var ng=document.getElementById('f-nguon'); if(ng)ng.value='pancake'; var sid=(typeof revFind==='function'&&ld.sale)?revFind(SALES,(''+ld.sale).split('/')[0].trim()):null; if(sid){ var ow=document.getElementById('f-owner'); if(ow)ow.value=sid; } var _ldn=(''+(ld.note||'')).trim(); if(_ldn && _ldn.indexOf('[auto:')<0) S('f-ghi',_ldn); var c=document.getElementById('v-add'); if(c)c.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }, 150);
 }
 
 function _chatSetPage(p){ _CHAT_PAGE=p; _chatPaintList(); }
