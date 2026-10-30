@@ -526,7 +526,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-cf';
+const APP_VERSION='2026-10-30-cg';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3362,6 +3362,13 @@ const SUPABASE_ANON_KEY = 'sb_publishable_ein2Oxmzo36-WpKUheVlYg_HOms1mso';
 const sb = (window.supabase && SUPABASE_URL.startsWith('http'))
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 window.sb = sb; /* để mọi nơi dùng window.sb đều hoạt động (sửa lỗi không lưu được dữ liệu) */
+/* ===== Chống văng khi token refresh lỗi 429 (cả team chung 1 IP): thử cứu phiên trước khi bỏ ===== */
+try{ if(sb && sb.auth && sb.auth.onAuthStateChange){ var __soTries=0; sb.auth.onAuthStateChange(function(ev){
+  if(ev==='TOKEN_REFRESHED'||ev==='SIGNED_IN'){ __soTries=0; }
+  if(ev==='SIGNED_OUT' && typeof ME!=='undefined' && ME && __soTries<3){ __soTries++;
+    setTimeout(function(){ try{ sb.auth.refreshSession().then(function(r){ if(r&&r.data&&r.data.session){ __soTries=0; try{ window.ME=ME; }catch(_){} } }).catch(function(){}); }catch(_){} }, 2500*__soTries);
+  }
+}); } }catch(e){}
 /* ===== Bảo mật đăng nhập: tự đăng xuất sau 30 phút không dùng ===== */
 let __idleTimer=null;
 async function __idleLogout(){ try{ if(sb) await sb.auth.signOut(); }catch(e){} alert('🔒 Đã tự đăng xuất do không hoạt động 8 giờ. Vui lòng đăng nhập lại.'); location.reload(); }
@@ -3970,6 +3977,7 @@ function openQuickAdd(cid){ var ld=_chatLead(cid); if(!ld){ alert('Không tìm t
   H+='<div><label style="'+lb+'">SĐT / WhatsApp</label><input id="qa-phone" value="'+_mvEsc(ld.phone||'')+'" style="'+ip+'"></div>';
   H+='<div><label style="'+lb+'">Quốc gia</label><select id="qa-qg" style="'+ip+'"><option value="US"'+(qg==='US'?' selected':'')+'>🇺🇸 US</option><option value="CAD"'+(qg==='CAD'?' selected':'')+'>🇨🇦 CAD</option><option value="EU"'+(qg==='EU'?' selected':'')+'>🇪🇺 EU</option></select></div>';
   H+='<div><label style="'+lb+'">Sale chăm</label><select id="qa-owner" style="'+ip+'">'+sel(SALES,sid)+'</select></div>';
+  H+='<div><label style="'+lb+'">MKT phụ trách</label><select id="qa-mkt" style="'+ip+'"><option value="">— chọn —</option>'+sel(MKT,'')+'</select></div>';
   H+='<div><label style="'+lb+'">Nguồn</label><select id="qa-nguon" style="'+ip+'">'+sel(NGUON,_src)+'</select></div>';
   H+='<div><label style="'+lb+'">Mức độ</label><select id="qa-muc" style="'+ip+'"><option value="nong">🔥 Nóng</option><option value="am" selected>☀️ Ấm</option><option value="lanh">❄️ Lạnh</option></select></div>';
   H+='<div><label style="'+lb+'">Trạng thái</label><select id="qa-tt" style="'+ip+'">'+sel(STATUS,'tuong_tac')+'</select></div>';
@@ -3987,7 +3995,7 @@ async function quickAddSave(){ var g=function(id){ var e=document.getElementById
   var ten=(g('qa-ten')||'').trim(); if(!ten){ alert('Nhập tên khách nhé.'); return; }
   var btn=document.getElementById('qa-save'); if(btn){ btn.textContent='⏳ Đang lưu…'; btn.disabled=true; }
   var owner=(ME.role==='sale')?ME.id:(g('qa-owner')||ME.id);
-  var rec={owner:owner, mkt:null, ten:ten, phone:g('qa-phone'), has_wa:(/whats/i.test(_qld.platform||'')), email:'', quoc_gia:g('qa-qg'), dia_chi:null, nguon:g('qa-nguon')||_src, benh:'khac', benh_list:(g('qa-benh')||'').trim(), sp:(g('qa-sp')||'').trim()||'—', muc:g('qa-muc'), tt:g('qa-tt'), follow:g('qa-follow')||null, ghi:g('qa-ghi'), dt:0, ngay_chot:D(0), ly:'', khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
+  var rec={owner:owner, mkt:(g('qa-mkt')||null), ten:ten, phone:g('qa-phone'), has_wa:(/whats/i.test(_qld.platform||'')), email:'', quoc_gia:g('qa-qg'), dia_chi:null, nguon:g('qa-nguon')||_src, benh:'khac', benh_list:(g('qa-benh')||'').trim(), sp:(g('qa-sp')||'').trim()||'—', muc:g('qa-muc'), tt:g('qa-tt'), follow:g('qa-follow')||null, ghi:g('qa-ghi'), dt:0, ngay_chot:D(0), ly:'', khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
   if(rec.tt==='kcnc'||rec.tt==='khach_chan') rec.follow=null; else if(!isChot(rec.tt) && (!rec.follow||rec.follow<=D(0))) rec.follow=D(1);
   var _dig=function(s){ return (''+(s||'')).replace(/\D/g,''); }; var _ph=_dig(rec.phone);
   try{
