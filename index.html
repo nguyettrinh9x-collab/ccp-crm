@@ -526,7 +526,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-ca';
+const APP_VERSION='2026-10-30-cb';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4298,18 +4298,25 @@ var _BRAIN=null;
 async function loadBrain(force){ if(_BRAIN && !force) return _BRAIN; try{ var r=await sb.from('csk_brain').select('*').eq('id',1).maybeSingle(); _BRAIN=r.data||{}; }catch(e){ _BRAIN=_BRAIN||{}; } return _BRAIN; }
 function _brainWords(){ var s=(_BRAIN&&_BRAIN.camtu)||''; return s.split(/[,\n;]+/).map(function(x){return x.trim().toLowerCase();}).filter(function(x){return x.length>=2;}); }
 function brainScan(text){ var t=(''+(text||'')).toLowerCase(); var hits=[]; _brainWords().forEach(function(w){ if(w && t.indexOf(w)>=0 && hits.indexOf(w)<0) hits.push(w); }); return hits; }
+var _BRAIN_EDIT=false;
+var _BRAIN_SECS=[['sanpham','📦 Sản phẩm','Danh sách sản phẩm + mô tả ngắn...',5],['gia','💰 Bảng giá','Giá từng sản phẩm / combo...',5],['combo','🎁 Combo & quà tặng','Các combo, quà kèm...',4],['ship','🚚 Phí ship / vận chuyển','US / CAD / EU...',3],['tuvan','💬 Cách tư vấn theo nhu cầu','Khách hiếm muộn / IVF / ... tư vấn ra sao...',6],['kienthuc','📚 Kiến thức sinh sản & bệnh lý','Khái niệm / biểu hiện / nguyên nhân / hậu quả / nhóm SP...',16],['camtu','⛔ Từ cấm (health-claim)','cách nhau bằng dấu phẩy',3]];
+function _brainFmt(txt){ var esc=_mvEsc(''+(txt||'')); if(!esc.trim()) return '<div style="color:var(--muted)">(chưa có nội dung)</div>'; var out=''; esc.split(/\n/).forEach(function(l){ var t=l.replace(/\s+$/,''); var tr=t.trim(); if(!tr){ out+='<div style="height:7px"></div>'; return; } if(/^═+/.test(tr)){ var tt=tr.replace(/═/g,'').trim(); if(tt) out+='<div style="font-weight:800;color:#0d5aff;margin:12px 0 5px;font-size:14px;letter-spacing:.3px">'+tt+'</div>'; return; } if(/^【.*】/.test(tr)){ out+='<div style="font-weight:700;color:#009344;margin:9px 0 3px">'+tr+'</div>'; return; } if(/^\d+\)/.test(tr)){ out+='<div style="font-weight:700;color:#1F6F54;margin:9px 0 3px">'+tr+'</div>'; return; } var m=tr.match(/^(Khái niệm|Biểu hiện|Nguyên nhân|Hậu quả|Nhóm SP hỗ trợ|Nhóm sản phẩm hỗ trợ|Định nghĩa hiếm muộn|Định nghĩa|NGUYÊN TẮC CHUNG|THEO NHÓM KHÁCH|LƯU Ý VÀNG KHI TƯ VẤN)\s*:?(.*)$/); if(m){ var rest=(m[2]||'').trim(); out+='<div style="margin:2px 0"><b style="color:#374151">'+m[1]+':</b> '+rest+'</div>'; return; } if(/^•/.test(tr)){ out+='<div style="margin:2px 0 2px 12px;padding-left:2px">'+tr+'</div>'; return; } out+='<div style="margin:2px 0">'+tr+'</div>'; }); return out; }
+function brainToggleEdit(){ _BRAIN_EDIT=!_BRAIN_EDIT; renderBrain(); }
+function brainFilter(q){ q=(q||'').trim().toLowerCase(); document.querySelectorAll('#v-brain .brain-sec').forEach(function(c){ var hit=!q||((c.getAttribute('data-txt')||'').indexOf(q)>=0); c.style.display=hit?'':'none'; }); var n=document.getElementById('brain-nohit'); if(n){ var any=Array.prototype.some.call(document.querySelectorAll('#v-brain .brain-sec'),function(c){return c.style.display!=='none';}); n.style.display=(q&&!any)?'':'none'; } }
 async function renderBrain(){ var el=document.getElementById('v-brain'); if(!el) return; el.innerHTML='<div class="card">⏳ Đang tải Bộ não…</div>'; await loadBrain(true); var b=_BRAIN||{}; var adm=(typeof isAdmin==='function')?isAdmin():false; var ro=adm?'':' readonly';
-  var fld=function(id,label,val,ph,rows){ return '<div style="margin-bottom:12px"><label style="font-weight:600;display:block;margin-bottom:4px">'+label+'</label><textarea id="brain-'+id+'"'+ro+' rows="'+(rows||3)+'" placeholder="'+ph+'" style="width:100%;border:1px solid #e3ece7;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;box-sizing:border-box;'+(adm?'':'background:#f7f9f8')+'">'+_mvEsc(val||'')+'</textarea></div>'; };
-  var h='<div class="card"><h2 class="sec" style="margin-top:0">🧠 Bộ não CSKH</h2><p style="color:var(--muted);font-size:13px;margin:-4px 0 14px">Nguồn kiến thức chung cho cả team: sản phẩm, giá, combo, cách tư vấn, và <b>từ cấm (health-claim)</b> dùng cho bộ lọc khi nhắn khách. '+(adm?'Chị sửa rồi bấm Lưu.':'Chỉ Admin sửa được.')+'</p>';
-  h+=fld('sanpham','Sản phẩm',b.sanpham,'Danh sách sản phẩm + mô tả ngắn...',4);
-  h+=fld('gia','Bảng giá',b.gia,'Giá từng sản phẩm / combo...',4);
-  h+=fld('combo','Combo & quà tặng',b.combo,'Các combo, quà kèm...',3);
-  h+=fld('ship','Phí ship / vận chuyển',b.ship,'US / CAD / EU...',2);
-  h+=fld('tuvan','Cách tư vấn theo nhu cầu khách',b.tuvan,'Khách hiếm muộn / IVF / ... tư vấn ra sao...',5);
-  h+=fld('kienthuc','📚 Kiến thức sinh sản & bệnh lý (nam + nữ)',b.kienthuc,'Khái niệm / biểu hiện / nguyên nhân / hậu quả / nhóm sản phẩm hỗ trợ...',14);
-  h+=fld('camtu','⛔ Từ cấm / câu không được nói (health-claim)',b.camtu,'cách nhau bằng dấu phẩy',3);
-  if(adm) h+='<div style="text-align:right"><button class="btn" type="button" id="brain-save" onclick="saveBrain()">💾 Lưu Bộ não</button></div>';
-  h+='<div style="font-size:11px;color:var(--muted);margin-top:8px">Cập nhật: '+(b.updated_at?(''+b.updated_at).slice(0,16).replace('T',' '):'—')+(b.updated_by?(' · '+_mvEsc(b.updated_by)):'')+'</div></div>';
+  var updS=(b.updated_at?(''+b.updated_at).slice(0,16).replace('T',' '):'—')+(b.updated_by?(' · '+_mvEsc(b.updated_by)):'');
+  var h='<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><h2 class="sec" style="margin:0">🧠 Bộ não CSKH</h2><div style="color:var(--muted);font-size:12px;margin-top:2px">Nguồn kiến thức chung cho cả team · Cập nhật: '+updS+'</div></div><div style="display:flex;gap:6px">'+(adm?('<button class="btn" type="button" onclick="brainToggleEdit()" style="'+(_BRAIN_EDIT?'background:#64748b':'')+'">'+(_BRAIN_EDIT?'👁 Xem lại':'✏️ Chỉnh sửa')+'</button>'):'')+'</div></div>';
+  if(!_BRAIN_EDIT){ h+='<input type="text" oninput="brainFilter(this.value)" placeholder="🔍 Tìm nhanh trong Bộ não (vd: u xơ, AMH, tinh trùng, giá...)" style="width:100%;margin-top:10px;border:1px solid #e3ece7;border-radius:8px;padding:9px 12px;font-size:13px;box-sizing:border-box">'; }
+  h+='</div>';
+  if(_BRAIN_EDIT && adm){
+    var fld=function(id,label,val,ph,rows){ return '<div style="margin-bottom:12px"><label style="font-weight:600;display:block;margin-bottom:4px">'+label+'</label><textarea id="brain-'+id+'" rows="'+(rows||3)+'" placeholder="'+ph+'" style="width:100%;border:1px solid #e3ece7;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;box-sizing:border-box">'+_mvEsc(val||'')+'</textarea></div>'; };
+    h+='<div class="card">';
+    _BRAIN_SECS.forEach(function(s){ h+=fld(s[0],s[1],b[s[0]],s[2],s[3]); });
+    h+='<div style="text-align:right"><button class="btn" type="button" id="brain-save" onclick="saveBrain()">💾 Lưu Bộ não</button></div></div>';
+  } else {
+    _BRAIN_SECS.forEach(function(s){ var val=''+(b[s[0]]||''); var dt=_mvEsc(val).toLowerCase(); h+='<div class="card brain-sec" data-txt="'+dt.replace(/"/g,'&quot;')+'" style="margin-bottom:12px"><div style="font-weight:700;font-size:15px;margin-bottom:9px;padding-bottom:7px;border-bottom:2px solid #eef3f1">'+s[1]+'</div><div style="font-size:13px;line-height:1.65;white-space:normal">'+_brainFmt(val)+'</div></div>'; });
+    h+='<div id="brain-nohit" class="card" style="display:none;color:var(--muted);text-align:center">Không tìm thấy nội dung khớp.</div>';
+  }
   el.innerHTML=h;
 }
 async function saveBrain(){ if(!(typeof isAdmin==='function'&&isAdmin())){ alert('Chỉ Admin sửa được.'); return; } var g=function(id){ var e=document.getElementById('brain-'+id); return e?e.value:''; }; var btn=document.getElementById('brain-save'); if(btn){btn.textContent='⏳ Đang lưu…';btn.disabled=true;}
