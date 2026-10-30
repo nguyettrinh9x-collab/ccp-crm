@@ -526,7 +526,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-cd';
+const APP_VERSION='2026-10-30-ce';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4277,8 +4277,9 @@ window._CHAT_SUG=[];
 function _chatSugEsc(s){ return (''+(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function chatUseSug(i){ var s=window._CHAT_SUG[i]; if(!s)return; var inp=document.getElementById('chat-send-input'); if(inp){ inp.value=s.vi||s.en||''; _chatClearPv&&_chatClearPv(); inp.focus(); } var p=document.getElementById('chat-ai-sug'); if(p)p.style.display='none'; }
 function chatRateSug(i,val){ var s=window._CHAT_SUG[i]; if(!s)return; var trig=''; var ms=(_CHAT_CUR&&_CHAT_CUR.messages)||[]; for(var j=ms.length-1;j>=0;j--){ if(!ms[j].from_page&&ms[j].text){ trig=ms[j].text; break; } }
- if(val>0){ try{ sb.from('ai_samples').insert({trigger:String(trig||'').slice(0,400),reply_vi:String(s.vi||'').slice(0,600),reply_en:String(s.en||'').slice(0,600),score:3,source:'thumbs_up',created_by:((window.ME&&ME.name)||'')}).then(function(){},function(){}); }catch(_){} }
- var el=document.getElementById('sugrate-'+i); if(el)el.innerHTML=(val>0?'<span style="font-size:10.5px;color:#1F6F54;font-weight:600">✓ đ\xe3 lưu cho AI học</span>':'<span style="font-size:10.5px;color:#9aa8a3">✕ đ\xe3 bỏ qua</span>'); }
+ try{ if(val>0){ sb.from('ai_samples').insert({trigger:String(trig||'').slice(0,400),reply_vi:String(s.vi||'').slice(0,600),reply_en:String(s.en||'').slice(0,600),score:3,source:'thumbs_up',created_by:((window.ME&&ME.name)||'')}).then(function(){},function(){}); }
+  else { sb.from('ai_samples').insert({trigger:String(trig||'').slice(0,400),reply_vi:String(s.vi||'').slice(0,600),reply_en:'',score:-1,source:'thumbs_down',created_by:((window.ME&&ME.name)||'')}).then(function(){},function(){}); } }catch(_){}
+ var el=document.getElementById('sugrate-'+i); if(el)el.innerHTML=(val>0?'<span style="font-size:10.5px;color:#1F6F54;font-weight:600">✓ đ\xe3 lưu cho AI học</span>':'<span style="font-size:10.5px;color:#c0587e;font-weight:600">✕ đ\xe3 ghi nhớ tr\xe1nh c\xe2u n\xe0y</span>'); }
 async function chatAiSuggest(){ if(!_CHAT_CUR)return; var ab=document.getElementById('chat-ai-btn'); var panel=document.getElementById('chat-ai-sug'); if(!panel)return;
  var ms=(_CHAT_CUR.messages)||[]; if(!ms.length){ alert('Ch\u01b0a c\xf3 n\u1ed9i dung h\u1ed9i tho\u1ea1i \u0111\u1ec3 g\u1ee3i \xfd.'); return; }
  var convo=ms.slice(-10).map(function(mm){ return {who: mm.from_page?'shop':'customer', text: String(mm.text||'').slice(0,500)}; }).filter(function(x){return x.text;});
