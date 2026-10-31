@@ -184,7 +184,7 @@
       <a data-v="settings">Cài đặt</a>
       <a data-v="trash">Thùng rác</a>
       <a data-v="appt">📅 Lịch hẹn 🆕</a>
-      <a data-v="pay">💵 Lương tạm tính 🆕</a>
+      <a data-v="pay">💵 Bảng lương 🆕</a>
       <a data-v="integ">🔌 Tích hợp & tự động hóa 🆕</a>
       <a data-v="ailog">🤖 Nhật ký AI & chi phí 🆕</a>
       <a data-v="brain">🧠 Bộ não CSKH 🆕</a>
@@ -526,7 +526,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-30-cg';
+const APP_VERSION='2026-10-31-ch';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -3887,7 +3887,7 @@ if(typeof renderDanhGia==='function'){var _o=renderDanhGia;renderDanhGia=functio
 </script>
 <script>
 /* ===== MỤC MỚI — chỉ THÊM, giữ nguyên phần cũ (28/10/2026) ===== */
-try{ if(typeof TITLES==='object') Object.assign(TITLES,{appt:'📅 Lịch hẹn',pay:'💵 Lương tạm tính (demo)',integ:'🔌 Tích hợp & tự động hóa',ailog:'🤖 Nhật ký AI & chi phí',chat:'💬 Hội thoại',imglib:'📷 Thư viện ảnh',brain:'🧠 Bộ não CSKH',feedback:'💬 Góp ý'}); }catch(e){}
+try{ if(typeof TITLES==='object') Object.assign(TITLES,{appt:'📅 Lịch hẹn',pay:'💵 Bảng lương',integ:'🔌 Tích hợp & tự động hóa',ailog:'🤖 Nhật ký AI & chi phí',chat:'💬 Hội thoại',imglib:'📷 Thư viện ảnh',brain:'🧠 Bộ não CSKH',feedback:'💬 Góp ý'}); }catch(e){}
 function _mvEsc(s){return (''+(s==null?'':s)).replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function _mvTable(head,rows){ var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr>'; head.forEach(function(x){h+='<th style="padding:7px 9px;border-bottom:1px solid #e3ece7;background:#eef4f1;text-align:left;font-size:12px">'+x+'</th>';}); h+='</tr>'; rows.forEach(function(r){ h+='<tr>'; r.forEach(function(c){ h+='<td style="padding:7px 9px;border-bottom:1px solid #eef2f0">'+c+'</td>'; }); h+='</tr>'; }); h+='</table></div>'; return h; }
 function _mvNote(t){ return '<div style="background:#eef4f1;border-left:3px solid #1F6F54;border-radius:0 8px 8px 0;padding:8px 12px;font-size:12.5px;margin:8px 0">'+t+'</div>'; }
@@ -3939,17 +3939,73 @@ function renderAppt(){ var el=document.getElementById('v-appt'); if(!el) return;
   +_mvTable(['Ngày','Khách','SĐT','Sale','Trạng thái',''],rows)
   +_mvNote('🆕 Mục mới (đọc từ dữ liệu có sẵn). Sau này có thể tạo lịch hẹn riêng với giờ cụ thể.')+'</div>';
 }
-function renderPay(){ var el=document.getElementById('v-pay'); if(!el) return;
+var _PAY_RATE=24000, _PAY_MONTH=null, _PAY_ROWS=[], _PAY_SAVED={};
+function _payYM(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function _payPrev(ym){ var p=(ym||'').split('-'); var d=new Date(+p[0],(+p[1])-1,1); d.setMonth(d.getMonth()-1); return _payYM(d); }
+function _paySaleBase(tr){ if(tr>=300)return 9500000; if(tr>=250)return 9000000; if(tr>=200)return 8500000; if(tr>=150)return 8000000; if(tr>=100)return 7500000; if(tr>=70)return 7000000; return 5600000; }
+function _paySaleHH(tr){ if(tr>500)return 0.05; if(tr>=400)return 0.045; if(tr>=300)return 0.04; if(tr>=250)return 0.035; if(tr>=200)return 0.03; if(tr>=150)return 0.025; if(tr>=100)return 0.02; if(tr>=70)return 0.015; return 0.01; }
+function _vnd(n){ return Math.round(Number(n)||0).toLocaleString('vi-VN'); }
+function _payNum(id){ var e=document.getElementById(id); if(!e)return 0; var v=(''+e.value).replace(/[^\d.\-]/g,''); return Number(v)||0; }
+async function renderPay(){ var el=document.getElementById('v-pay'); if(!el) return;
  if(!canPancake()){ el.innerHTML='<div class="card empty">🔒 Chỉ chị Nguyệt / Admin (lương).</div>'; return; }
- var rev={};
- (DATA||[]).forEach(function(c){ if(isChot(c.tt)){ rev[c.owner]=(rev[c.owner]||0)+(Number(c.dt)||0); } });
- var rows=[];
- if(typeof SALES!=='undefined') Object.keys(SALES).forEach(function(id){ var r=rev[id]||0; var base=6000000; var hh=Math.round(r*24000*0.03); var tam=base+hh;
-   rows.push([ '<b>'+SALES[id]+'</b>','6.000.000','(cấu hình)','3% × $'+Math.round(r).toLocaleString('en-US'), hh.toLocaleString('vi-VN'), '<b>≈ '+tam.toLocaleString('vi-VN')+'</b>' ]); });
- el.innerHTML='<div class="card"><h2 class="sec">💵 Lương <span style="background:#fff6e5;color:#c98a00;padding:2px 9px;border-radius:20px;font-size:12px">tạm tính</span></h2>'
-  +_mvNote('⚠️ <b>CÔNG THỨC LÀ GIẢ ĐỊNH MINH HỌA</b> (cơ bản 6tr + 3% doanh số quy đổi 24.000đ/$). Ngày công đang để "(cấu hình)". <b>Chờ chị cấp công thức thật + hệ số ngày công</b> để em thay.')
-  +_mvTable(['Nhân viên','Cơ bản','Ngày công','HH doanh số','Thưởng HH (đ)','Tạm tính (đ)'],rows.length?rows:[['—','','','','','']])
-  +_mvNote('Doanh số lấy từ khách đã chốt trong CRM. Hiển thị rõ thành phần + kỳ dữ liệu; sẽ phân quyền khi chốt công thức.')+'</div>';
+ if(!window.__custFull){ el.innerHTML='<div class="card">⏳ Đang tải dữ liệu khách…</div>'; try{ await ensureCustomers(); }catch(e){} }
+ if(!_PAY_MONTH) _PAY_MONTH=_payYM(new Date());
+ var dsMonth=_payPrev(_PAY_MONTH);
+ var profs=[]; try{ var pr=await sb.from('profiles').select('id,ten,role'); profs=(pr&&pr.data)||[]; }catch(e){}
+ var ds={}; (DATA||[]).forEach(function(c){ if(c&&isChot(c.tt)&&(''+(c.ngay_chot||'')).slice(0,7)===dsMonth){ ds[c.owner]=(ds[c.owner]||0)+(Number(c.dt)||0); } });
+ _PAY_SAVED={}; try{ var sv=await sb.from('payroll_inputs').select('*').eq('thang',_PAY_MONTH); ((sv&&sv.data)||[]).forEach(function(r){ _PAY_SAVED[r.sale_id]=r; }); }catch(e){}
+ var ids={}; profs.forEach(function(p){ if(p.role==='sale')ids[p.id]={id:p.id,ten:p.ten,role:p.role}; });
+ Object.keys(ds).forEach(function(k){ if(!ids[k]){ var p=profs.find(function(x){return x.id===k;}); ids[k]={id:k,ten:(p?p.ten:'(?)'),role:(p?p.role:'')}; } });
+ Object.keys(_PAY_SAVED).forEach(function(k){ if(!ids[k]) ids[k]={id:k,ten:_PAY_SAVED[k].ten||'(?)',role:''}; });
+ _PAY_ROWS=Object.keys(ids).map(function(k){ var o=ids[k]; var usd=ds[k]||0; var vnd=usd*_PAY_RATE; var tr=vnd/1000000; o.dsUsd=usd; o.dsVnd=vnd; o.base=_paySaleBase(tr); o.hhRate=_paySaleHH(tr); o.hh=Math.round(vnd*o.hhRate); return o; });
+ _PAY_ROWS.sort(function(a,b){return b.dsVnd-a.dsVnd;});
+ var monthSel='<input type="month" id="pay-month" value="'+_PAY_MONTH+'" onchange="_PAY_MONTH=this.value;renderPay();" style="border:1px solid #e3ece7;border-radius:8px;padding:6px 10px;font-size:13px">';
+ var h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 class="sec" style="margin:0">💵 Bảng lương Sale</h2><div style="display:flex;gap:8px;align-items:center">Kỳ lương: '+monthSel+'<button class="btn" type="button" onclick="_paySave()">💾 Lưu</button></div></div>';
+ h+='<div style="font-size:12px;color:var(--muted);margin:4px 0 10px">Lương cứng = mốc DS × (công/26) · Hoa hồng = DS × % mốc · Giữ lương = 5% lương cứng · Tiền ăn = 30k×công. <b>DS tự lấy từ khách đã chốt tháng '+dsMonth+'</b> (×'+_vnd(_PAY_RATE)+'đ/$). Công & khoản khác nhập tay.</div>';
+ var cols=['Sale','DS '+dsMonth,'Mốc LC','Công','Lương cứng','HH%','Hoa hồng','Phụ cấp','Tiền ăn','Thưởng sàn','Đội nhóm','Khác','Phạt','Giữ 5%','Trả giữ','Ứng','BHXH','Tổng TN','Thực nhận'];
+ h+='<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;white-space:nowrap"><tr style="background:#1F6F54;color:#fff">';
+ cols.forEach(function(c){ h+='<th style="padding:6px 8px;border:1px solid #cfe0d8">'+c+'</th>'; });
+ h+='</tr>';
+ var inp='width:84px;border:1px solid #e3ece7;border-radius:6px;padding:4px 6px;font-size:12px;text-align:right';
+ _PAY_ROWS.forEach(function(o){ var s=_PAY_SAVED[o.id]||{}; var nc=(s.ngay_cong!=null?s.ngay_cong:26); var lc=(s.luong_cung_override!=null?s.luong_cung_override:o.base);
+   h+='<tr>'
+    +'<td style="padding:5px 8px;border:1px solid #e3ece7;font-weight:700">'+_mvEsc(o.ten)+(o.role==='admin'?' <span style="font-size:9px;color:#822ba1">(đặc biệt)</span>':'')+'</td>'
+    +'<td style="padding:5px 8px;border:1px solid #e3ece7;text-align:right">'+_vnd(o.dsVnd)+'<div style="font-size:10px;color:#9aa8a3">$'+_vnd(o.dsUsd)+'</div></td>'
+    +'<td style="padding:5px 8px;border:1px solid #e3ece7;text-align:right;color:#9aa8a3">'+_vnd(o.base)+'</td>'
+    +'<td style="padding:5px 8px;border:1px solid #e3ece7"><input id="pay-'+o.id+'-nc" value="'+nc+'" oninput="_payCalc(\''+o.id+'\')" style="width:50px;border:1px solid #e3ece7;border-radius:6px;padding:4px;font-size:12px;text-align:center"></td>'
+    +'<td style="padding:5px 8px;border:1px solid #e3ece7;text-align:right"><input id="pay-'+o.id+'-lc" value="'+lc+'" oninput="_payCalc(\''+o.id+'\')" style="'+inp+'"></td>'
+    +'<td style="padding:5px 8px;border:1px solid #e3ece7;text-align:center">'+(o.hhRate*100)+'%</td>'
+    +'<td style="padding:5px 8px;border:1px solid #e3ece7;text-align:right">'+_vnd(o.hh)+'</td>'
+    +'<td style="padding:4px;border:1px solid #e3ece7"><input id="pay-'+o.id+'-pc" value="'+(s.phu_cap||0)+'" oninput="_payCalc(\''+o.id+'\')" style="'+inp+'"></td>'
+    +'<td id="pay-'+o.id+'-ta" style="padding:5px 8px;border:1px solid #e3ece7;text-align:right"></td>'
+    +'<td style="padding:4px;border:1px solid #e3ece7"><input id="pay-'+o.id+'-ts" value="'+(s.thuong_san||0)+'" oninput="_payCalc(\''+o.id+'\')" style="'+inp+'"></td>'
+    +'<td style="padding:4px;border:1px solid #e3ece7"><input id="pay-'+o.id+'-td" value="'+(s.thuong_doinhom||0)+'" oninput="_payCalc(\''+o.id+'\')" style="'+inp+'"></td>'
+    +'<td style="padding:4px;border:1px solid #e3ece7"><input id="pay-'+o.id+'-tk" value="'+(s.thuong_khac||0)+'" oninput="_payCalc(\''+o.id+'\')" style="'+inp+'"></td>'
+    +'<td style="padding:4px;border:1px solid #e3ece7"><input id="pay-'+o.id+'-ph" value="'+(s.phat||0)+'" oninput="_payCalc(\''+o.id+'\')" style="'+inp+'"></td>'
+    +'<td id="pay-'+o.id+'-giu" style="padding:5px 8px;border:1px solid #e3ece7;text-align:right;color:#c0587e"></td>'
+    +'<td style="padding:4px;border:1px solid #e3ece7"><input id="pay-'+o.id+'-tg" value="'+(s.tra_giu_luong||0)+'" oninput="_payCalc(\''+o.id+'\')" style="'+inp+'"></td>'
+    +'<td style="padding:4px;border:1px solid #e3ece7"><input id="pay-'+o.id+'-ung" value="'+(s.ung_luong||0)+'" oninput="_payCalc(\''+o.id+'\')" style="'+inp+'"></td>'
+    +'<td style="padding:4px;border:1px solid #e3ece7"><input id="pay-'+o.id+'-bh" value="'+(s.bhxh||0)+'" oninput="_payCalc(\''+o.id+'\')" style="'+inp+'"></td>'
+    +'<td id="pay-'+o.id+'-ttn" style="padding:5px 8px;border:1px solid #e3ece7;text-align:right;font-weight:700"></td>'
+    +'<td id="pay-'+o.id+'-tn" style="padding:5px 8px;border:1px solid #e3ece7;text-align:right;font-weight:800;color:#1F6F54;background:#f1f8f4"></td>'
+    +'</tr>';
+ });
+ h+='</table></div><div style="font-size:11px;color:var(--muted);margin-top:8px">(đặc biệt)=Trưởng nhóm/mức riêng — sửa cột "Lương cứng" tay. Mỗi kỳ bấm 💾 Lưu.</div></div>';
+ el.innerHTML=h;
+ _PAY_ROWS.forEach(function(o){ _payCalc(o.id); });
+}
+function _payCalc(id){ var o=(_PAY_ROWS||[]).find(function(x){return x.id===id;}); if(!o)return;
+ var nc=_payNum('pay-'+id+'-nc'), lcBase=_payNum('pay-'+id+'-lc');
+ var lcc=Math.round(lcBase*(nc/26)), ta=Math.round(30000*nc), giu=Math.round(lcc*0.05);
+ var pc=_payNum('pay-'+id+'-pc'),ts=_payNum('pay-'+id+'-ts'),td=_payNum('pay-'+id+'-td'),tk=_payNum('pay-'+id+'-tk'),ph=_payNum('pay-'+id+'-ph'),tg=_payNum('pay-'+id+'-tg'),ung=_payNum('pay-'+id+'-ung'),bh=_payNum('pay-'+id+'-bh');
+ var ttn=lcc+o.hh+pc+ta+ts+td+tk-ph-giu+tg; var tn=ttn-ung-bh;
+ var S=function(sfx,v){ var e=document.getElementById('pay-'+id+'-'+sfx); if(e)e.textContent=_vnd(v); };
+ S('ta',ta);S('giu',giu);S('ttn',ttn);S('tn',tn);
+}
+async function _paySave(){ if(!canPancake()){ alert('Chỉ Admin.'); return; }
+ var rows=(_PAY_ROWS||[]).map(function(o){ return {thang:_PAY_MONTH,sale_id:o.id,ten:o.ten,ngay_cong:_payNum('pay-'+o.id+'-nc'),luong_cung_override:_payNum('pay-'+o.id+'-lc'),phu_cap:_payNum('pay-'+o.id+'-pc'),thuong_san:_payNum('pay-'+o.id+'-ts'),thuong_doinhom:_payNum('pay-'+o.id+'-td'),thuong_khac:_payNum('pay-'+o.id+'-tk'),phat:_payNum('pay-'+o.id+'-ph'),ung_luong:_payNum('pay-'+o.id+'-ung'),bhxh:_payNum('pay-'+o.id+'-bh'),tra_giu_luong:_payNum('pay-'+o.id+'-tg'),updated_at:new Date().toISOString(),updated_by:((window.ME&&ME.name)||'')}; });
+ if(!rows.length){ alert('Chưa có nhân viên.'); return; }
+ try{ var e=await sb.from('payroll_inputs').upsert(rows,{onConflict:'thang,sale_id'}); if(e&&e.error)throw e.error; if(typeof toast==='function')toast('✓ Đã lưu bảng lương '+_PAY_MONTH); else alert('✓ Đã lưu bảng lương '+_PAY_MONTH); }catch(err){ alert('Lỗi lưu: '+((err&&err.message)||err)); }
 }
 var _CHAT_CONVS=[], _CHAT_PAGE='', _CHAT_Q='', _CHAT_TIMER=null, _CHAT_OPEN=null, _CHAT_SIG='';
 function _chatIcon(p){ return /whats/i.test(p||'')?'🟢':(/face/i.test(p||'')?'💬':'📄'); }
