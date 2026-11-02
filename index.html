@@ -336,7 +336,8 @@ async function loadPleads(force){ if(window.__pleadsLoaded && !force) return; tr
 let TARGETS = {}; // mục tiêu DT theo tháng: { 'owner|YYYY-MM': muc_tieu }
 let REPORT_MONTH = (new Date()).toISOString().slice(0,7); // tháng đang xem ở Báo cáo
 let TASK_Q = '';  // bộ lọc tên khách ở trang Việc cần làm
-function setTaskQ(v){ TASK_Q=v; renderToday(); const el=document.getElementById('tk-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
+var _debTK=null,_debDN=null,_debCCT=null;
+function setTaskQ(v){ TASK_Q=v; clearTimeout(_debTK); _debTK=setTimeout(function(){ renderToday(); var el=document.getElementById('tk-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } },280); }
 let TASK_SALE='', TASK_FROM='', TASK_TO='', TASK_TT='';
 function setTaskSale(v){ TASK_SALE=v; renderToday(); }
 function setTaskTt(v){ TASK_TT=v; renderToday(); }
@@ -378,7 +379,7 @@ async function bulkTaskAssign(){ const sel=document.getElementById('task-bulk-sa
 let DONE_Q='', DONE_SALE='', DONE_FROM='', DONE_TO='';
 let DONE_HIDE=(function(){try{return localStorage.getItem('done_hide')!=='0';}catch(e){return true;}})();
 function toggleDone(){ DONE_HIDE=!DONE_HIDE; try{localStorage.setItem('done_hide',DONE_HIDE?'1':'0');}catch(e){} renderToday(); }
-function setDoneQ(v){ DONE_Q=v; renderToday(); const el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
+function setDoneQ(v){ DONE_Q=v; clearTimeout(_debDN); _debDN=setTimeout(function(){ renderToday(); var el=document.getElementById('dn-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } },280); }
 function setDoneSale(v){ DONE_SALE=v; renderToday(); }
 function setDoneFrom(v){ DONE_FROM=v; renderToday(); }
 function setDoneTo(v){ DONE_TO=v; renderToday(); }
@@ -481,7 +482,7 @@ function setTaskBucket(v){ TASK_BUCKET=v; renderToday(); }
 function toggleTaskPanel(){ TASK_PANEL_OPEN=!TASK_PANEL_OPEN; renderToday(); }
 function toggleCareToday(){ CARE_TODAY_OPEN=!CARE_TODAY_OPEN; renderToday(); }
 let CARE_TODAY_Q='', CARE_TODAY_SALE='', CARE_TODAY_MKT='';  // bộ lọc bảng "Lịch chăm khách đã chốt" ở trang Việc cần làm
-function setCareTodayQ(v){ CARE_TODAY_Q=v; renderToday(); const el=document.getElementById('cct-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } }
+function setCareTodayQ(v){ CARE_TODAY_Q=v; clearTimeout(_debCCT); _debCCT=setTimeout(function(){ renderToday(); var el=document.getElementById('cct-q'); if(el){ el.focus(); try{el.setSelectionRange(v.length,v.length);}catch(e){} } },280); }
 function setCareTodaySale(v){ CARE_TODAY_SALE=v; renderToday(); }
 function setCareTodayMkt(v){ CARE_TODAY_MKT=v; renderToday(); }
 let CARE_TODAY_FROM='', CARE_TODAY_TO='';
@@ -526,7 +527,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-10-31-ch';
+const APP_VERSION='2026-11-02-ci';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
