@@ -527,7 +527,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-02-ci';
+const APP_VERSION='2026-11-03-cj';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4089,7 +4089,8 @@ function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=
  var _db=document.getElementById('chat-dao-break'); if(_db){ if(_CHAT_MODE==='dao'){ var _bs={}; _CHAT_CONVS.forEach(function(c){ if(_daoToday(c)){ var s=((c.sale||'').trim())||'(chưa gán)'; _bs[s]=(_bs[s]||0)+1; } }); var _tot=0; var _pt=Object.keys(_bs).sort(function(a,b){return _bs[b]-_bs[a];}).map(function(s){ _tot+=_bs[s]; return '<b>'+_mvEsc(s)+'</b> '+_bs[s]; }); _db.innerHTML=_pt.length?('\u267b\ufe0f Khách đào theo sale ('+_tot+'): '+_pt.join(' \u00b7 ')):''; } else { _db.innerHTML=''; } }
  var _ps=document.getElementById('chat-page-sel'); if(_ps){ var _pg={}; _CHAT_CONVS.forEach(function(c){ if(c.page_name)_pg[c.page_name]=(_pg[c.page_name]||0)+1; }); var _o='<option value="">Tất cả page ('+_CHAT_CONVS.length+')</option>'; Object.keys(_pg).sort().forEach(function(p){ _o+='<option value="'+_mvEsc(p)+'"'+(_CHAT_PAGE===p?' selected':'')+'>'+_mvEsc(p)+' ('+_pg[p]+')</option>'; }); _ps.innerHTML=_o; }
  var q=(_CHAT_Q||'').toLowerCase();
- var list=_CHAT_CONVS.filter(function(c){ if(_CHAT_PAGE&&c.page_name!==_CHAT_PAGE)return false; if(!_chatModeOk(c))return false; if(!_chatDateOk(_chatBasisDate(c)))return false; if(q&&((c.ten||'')+' '+(c.snippet||'')).toLowerCase().indexOf(q)<0)return false; if(_CHAT_FTAGS.length){ var tg=','+(c.tags||'').split(',').map(function(x){return x.trim();}).join(',')+','; for(var k=0;k<_CHAT_FTAGS.length;k++){ if(tg.indexOf(','+_CHAT_FTAGS[k]+',')<0)return false; } } return true; });
+ var _usingSearch=!!_CHAT_SEARCHRES; var _src=_usingSearch?_CHAT_SEARCHRES:_CHAT_CONVS;
+ var list=_src.filter(function(c){ if(_CHAT_PAGE&&c.page_name!==_CHAT_PAGE)return false; if(!_chatModeOk(c))return false; if(!_chatDateOk(_chatBasisDate(c)))return false; if(!_usingSearch && q&&((c.ten||'')+' '+(c.snippet||'')).toLowerCase().indexOf(q)<0)return false; if(_CHAT_FTAGS.length){ var tg=','+(c.tags||'').split(',').map(function(x){return x.trim();}).join(',')+','; for(var k=0;k<_CHAT_FTAGS.length;k++){ if(tg.indexOf(','+_CHAT_FTAGS[k]+',')<0)return false; } } return true; });
  var _unc=0; for(var _j=0;_j<list.length;_j++){if(list[_j].unread)_unc++;}
  var cnt=document.getElementById('chat-count'); if(cnt) cnt.innerHTML=list.length+' hội thoại'+(_unc?' · <b onclick="_chatSetMode(\'unread\')" style="color:#e23d3d;cursor:pointer;text-decoration:underline">'+_unc+' chưa đọc ▸</b>':'');
  var items=list.slice(0,80).map(function(c){ var op=_CHAT_OPEN&&_CHAT_OPEN.cid===c.conv_id; var bg=op?'#eaf4ef':(c.unread?'#fff4f4':'transparent');
@@ -4097,7 +4098,12 @@ function _chatPaintList(){ var ch=document.getElementById('chat-chips'); var lc=
    +_chatAva(c.ten,c.platform)
    +'<div style="flex:1;min-width:0"><div style="font-weight:'+(c.unread?'800':'600')+';font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc(c.ten||'(không tên)')+(c.sale?' <span style="font-weight:400;color:#9aa8a3;font-size:11px">· '+_mvEsc(c.sale)+'</span>':'')+(!_crmHas(c)?' <span style="font-weight:700;font-size:9px;background:#1F6F54;color:#fff;padding:1px 6px;border-radius:8px;vertical-align:middle">+CRM</span>':'')+'</div>'
    +'<div style="font-size:12px;color:'+(c.unread?'#55403f':'#8a978f')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_mvEsc((c.snippet||'').slice(0,60))+'</div>'+_chatTags(c.tags)+'</div>'+(c.unread?'<span title="Chưa đọc" style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:#e23d3d;margin-left:2px"></span>':'')+'</div>'; }).join('');
- lc.innerHTML=items||'<div style="color:#6b7c76;padding:10px">Không có hội thoại.</div>';
+ var _foot='';
+ if(_CHAT_SEARCHING){ _foot='<div style="text-align:center;padding:10px;color:#3b4ba8;font-size:12px">⏳ Đang tìm toàn bộ khách…</div>'; }
+ else if(_usingSearch){ _foot='<div style="text-align:center;padding:8px;color:#9aa8a3;font-size:11.5px">🔎 Kết quả tìm toàn hệ thống ('+list.length+(list.length>=300?'+':'')+' khách) · xoá ô tìm để về danh sách gần nhất</div>'; }
+ else if(list.length>80){ _foot='<div style="text-align:center;padding:8px;color:#9aa8a3;font-size:11px">Hiện 80/'+list.length+' · gõ ô tìm để tìm toàn bộ khách</div>'; }
+ if(!_usingSearch && !_CHAT_SEARCHING){ _foot+='<div style="text-align:center;padding:8px 10px 12px"><span onclick="chatLoadMore()" style="cursor:pointer;font-size:12px;color:#1F6F54;font-weight:600;border:1px solid #d2e8bd;background:#eef7e6;border-radius:16px;padding:6px 16px">'+(_CHAT_MORE?'⏳ Đang tải…':'📥 Tải thêm khách cũ hơn')+'</span></div>'; }
+ lc.innerHTML=(items||'<div style="color:#6b7c76;padding:10px">'+(_CHAT_SEARCHING?'⏳ Đang tìm…':'Không có hội thoại khớp.')+'</div>')+_foot;
 }
 /* ============ THƯ VIỆN ẢNH (đồng bộ từ Pancake) ============ */
 var IMGLIB_FOLDERS=null, IMGLIB_ITEMS={}, IMGLIB_SEL=null, IMGLIB_Q='';
@@ -4191,7 +4197,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
    +'<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #e9efec;background:#3b4ba8;color:#fff"><span style="font-size:17px;font-weight:700">💬 Hội thoại</span><span style="font-size:12px;opacity:.85">Gộp mọi page Pancake · tự làm mới ~45s</span></div>'+'<div style="padding:8px 14px;border-bottom:1px solid #eef2f0;background:#fbfdfc;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+'<span style="font-size:12px;font-weight:700;color:#1F6F54;white-space:nowrap">🌍 Check SĐT:</span>'+'<input id="qc-phone" oninput="qcCheck(this.value)" placeholder="Dán SĐT khách (vd +1 416…, +33…) → ra quốc gia + WhatsApp" style="flex:1;min-width:160px;border:1px solid #e3ece7;border-radius:16px;padding:6px 12px;font-size:12.5px">'+'<span id="qc-result" style="font-size:12.5px;white-space:nowrap"></span>'+'</div>'
    +'<div class="chat-wrap" style="display:flex;height:850px;max-height:88vh">'
    +'<div class="chat-c-list" style="flex:0 0 340px;max-width:44%;border-right:1px solid #e9efec;display:flex;flex-direction:column">'
-     +'<div style="padding:10px 12px 4px"><input id="chat-q" oninput="_chatQInput(this.value)" placeholder="🔍 Tìm tên / nội dung…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
+     +'<div style="padding:10px 12px 4px"><input id="chat-q" oninput="_chatQInput(this.value)" placeholder="🔍 Tìm tên / SĐT toàn bộ khách…" style="width:100%;border:1px solid #e3ece7;border-radius:20px;padding:7px 14px;font-size:13px"></div>'
      +'<div style="padding:0 12px 6px;display:flex;gap:6px"><select id="chat-page-sel" onchange="_chatSetPage(this.value)" style="flex:1;min-width:0;border:1px solid #e3ece7;border-radius:8px;padding:6px 8px;font-size:12px;background:#fff"><option>⏳</option></select><select id="chat-date-sel" onchange="_chatSetDate(this.value)" style="border:1px solid #e3ece7;border-radius:8px;padding:6px 8px;font-size:12px;background:#fff"><option value="">Mọi lúc</option><option value="today">Hôm nay</option><option value="yesterday">Hôm qua</option><option value="7d">7 ngày</option><option value="month">Tháng này</option></select></div>'
      +'<div id="chat-modebar" style="padding:0 12px 6px;display:flex;flex-wrap:wrap;gap:4px"></div>'
      +'<div id="chat-dao-break" style="padding:0 12px 6px;font-size:11px;color:#6b7c76;line-height:1.6"></div>'
@@ -4214,7 +4220,19 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
  _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
 var _CHAT_THREADCACHE={}; var _CHAT_QT=null;
-function _chatQInput(v){ _CHAT_Q=v; if(_CHAT_QT)clearTimeout(_CHAT_QT); _CHAT_QT=setTimeout(function(){ try{_chatPaintList();}catch(e){} }, 160); }
+var _CHAT_COLS='conv_id,page_id,page_name,platform,ten,phone,snippet,conv_inserted_at,last_at,sale,note,in_crm,status,tags,unread';
+var _CHAT_SEARCHRES=null, _CHAT_SEARCHING=false, _CHAT_MORE=false;
+function _chatQInput(v){ _CHAT_Q=v; if(_CHAT_QT)clearTimeout(_CHAT_QT); _CHAT_QT=setTimeout(function(){ _chatDoSearch(v); }, 300); }
+async function _chatDoSearch(v){ var q=(''+(v||'')).trim();
+  if(q.length<2){ _CHAT_SEARCHRES=null; _CHAT_SEARCHING=false; try{_chatPaintList();}catch(e){} return; }
+  _CHAT_SEARCHING=true; try{_chatPaintList();}catch(e){}
+  try{ var like='%'+q.replace(/[%_,]/g,' ').trim()+'%'; var r=await sb.from('pancake_leads').select(_CHAT_COLS).or('ten.ilike.'+like+',phone.ilike.'+like+',snippet.ilike.'+like).order('last_at',{ascending:false,nullsFirst:false}).limit(300); _CHAT_SEARCHRES=(r&&r.data)||[]; }catch(e){ _CHAT_SEARCHRES=[]; }
+  _CHAT_SEARCHING=false; try{_chatPaintList();}catch(e){}
+}
+async function chatLoadMore(){ if(_CHAT_MORE)return; _CHAT_MORE=true; try{_chatPaintList();}catch(e){} var off=_CHAT_CONVS.length;
+  try{ var r=await sb.from('pancake_leads').select(_CHAT_COLS).order('last_at',{ascending:false,nullsFirst:false}).range(off,off+499); var more=(r&&r.data)||[]; var seen={}; _CHAT_CONVS.forEach(function(c){seen[c.conv_id]=1;}); more.forEach(function(c){ if(!seen[c.conv_id]) _CHAT_CONVS.push(c); }); }catch(e){}
+  _CHAT_MORE=false; try{_chatPaintList();}catch(e){}
+}
 var _CHAT_CUR=null, _CHAT_TR={}, _CHAT_TRN={}, _CHAT_SHOWTR=false, _CHAT_AUTOTR=true;
 function _chatRenderThread(){ var box=document.getElementById('chat-thread'); if(!box||!_CHAT_CUR)return; var d=_CHAT_CUR; var cid=d.cid, pid=d.pid; var tr=_CHAT_TR[cid]||null; var on=_CHAT_SHOWTR&&tr;
  var btn='<span onclick="chatMarkUnread()" title="Đánh dấu hội thoại này là chưa đọc" style="cursor:pointer;color:#e23d3d;font-size:12px;margin-right:14px">🔴 Chưa đọc</span><span onclick="chatTranslate()" style="cursor:pointer;color:#1F6F54;font-size:12px;margin-right:14px">'+(on?'🌐 Tắt dịch':'🌐 Dịch tiếng Việt')+'</span>'+'<span onclick="_chatToggleMax()" title="Phóng to / thu nhỏ hội thoại" style="cursor:pointer;color:#3b4ba8;font-size:12px;margin-right:14px">⛶ Phóng to</span>';
