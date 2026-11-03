@@ -527,7 +527,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-03-cj';
+const APP_VERSION='2026-11-03-ck';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -4217,7 +4217,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
  _chatPaintDatebar(); _chatPaintTagFilter(); _chatPaintTrg(); _chatLoadWA(); _chatLoadCRMKeys();
  if((_CHAT_CONVS||[]).length){ _chatPaintList(); var _sig0=_CHAT_SIG; _chatLoad().then(function(){ if(_CHAT_SIG!==_sig0){ try{ _chatPaintList(); }catch(e){} } }); } else { await _chatLoad(); _chatPaintList(); } var _dsel=document.getElementById('chat-date-sel'); if(_dsel)_dsel.value=_CHAT_DP||'';
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
- _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
+ _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; if(_CHAT_SEARCHRES){ try{ _chatDoSearch(_CHAT_Q); }catch(e){} return; } var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
 }
 var _CHAT_THREADCACHE={}; var _CHAT_QT=null;
 var _CHAT_COLS='conv_id,page_id,page_name,platform,ten,phone,snippet,conv_inserted_at,last_at,sale,note,in_crm,status,tags,unread';
