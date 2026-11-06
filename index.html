@@ -527,7 +527,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-03-ck';
+const APP_VERSION='2026-11-06-cl';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1844,7 +1844,7 @@ function renderAdd(){
       <div><label>Quốc gia</label><select id="f-qg"><option value="US">🇺🇸 US</option><option value="CAD">🇨🇦 CAD (Canada)</option><option value="EU">🇪🇺 EU (Euro)</option></select></div>
       <div><label>Email (nếu có)</label><input id="f-email" type="email" oninput="checkDupAdd()"></div>
       <div><label>Nguồn khách</label><select id="f-nguon">${opt(NGUON)}</select></div>
-      <div><label>MKT phụ trách (kéo lead)</label><select id="f-mkt">${opt(MKT)}</select></div>
+      <div><label>MKT phụ trách (kéo lead)</label><select id="f-mkt"><option value="">— chọn —</option>${Object.keys(MKT).filter(k=>/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(k)).map(k=>`<option value="${k}">${MKT[k]}</option>`).join('')}</select></div>
       <div><label>Sale chăm khách</label><select id="f-owner">${opt(SALES)}</select></div>
       <div><label>Mức độ khách</label><select id="f-muc"><option value="nong">🔥 Nóng</option><option value="am" selected>☀️ Ấm</option><option value="lanh">❄️ Lạnh</option></select>
         <details style="margin-top:6px"><summary style="font-size:11px;color:var(--muted);cursor:pointer">ℹ️ Giải thích mức độ</summary>
@@ -3650,7 +3650,7 @@ async function disableMFA(){
 async function saveCustomer(e){
   e.preventDefault(); const g=id=>document.getElementById(id).value;
   const owner = ME.role==='sale'?ME.id:(g('f-owner')||ME.id);
-  const rec={owner, mkt:g('f-mkt')||null, ten:g('f-ten'), phone:g('f-phone'), has_wa:document.getElementById('f-wa').checked,
+  var _fm=g('f-mkt')||''; const rec={owner, mkt:(/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(_fm)?_fm:null), ten:g('f-ten'), phone:g('f-phone'), has_wa:document.getElementById('f-wa').checked,
     email:g('f-email'), quoc_gia:g('f-qg'), dia_chi:g('f-diachi')||null, nguon:g('f-nguon'), benh:'khac', benh_list:(g('f-benh')||'').trim(),
     sp:(g('f-sp')||'').trim()||'—', muc:g('f-muc'), tt:g('f-tt'), follow:g('f-follow')||null, ghi:g('f-ghi'),
     dt:Number(g('f-dt'))||0, ngay_chot:g('f-ngaychot')||D(0), ly:g('f-ly'), khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
@@ -4034,7 +4034,8 @@ function openQuickAdd(cid){ var ld=_chatLead(cid); if(!ld){ alert('Không tìm t
   H+='<div><label style="'+lb+'">SĐT / WhatsApp</label><input id="qa-phone" value="'+_mvEsc(ld.phone||'')+'" style="'+ip+'"></div>';
   H+='<div><label style="'+lb+'">Quốc gia</label><select id="qa-qg" style="'+ip+'"><option value="US"'+(qg==='US'?' selected':'')+'>🇺🇸 US</option><option value="CAD"'+(qg==='CAD'?' selected':'')+'>🇨🇦 CAD</option><option value="EU"'+(qg==='EU'?' selected':'')+'>🇪🇺 EU</option></select></div>';
   H+='<div><label style="'+lb+'">Sale chăm</label><select id="qa-owner" style="'+ip+'">'+sel(SALES,sid)+'</select></div>';
-  H+='<div><label style="'+lb+'">MKT phụ trách</label><select id="qa-mkt" style="'+ip+'"><option value="">— chọn —</option>'+sel(MKT,'')+'</select></div>';
+  var _mktOpt=Object.keys(MKT).filter(function(k){return /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(k);}).map(function(k){ return '<option value="'+k+'">'+MKT[k]+'</option>'; }).join('');
+  H+='<div><label style="'+lb+'">MKT phụ trách</label><select id="qa-mkt" style="'+ip+'"><option value="">— chọn —</option>'+_mktOpt+'</select></div>';
   H+='<div><label style="'+lb+'">Nguồn</label><select id="qa-nguon" style="'+ip+'">'+sel(NGUON,_src)+'</select></div>';
   H+='<div><label style="'+lb+'">Mức độ</label><select id="qa-muc" style="'+ip+'"><option value="nong">🔥 Nóng</option><option value="am" selected>☀️ Ấm</option><option value="lanh">❄️ Lạnh</option></select></div>';
   H+='<div><label style="'+lb+'">Trạng thái</label><select id="qa-tt" style="'+ip+'">'+sel(STATUS,'tuong_tac')+'</select></div>';
@@ -4052,7 +4053,7 @@ async function quickAddSave(){ var g=function(id){ var e=document.getElementById
   var ten=(g('qa-ten')||'').trim(); if(!ten){ alert('Nhập tên khách nhé.'); return; }
   var btn=document.getElementById('qa-save'); if(btn){ btn.textContent='⏳ Đang lưu…'; btn.disabled=true; }
   var owner=(ME.role==='sale')?ME.id:(g('qa-owner')||ME.id);
-  var rec={owner:owner, mkt:(g('qa-mkt')||null), ten:ten, phone:g('qa-phone'), has_wa:(/whats/i.test(_qld.platform||'')), email:'', quoc_gia:g('qa-qg'), dia_chi:null, nguon:g('qa-nguon')||_src, benh:'khac', benh_list:(g('qa-benh')||'').trim(), sp:(g('qa-sp')||'').trim()||'—', muc:g('qa-muc'), tt:g('qa-tt'), follow:g('qa-follow')||null, ghi:g('qa-ghi'), dt:0, ngay_chot:D(0), ly:'', khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
+  var _qm=g('qa-mkt')||''; var rec={owner:owner, mkt:(/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(_qm)?_qm:null), ten:ten, phone:g('qa-phone'), has_wa:(/whats/i.test(_qld.platform||'')), email:'', quoc_gia:g('qa-qg'), dia_chi:null, nguon:g('qa-nguon')||_src, benh:'khac', benh_list:(g('qa-benh')||'').trim(), sp:(g('qa-sp')||'').trim()||'—', muc:g('qa-muc'), tt:g('qa-tt'), follow:g('qa-follow')||null, ghi:g('qa-ghi'), dt:0, ngay_chot:D(0), ly:'', khach_cu:false, ngay_tao:D(0), ngay_capnhat:D(0)};
   if(rec.tt==='kcnc'||rec.tt==='khach_chan') rec.follow=null; else if(!isChot(rec.tt) && (!rec.follow||rec.follow<=D(0))) rec.follow=D(1);
   var _dig=function(s){ return (''+(s||'')).replace(/\D/g,''); }; var _ph=_dig(rec.phone);
   try{
