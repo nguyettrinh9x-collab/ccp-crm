@@ -527,7 +527,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-06-cm';
+const APP_VERSION='2026-11-12-cn';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -2041,7 +2041,7 @@ function renderList(){
       <select id="fl-chot" onchange="renderList()"><option value="">Đã &amp; chưa chốt</option><option value="chot">✅ Đã chốt</option><option value="chua">⏳ Chưa chốt</option></select>
       <select id="fl-follow" onchange="renderList()"><option value="">Mọi ngày follow</option><option value="today">Hôm nay</option><option value="over">Quá hạn</option></select>
     </div>
-    <div class="colbar"><span style="color:var(--muted);font-weight:700">⚙ Hiện cột:</span>${LIST_COLS.map(c=>`<label><input type="checkbox" id="colcb-${c.k}" ${COL_HIDE[c.k]?'':'checked'} onchange="toggleCol('${c.k}')"> ${c.label}</label>`).join('')}${(ME.role==='admin'||ME.role==='owner')?`<button class="btn ghost" type="button" onclick="exportList()" style="padding:5px 12px;margin-left:auto;white-space:nowrap">⬇️ Tải Excel</button>`:''}</div>
+    <div class="colbar"><span style="color:var(--muted);font-weight:700">⚙ Hiện cột:</span>${LIST_COLS.map(c=>`<label><input type="checkbox" id="colcb-${c.k}" ${COL_HIDE[c.k]?'':'checked'} onchange="toggleCol('${c.k}')"> ${c.label}</label>`).join('')}${(ME.role==='admin'||ME.role==='owner')?`<button class="btn ghost" type="button" onclick="exportList()" style="padding:5px 12px;margin-left:auto;white-space:nowrap">⬇️ Tải Excel</button>`:''}<button class="btn ghost" type="button" onclick="custResyncFull()" style="padding:5px 12px;white-space:nowrap" title="Tải mới toàn bộ khách từ máy chủ (dùng khi nghi dữ liệu lệch)">🔄 Tải lại toàn bộ</button></div>
     <div id="list-revenue"></div>
     <div class="card" style="padding:0" id="list-table"></div>`;
   }
@@ -3396,6 +3396,44 @@ async function fetchAllRows(tbl, orderCol, asc){ // phân trang lấy HẾT - tr
   res.forEach(r=>{ if(!r.error && r.data) out=out.concat(r.data); });
   return out;
 }
+/* ===== Cache khách offline (IndexedDB) + đồng bộ DELTA để giảm egress ===== */
+var _IDB_NAME='ccp_cache', _IDB_VER=1, _idbP=null;
+function _idbOpen(){ if(_idbP) return _idbP; _idbP=new Promise(function(res,rej){ try{ var rq=indexedDB.open(_IDB_NAME,_IDB_VER); rq.onupgradeneeded=function(e){ var db=e.target.result; if(!db.objectStoreNames.contains('customers')) db.createObjectStore('customers',{keyPath:'id'}); }; rq.onsuccess=function(){ res(rq.result); }; rq.onerror=function(){ rej(rq.error); }; }catch(e){ rej(e); } }); return _idbP; }
+function _idbGetAll(store){ return _idbOpen().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction(store,'readonly'); var rq=tx.objectStore(store).getAll(); rq.onsuccess=function(){ res(rq.result||[]); }; rq.onerror=function(){ rej(rq.error); }; }catch(e){ rej(e); } }); }); }
+function _idbBulkPut(store,rows){ if(!rows||!rows.length) return Promise.resolve(); return _idbOpen().then(function(db){ return new Promise(function(res,rej){ try{ var tx=db.transaction(store,'readwrite'); var st=tx.objectStore(store); rows.forEach(function(r){ try{ st.put(r); }catch(e){} }); tx.oncomplete=function(){ res(); }; tx.onerror=function(){ rej(tx.error); }; }catch(e){ rej(e); } }); }); }
+function _idbDel(store,id){ return _idbOpen().then(function(db){ return new Promise(function(res){ try{ var tx=db.transaction(store,'readwrite'); tx.objectStore(store).delete(id); tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); }; }catch(e){ res(); } }); }); }
+function _idbClear(store){ return _idbOpen().then(function(db){ return new Promise(function(res){ try{ var tx=db.transaction(store,'readwrite'); tx.objectStore(store).clear(); tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); }; }catch(e){ res(); } }); }); }
+/* Tải khách kiểu DELTA: lần đầu (hoặc >7 ngày) tải hết & lưu cache; lần sau chỉ tải dòng updated_at > mốc đã lưu.
+   Xoá mềm (da_xoa) tự về qua delta. Giảm ~90% băng thông so với kéo cả 9.000 dòng mỗi lần đăng nhập. */
+async function fetchCustomersDelta(){
+  var SYNC_KEY='cust_sync_at', FULL_KEY='cust_full_at', WEEK=7*24*3600*1000, LIM=20000;
+  var cached=[]; try{ cached=await _idbGetAll('customers'); }catch(e){ cached=[]; }
+  var since=null, fullAt=0;
+  try{ since=localStorage.getItem(SYNC_KEY); }catch(e){}
+  try{ fullAt=Number(localStorage.getItem(FULL_KEY))||0; }catch(e){}
+  var needFull = !cached.length || !since || (Date.now()-fullAt>WEEK);
+  var rows=[];
+  try{
+    if(needFull){
+      rows=await fetchAllRows('customers','updated_at',true);
+      try{ await _idbClear('customers'); }catch(e){}
+      cached=rows.slice();
+      try{ localStorage.setItem(FULL_KEY,String(Date.now())); }catch(e){}
+    } else {
+      var r=await sb.from('customers').select('*').gt('updated_at',since).order('updated_at',{ascending:true}).limit(LIM);
+      rows=(r&&r.data)||[];
+      if(rows.length>=LIM){ try{ localStorage.removeItem(FULL_KEY); }catch(e){} } /* đổi quá nhiều -> ép tải full lần sau cho chắc */
+      if(rows.length){ var map={}; cached.forEach(function(c){ map[c.id]=c; }); rows.forEach(function(c){ map[c.id]=c; }); cached=Object.keys(map).map(function(k){ return map[k]; }); }
+    }
+  }catch(e){ /* lỗi mạng -> dùng cache sẵn có */ }
+  try{ await _idbBulkPut('customers',rows); }catch(e){}
+  var maxTs=since;
+  rows.forEach(function(c){ if(c.updated_at && (!maxTs || c.updated_at>maxTs)) maxTs=c.updated_at; });
+  if(maxTs){ try{ localStorage.setItem(SYNC_KEY,maxTs); }catch(e){} }
+  return cached;
+}
+/* Buộc tải lại toàn bộ khách (xoá cache) — dùng khi nghi dữ liệu lệch */
+async function custResyncFull(){ try{ await _idbClear('customers'); }catch(e){} try{ localStorage.removeItem('cust_sync_at'); localStorage.removeItem('cust_full_at'); }catch(e){} if(window.loadAll){ await loadAll(); if(window.renderAll) renderAll(); } try{ toast('🔄 Đã tải lại toàn bộ khách',true); }catch(e){} }
 /* Chuẩn hoá 1 dòng khách (dùng chung loadAll + reloadCustomer) */
 function normCust(c){ return { ...c,
   follow:c.follow||'', ngay_tao:(c.ngay_tao||'').slice(0,10),
@@ -3410,11 +3448,12 @@ async function reloadCustomer(id){ if(!window.sb||id==null) return; try{
   const nc=normCust(data);
   if(di>=0)DATA.splice(di,1); if(ti>=0)TRASH.splice(ti,1);
   if(nc.da_xoa) TRASH.unshift(nc); else if(di>=0) DATA.splice(di,0,nc); else DATA.unshift(nc);
+  try{ await _idbBulkPut('customers',[data]); }catch(e){} /* giữ cache khớp */
 }catch(e){} }
 /* Nạp lại danh sách việc (nhẹ) */
 async function reloadTasks(){ if(!window.sb) return; try{ const { data:tk }=await sb.from('tasks').select('*'); TASKS=(tk||[]).map(t=>({id:t.id, owner:t.owner, customer_id:t.customer_id, loai:t.loai, noi_dung:t.noi_dung, han:(t.han||'').slice(0,10), xong:!!t.xong})); }catch(e){} }
 async function loadCustomers(){ /* tải TẤT CẢ khách */
-  try{ var cs=await fetchAllRows('customers','ngay_tao',false); /* mọi tài khoản xem được tất cả khách */ const allc=(cs||[]).map(normCust); DATA=allc.filter(c=>!c.da_xoa); TRASH=allc.filter(c=>c.da_xoa); window.__custLoaded=true; window.__custFull=true; }catch(e){}
+  try{ var cs=await fetchCustomersDelta(); /* cache + delta, mọi tài khoản xem tất cả khách */ const allc=(cs||[]).map(normCust); DATA=allc.filter(c=>!c.da_xoa); TRASH=allc.filter(c=>c.da_xoa); window.__custLoaded=true; window.__custFull=true; }catch(e){}
 }
 async function loadTaskCustomers(){ /* CHỈ tải khách có trong danh sách việc — đủ cho "Việc cần làm", không kéo hết 8.047 */
   try{ var ids=[...new Set((TASKS||[]).map(t=>t.customer_id).filter(x=>x!=null).map(String))]; if(!ids.length){ DATA=DATA||[]; return; } var out=[]; for(var i=0;i<ids.length;i+=250){ var r=await sb.from('customers').select('*').in('id',ids.slice(i,i+250)); if(r&&r.data) out=out.concat(r.data); } var allc=out.map(normCust); DATA=allc.filter(c=>!c.da_xoa); TRASH=[]; window.__custFull=false; }catch(e){}
@@ -3446,7 +3485,7 @@ async function loadAll(skipCust){
   const _SB=(p)=>p.then(r=>r).catch(e=>({data:[],error:e}));
   const _FA=(t,o,a)=>fetchAllRows(t,o,a).catch(()=>[]);
   const [cs, spdr, ss, imgsr, od, tkr, tgr, mrr] = await Promise.all([
-    (skipCust?Promise.resolve(null):_FA('customers','ngay_tao',false)),
+    (skipCust?Promise.resolve(null):fetchCustomersDelta().catch(function(){return [];})),
     _SB(sb.from('marketing_spend').select('*')),
     _FA('sale_scores'),
     _SB(sb.from('app_images').select('*')),
@@ -3741,6 +3780,7 @@ async function purgeCustomer(id){
   if(!confirm('Xoá VĨNH VIỄN'+(c?' "'+c.ten+'"':'')+'? Không khôi phục được nữa.')) return;
   const { error }=await sb.from('customers').delete().eq('id', id);
   if(error){ alert('Lỗi: '+error.message); return; }
+  try{ await _idbDel('customers', id); }catch(e){} /* xoá khỏi cache cục bộ (xoá cứng không về qua delta) */
   alert('Đã xoá vĩnh viễn.'); await loadAll(); renderAll();
 }
 function importExcel(){
@@ -4218,7 +4258,7 @@ async function renderChat(){ var el=document.getElementById('v-chat'); if(!el) r
  _chatPaintDatebar(); _chatPaintTagFilter(); _chatPaintTrg(); _chatLoadWA(); _chatLoadCRMKeys();
  if((_CHAT_CONVS||[]).length){ _chatPaintList(); var _sig0=_CHAT_SIG; _chatLoad().then(function(){ if(_CHAT_SIG!==_sig0){ try{ _chatPaintList(); }catch(e){} } }); } else { await _chatLoad(); _chatPaintList(); } var _dsel=document.getElementById('chat-date-sel'); if(_dsel)_dsel.value=_CHAT_DP||'';
  if(_CHAT_TIMER) clearInterval(_CHAT_TIMER);
- _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; if(_CHAT_SEARCHRES){ try{ _chatDoSearch(_CHAT_Q); }catch(e){} return; } var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 60000);
+ _CHAT_TIMER=setInterval(async function(){ var v=document.getElementById('v-chat'); var lc=document.getElementById('chat-list'); if(!v||!lc||v.offsetParent===null||document.hidden) return; if(_CHAT_SEARCHRES){ try{ _chatDoSearch(_CHAT_Q); }catch(e){} return; } var prev=_CHAT_SIG; await _chatLoad(); if(_CHAT_SIG!==prev) _chatPaintList(); }, 120000);
 }
 var _CHAT_THREADCACHE={}; var _CHAT_QT=null;
 var _CHAT_COLS='conv_id,page_id,page_name,platform,ten,phone,snippet,conv_inserted_at,last_at,sale,note,in_crm,status,tags,unread';
