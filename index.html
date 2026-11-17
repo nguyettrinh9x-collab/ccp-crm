@@ -554,7 +554,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-17-cv';
+const APP_VERSION='2026-11-17-cw';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -2751,14 +2751,12 @@ function renderMarketing(){
   html+=`<h2 class="sec" style="margin-top:18px">📄 Chi tiết theo Page / Camp</h2>`;
   const allDates=[...new Set(ROWS.map(r=>(r.ngay||'').slice(0,10)).filter(Boolean))].sort().reverse();
   html+=`<div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-    <span style="font-size:12px;color:var(--muted);font-weight:600">🗓 Xem ngày:</span>
-    <select onchange="setMktDetailDate(this.value)" style="width:auto;padding:7px 10px;font-size:13px;max-width:220px">
-      <option value="" ${!MKT_DETAIL_DATE?'selected':''}>Tất cả ngày (${allDates.length})</option>
-      ${allDates.map(d=>`<option value="${d}" ${MKT_DETAIL_DATE===d?'selected':''}>${d}</option>`).join('')}
-    </select>
-    <button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px;${MKT_DETAIL_DATE===D(0)?'background:var(--teal);color:#fff;':''}" onclick="setMktDetailDate('${D(0)}')">Hôm nay</button>
-    <button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px;${MKT_DETAIL_DATE===D(-1)?'background:var(--teal);color:#fff;':''}" onclick="setMktDetailDate('${D(-1)}')">Hôm qua</button>
-    ${MKT_DETAIL_DATE?`<button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px" onclick="setMktDetailDate('')">✕ Bỏ lọc ngày</button>`:''}
+    <span style="font-size:12px;color:var(--muted);font-weight:600">🗓 Lọc theo lịch ở <b>đầu trang</b> (khoảng ngày + mốc nhanh). Nút nhanh:</span>
+    <button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px" onclick="applyPreset('mkt','hom_nay')">Hôm nay</button>
+    <button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px" onclick="applyPreset('mkt','hom_qua')">Hôm qua</button>
+    <button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px" onclick="applyPreset('mkt','7ngay')">7 ngày</button>
+    <button class="btn ghost" type="button" style="padding:6px 12px;font-size:12px" onclick="applyPreset('mkt','thang_nay')">Tháng này</button>
+    <span style="font-size:12px;color:var(--muted)">· đang xem: <b>${rg.s||'…'} → ${rg.e||'…'}</b></span>
   </div>`;
   const ownerKeys=Object.keys(MKT).filter(id=>ROWS.some(r=>r.owner===id));
   const otherOwners=[...new Set(ROWS.filter(r=>!MKT[r.owner]).map(r=>r.owner))];
@@ -2766,8 +2764,7 @@ function renderMarketing(){
   if(!ROWS.length) html+=`<div class="card empty">Chưa có báo cáo nào trong kỳ.</div>`;
   const sumOf=arr=>{ const s={tien:0,mes:0,cmt:0,tt:0,chot:0}; arr.forEach(r=>{s.tien+=+r.tien||0;s.mes+=+r.sl_mes||0;s.cmt+=+r.so_cmt||0;s.tt+=+r.mes_tt||0;s.chot+=+r.sd_chot||0;}); return s; };
   allOwners.forEach(oid=>{
-    let orows=ROWS.filter(r=>r.owner===oid);
-    if(MKT_DETAIL_DATE) orows=orows.filter(r=>(r.ngay||'').slice(0,10)===MKT_DETAIL_DATE);
+    let orows=ROWS.filter(r=>r.owner===oid); /* đã lọc theo lịch đầu trang (ROWS) */
     if(!orows.length) return;
     const s=sumOf(orows);
     html+=`<div id="mkt-owner-${oid}" class="card" style="padding:6px;overflow-x:auto;margin-bottom:16px;background:#f3f7f3;border:1.5px solid #cde0d2;box-shadow:0 2px 8px rgba(47,124,106,.08)"><table class="mkt-tbl" style="border:1px solid #e0d2b4">
