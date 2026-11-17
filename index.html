@@ -527,7 +527,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-17-cq';
+const APP_VERSION='2026-11-17-cr';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -865,7 +865,7 @@ function setListSize(v){ LIST_PAGE_SIZE = v==='all'?1000000:(Number(v)||50); LIS
 let KPI_OPEN=(function(){try{return localStorage.getItem('kpi_open')!=='0';}catch(e){return true;}})();
 function toggleKPI(){ KPI_OPEN=!KPI_OPEN; try{localStorage.setItem('kpi_open',KPI_OPEN?'1':'0');}catch(e){} renderList(); }
 let COLBAR_OPEN=(function(){try{return localStorage.getItem('colbar_open')==='1';}catch(e){return false;}})();
-function toggleColbar(){ COLBAR_OPEN=!COLBAR_OPEN; try{localStorage.setItem('colbar_open',COLBAR_OPEN?'1':'0');}catch(e){} renderList(); }
+function toggleColbar(){ COLBAR_OPEN=!COLBAR_OPEN; try{localStorage.setItem('colbar_open',COLBAR_OPEN?'1':'0');}catch(e){} const el=document.getElementById('list-colbar'); if(el){ el.innerHTML=colbarInner(); } else if(window.renderList){ renderList(); } }
 function pagerHTML(total,page,size,fnName){
   const pages=Math.max(1,Math.ceil(total/size)); if(pages<=1) return '';
   const p=Math.min(Math.max(1,page),pages);
@@ -2072,6 +2072,15 @@ function renderRevenue(allRows){ const el=document.getElementById('list-revenue'
     .map(([k,lbl])=>`<div class="rev-card"><div class="rl">${lbl}</div><div class="rv">$${rev[k].s.toLocaleString('en-US')}</div><div class="rn">${rev[k].n} khách</div></div>`).join('');
   el.innerHTML=`<div class="rev-grid">${cards}<div class="rev-card" style="background:var(--cream)"><div class="rl">💰 Tổng đã chốt (USD)</div><div class="rv">$${tot.toLocaleString('en-US')}</div><div class="rn">${rows.length} khách chốt</div></div><div class="rev-card" style="background:#eef6f1"><div class="rl">💵 Doanh số VNĐ (sale điền)</div><div class="rv" style="color:var(--teal-dark)">${totVnd.toLocaleString('vi-VN')} đ</div><div class="rn">${nVnd} khách có nhập</div></div><div class="rev-card" style="background:#fdeeee"><div class="rl">💳 Số nợ (nợ gốc)</div><div class="rv" style="color:var(--over)">$${totNo.toLocaleString('en-US')}</div><div class="rn">${noRows.length} khách còn nợ</div></div></div>`;
 }
+/* Nội dung thanh "Hiện cột" — tách riêng để nút ẩn/hiện cập nhật được (shell danh sách chỉ dựng 1 lần) */
+function colbarInner(){
+  const adm=(ME.role==='admin'||ME.role==='owner');
+  const toggleBtn=`<button class="btn ghost" type="button" onclick="toggleColbar()" style="padding:5px 12px;font-weight:700;white-space:nowrap" title="Chọn cột hiển thị">⚙ Hiện cột ${COLBAR_OPEN?'▾':'▸'}</button>`;
+  const checks=COLBAR_OPEN?LIST_COLS.map(c=>`<label><input type="checkbox" id="colcb-${c.k}" ${COL_HIDE[c.k]?'':'checked'} onchange="toggleCol('${c.k}')"> ${c.label}</label>`).join(''):'';
+  const xls=adm?`<button class="btn ghost" type="button" onclick="exportList()" style="padding:5px 12px;margin-left:auto;white-space:nowrap">⬇️ Tải Excel</button>`:'';
+  const resync=`<button class="btn ghost" type="button" onclick="custResyncFull()" style="padding:5px 12px;white-space:nowrap${adm?'':';margin-left:auto'}" title="Tải mới toàn bộ khách từ máy chủ (dùng khi nghi dữ liệu lệch)">🔄 Tải lại toàn bộ</button>`;
+  return toggleBtn+checks+xls+resync;
+}
 function renderList(){
   const opt=(o,all)=>`<option value="">${all}</option>`+Object.entries(o).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
   const saleFilter = fullView()
@@ -2098,7 +2107,7 @@ function renderList(){
       <select id="fl-chot" onchange="renderList()"><option value="">Đã &amp; chưa chốt</option><option value="chot">✅ Đã chốt</option><option value="chua">⏳ Chưa chốt</option></select>
       <select id="fl-follow" onchange="renderList()"><option value="">Mọi ngày follow</option><option value="today">Hôm nay</option><option value="over">Quá hạn</option></select>
     </div>
-    <div class="colbar"><button class="btn ghost" type="button" onclick="toggleColbar()" style="padding:5px 12px;font-weight:700;white-space:nowrap" title="Chọn cột hiển thị">⚙ Hiện cột ${COLBAR_OPEN?'▾':'▸'}</button>${COLBAR_OPEN?LIST_COLS.map(c=>`<label><input type="checkbox" id="colcb-${c.k}" ${COL_HIDE[c.k]?'':'checked'} onchange="toggleCol('${c.k}')"> ${c.label}</label>`).join(''):''}${(ME.role==='admin'||ME.role==='owner')?`<button class="btn ghost" type="button" onclick="exportList()" style="padding:5px 12px;margin-left:auto;white-space:nowrap">⬇️ Tải Excel</button>`:''}<button class="btn ghost" type="button" onclick="custResyncFull()" style="padding:5px 12px;white-space:nowrap${(ME.role==='admin'||ME.role==='owner')?'':';margin-left:auto'}" title="Tải mới toàn bộ khách từ máy chủ (dùng khi nghi dữ liệu lệch)">🔄 Tải lại toàn bộ</button></div>
+    <div class="colbar" id="list-colbar">${colbarInner()}</div>
     <div id="list-kpi"></div>
     <div id="list-revenue"></div>
     <div class="card" style="padding:0" id="list-table"></div>`;
