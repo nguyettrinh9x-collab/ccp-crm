@@ -554,7 +554,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-17-cs';
+const APP_VERSION='2026-11-17-ct';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1425,15 +1425,15 @@ async function _renderDashQuick(){
   if(!s){ el.innerHTML='<div class="card">⏳ Đang tải tổng quan…</div>'; return; }
   if(window.__custFull) return; /* đã có data đầy đủ thì để renderDash lo */
   var tyle=s.tong?(100*s.chot/s.tong):0; var kttPct=s.tong?Math.round(100*s.ktt/s.tong):0;
-  var card=function(num,lbl,red){return '<div class="card" style="text-align:left"><div class="val" style="font-size:26px'+(red?';color:var(--over)':'')+'">'+num+'</div><div class="lbl">'+lbl+'</div></div>';};
-  var h='<h2 class="sec" style="margin-top:0">🎯 Bảng điều khiển tối ưu doanh nghiệp <span style="font-size:12px;color:var(--muted);font-weight:400">· số liệu nhanh từ server</span></h2>';
+  var card=function(num,lbl,clr){return '<div class="card" style="text-align:left;border-top:3px solid '+(clr||'var(--teal)')+'"><div class="val" style="font-size:26px;color:'+(clr||'var(--teal-dark)')+'">'+num+'</div><div class="lbl">'+lbl+'</div></div>';};
+  var h='<h2 class="sec" style="margin-top:0">🎯 Bảng điều khiển tối ưu doanh nghiệp <span style="font-size:12px;color:var(--muted);font-weight:400">· tổng toàn thời gian</span></h2>';
   h+='<div class="grid" style="grid-template-columns:repeat(3,1fr)">';
-  h+=card((s.tong||0).toLocaleString('vi-VN'),'Tổng khách');
-  h+=card((s.chot||0).toLocaleString('vi-VN'),'Đã chốt');
-  h+=card(tyle.toFixed(1)+'%','Tỷ lệ chốt');
-  h+=card('$'+(s.dt||0).toLocaleString('en-US'),'Doanh thu (đã chốt)');
-  h+=card((s.ktt||0).toLocaleString('vi-VN')+' <span style="font-size:14px;color:var(--muted)">('+kttPct+'%)</span>','KTT tồn',true);
-  h+=card((s.moi30||0).toLocaleString('vi-VN'),'Khách mới 30 ngày');
+  h+=card((s.tong||0).toLocaleString('vi-VN'),'Tổng khách','var(--teal-dark)');
+  h+=card((s.moi30||0).toLocaleString('vi-VN'),'Khách mới 30 ngày','#1d6fb8');
+  h+=card((s.ktt||0).toLocaleString('vi-VN')+' <span style="font-size:14px;color:var(--muted)">('+kttPct+'%)</span>','KTT tồn (chưa chạm)','var(--over)');
+  h+=card((s.chot||0).toLocaleString('vi-VN'),'Đã chốt','var(--won)');
+  h+=card(tyle.toFixed(1)+'%','Tỷ lệ chốt','#d9892a');
+  h+=card('$'+(s.dt||0).toLocaleString('en-US'),'Doanh thu (đã chốt)','var(--won)');
   h+='</div>';
   var rows=s.bySale||[]; var maxK=Math.max.apply(null,rows.map(function(r){return Number(r.ktt)||0;}).concat([1]));
   h+='<h2 class="sec">🔴 Lead "chưa tương tác" (KTT) tồn theo sale</h2><div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Sale</th><th>Lead chưa chạm (KTT)</th><th style="text-align:right">/ tổng lead</th></tr>';
@@ -1463,7 +1463,7 @@ function renderDash(){
   const chotKy=dp.filter(c=>isChot(c.tt)).length;
   const revKy=dp.filter(c=>isChot(c.tt)).reduce((s,c)=>s+c.dt,0);
 
-  let html=renderDateFilterBar('dash')+`<div class="grid kpi-grid">
+  let html=`<h2 class="sec">📅 Phân tích theo khoảng thời gian <span style="font-size:12px;color:var(--muted);font-weight:400">· chọn kỳ để lọc toàn bộ các mục bên dưới</span></h2>`+renderDateFilterBar('dash')+`<div style="height:10px"></div><div class="grid kpi-grid">
     <div class="card kpi"><div class="lbl">Khách trong kỳ</div><div class="val">${dp.length}</div></div>
     <div class="card kpi"><div class="lbl">Đã tương tác</div><div class="val">${interacted}<span style="font-size:13px;color:var(--muted)"> / ${dp.length}</span></div></div>
     <div class="card kpi"><div class="lbl">Tỷ lệ tương tác</div><div class="val amber">${rate}%</div>
@@ -1566,15 +1566,15 @@ function _ktStudioBlock(){
     var moi30=base.filter(function(c){return (c.ngay_tao||'')>=cut;}).length;
     var tyle=tong?(100*chot/tong):0;
     var kttPct=tong?Math.round(100*ktt/tong):0;
-    var card=function(num,lbl,red){return '<div class="card" style="text-align:left"><div class="val" style="font-size:26px'+(red?';color:var(--over)':'')+'">'+num+'</div><div class="lbl">'+lbl+'</div></div>';};
-    var h='<h2 class="sec" style="margin-top:0">🎯 Bảng điều khiển tối ưu doanh nghiệp</h2>';
+    var card=function(num,lbl,clr){return '<div class="card" style="text-align:left;border-top:3px solid '+(clr||'var(--teal)')+'"><div class="val" style="font-size:26px;color:'+(clr||'var(--teal-dark)')+'">'+num+'</div><div class="lbl">'+lbl+'</div></div>';};
+    var h='<h2 class="sec" style="margin-top:0">🎯 Bảng điều khiển tối ưu doanh nghiệp <span style="font-size:12px;color:var(--muted);font-weight:400">· tổng toàn thời gian</span></h2>';
     h+='<div class="grid" style="grid-template-columns:repeat(3,1fr)">';
-    h+=card(tong.toLocaleString('vi-VN'),'Tổng khách');
-    h+=card(chot.toLocaleString('vi-VN'),'Đã chốt');
-    h+=card(tyle.toFixed(1)+'%','Tỷ lệ chốt');
-    h+=card('$'+Math.round(dt).toLocaleString('en-US'),'Doanh thu (đã chốt)');
-    h+=card(ktt.toLocaleString('vi-VN')+' <span style="font-size:14px;color:var(--muted)">('+kttPct+'%)</span>','KTT tồn',true);
-    h+=card(moi30.toLocaleString('vi-VN'),'Khách mới 30 ngày');
+    h+=card(tong.toLocaleString('vi-VN'),'Tổng khách','var(--teal-dark)');
+    h+=card(moi30.toLocaleString('vi-VN'),'Khách mới 30 ngày','#1d6fb8');
+    h+=card(ktt.toLocaleString('vi-VN')+' <span style="font-size:14px;color:var(--muted)">('+kttPct+'%)</span>','KTT tồn (chưa chạm)','var(--over)');
+    h+=card(chot.toLocaleString('vi-VN'),'Đã chốt','var(--won)');
+    h+=card(tyle.toFixed(1)+'%','Tỷ lệ chốt','#d9892a');
+    h+=card('$'+Math.round(dt).toLocaleString('en-US'),'Doanh thu (đã chốt)','var(--won)');
     h+='</div>';
     if(!(ME&&ME.role==='sale')){
       var byS={};
