@@ -143,6 +143,33 @@
     .chat-name{padding:0 8px!important}
     .login-card{width:90vw;max-width:360px;padding:28px 22px}
   }
+  /* ===== TINH CHỈNH GIAO DIỆN TOÀN CỤC (polish, chỉ hình thức) ===== */
+  body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .btn,.nav a,input,select,textarea,.rev-card,.card{transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease,transform .06s ease,filter .15s ease}
+  .btn{box-shadow:0 1px 2px rgba(47,93,85,.18)}
+  .btn:hover{filter:brightness(1.06)}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{box-shadow:none}
+  .btn.ghost:hover{background:var(--cream);border-color:var(--sage);filter:none}
+  .card{box-shadow:0 1px 3px rgba(20,45,38,.05)}
+  h2.sec{position:relative;padding-left:12px;color:var(--teal-dark);font-weight:800}
+  h2.sec::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:4px;height:15px;background:var(--teal);border-radius:3px}
+  .topbar h1{font-weight:800;letter-spacing:-.2px;color:var(--teal-dark)}
+  /* Bảng: tiêu đề nổi, di chuột sáng dòng (giữ nguyên màu trạng thái) */
+  th{border-bottom:2px solid #e0e7e3}
+  tr:hover>td{background-color:rgba(47,93,85,.05)}
+  td{vertical-align:middle}
+  /* Ô nhập: viền focus/hover đồng nhất */
+  input:hover,select:hover,textarea:hover,.filters input:hover,.filters select:hover{border-color:var(--sage)}
+  input:focus,select:focus,textarea:focus,.filters input:focus,.filters select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(63,125,114,.15)}
+  .pill{box-shadow:0 1px 1px rgba(0,0,0,.04)}
+  .rev-card:hover{box-shadow:0 2px 10px rgba(20,45,38,.07)}
+  .nav a{border-radius:0 8px 8px 0;margin-right:8px}
+  /* Thanh cuộn mảnh, nhã cho vùng nội dung */
+  .main ::-webkit-scrollbar{width:10px;height:10px}
+  .main ::-webkit-scrollbar-thumb{background:#cdd8d2;border-radius:6px;border:2px solid transparent;background-clip:content-box}
+  .main ::-webkit-scrollbar-thumb:hover{background:#aebdb5;background-clip:content-box}
+  .main ::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
@@ -527,7 +554,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-17-cr';
+const APP_VERSION='2026-11-17-cs';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
