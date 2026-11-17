@@ -527,7 +527,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-12-cn';
+const APP_VERSION='2026-11-17-co';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1111,7 +1111,7 @@ async function toggleLLLock(){ if(!isAdmin()){alert('Chỉ Admin mới khoá/m�
 function llMondayKey(y,m,d){ const dt=new Date(y,m-1,d); const off=(dt.getDay()+6)%7; const mon=new Date(y,m-1,d-off); return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0'); }
 function llWeekLocked(mk){ return IMAGES['lichlam_wlock:'+mk]==='1'; }
 async function toggleWeekLock(mk){ if(!isAdmin()){alert('Chỉ Admin mới khoá/mở tuần');return;} const key='lichlam_wlock:'+mk; const v=llWeekLocked(mk)?'0':'1'; IMAGES[key]=v; if(window.sb){ const {error}=await sb.from('app_images').upsert({key,data:v,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi: '+error.message); } } await llReload(); renderLichLam(); }
-const LL_ZOOM_DEFAULT={url:'https://us06web.zoom.us/j/86301205198?pwd=sDIVTlHcm8BCVcfHQuJHdBNPba1dRl.1#success',id:'86301205198',pass:'1234'};
+const LL_ZOOM_DEFAULT={url:'https://us06web.zoom.us/j/81697999357?pwd=KotMwVPLeZ7sPMWn0BQkPV1bGVL1og.1',id:'81697999357',pass:'1234'};
 function llZoom(){ try{ const z=JSON.parse(IMAGES['lichlam_zoom']||'null'); return (z&&z.url)?z:LL_ZOOM_DEFAULT; }catch(e){ return LL_ZOOM_DEFAULT; } }
 async function editZoom(){ if(!isAdmin()){alert('Chỉ Admin mới sửa link Zoom');return;} const z=llZoom(); const url=prompt('Link Zoom:',z.url); if(url===null)return; const id=prompt('ID phòng:',z.id); if(id===null)return; const pass=prompt('Mã (passcode):',z.pass); if(pass===null)return; const data=JSON.stringify({url:url.trim(),id:id.trim(),pass:pass.trim()}); IMAGES['lichlam_zoom']=data; if(window.sb){ const {error}=await sb.from('app_images').upsert({key:'lichlam_zoom',data,updated_at:new Date().toISOString()}); if(error){ alert('Lỗi: '+error.message); } } await llReload(); renderLichLam(); }
 const LL_OPTS=['','S','T','Đ','S-T','T-Đ','S-Đ','S-T-Đ'];
@@ -1984,6 +1984,42 @@ function curSym(c){ const g=countryGroup(c&&c.quoc_gia); return g==='Euro'?'€'
 const RATE_VN={US:23500,Canada:16000,Euro:24500}; // tỷ giá quy đổi sang VNĐ
 function rateVN(c){ const g=countryGroup(c&&c.quoc_gia); return RATE_VN[g]||23500; } // Khác: tạm dùng tỷ giá USD
 function fmtCur(c,n){ n=Number(n)||0; return curSym(c)+n.toLocaleString('en-US'); }
+/* Bảng CHỈ SỐ CHI TIẾT theo bộ lọc hiện tại (sale/MKT/quốc gia/kỳ) — hiện ngay trên trang Tất cả khách */
+function renderSaleKPI(rows){
+  const el=document.getElementById('list-kpi'); if(!el) return;
+  const fS=(document.getElementById('fl-sale')?.value)||(!fullView()?ME.id:'');
+  const fM=document.getElementById('fl-mkt')?.value||'';
+  const fQ=document.getElementById('fl-qg')?.value||'';
+  const who=fS?(SALES[fS]||'—'):'Tất cả sale';
+  const sub=[fM?('MKT: '+(MKT[fM]||fM)):'', fQ?('Quốc gia: '+fQ):''].filter(Boolean).join(' · ');
+  const n=rows.length;
+  const nChot=rows.filter(c=>isChot(c.tt)).length;
+  const rate=n?Math.round(nChot/n*100):0;
+  const nNong=rows.filter(c=>c.muc==='nong'&&!isChot(c.tt)).length;
+  const nAm=rows.filter(c=>c.muc==='am'&&!isChot(c.tt)).length;
+  const nLanh=rows.filter(c=>c.muc==='lanh'&&!isChot(c.tt)).length;
+  const nToday=rows.filter(c=>flag(c)==='warn').length;
+  const nOver=rows.filter(c=>flag(c)==='over').length;
+  const nNo=rows.filter(c=>Number(c.no_goc)>0).length;
+  const box=(lbl,val,clr)=>`<div style="flex:1;min-width:92px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;text-align:center"><div style="font-size:11px;color:var(--muted);white-space:nowrap">${lbl}</div><div style="font-size:19px;font-weight:800;color:${clr||'var(--teal-dark)'}">${val}</div></div>`;
+  el.innerHTML=`<div class="card" style="padding:12px 14px;margin-bottom:12px;background:linear-gradient(0deg,#f6fbf8,#fff)">
+    <div style="font-weight:800;color:var(--teal-dark);margin-bottom:2px">📊 Chỉ số chi tiết — ${who}</div>
+    ${sub?`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${sub}</div>`:'<div style="margin-bottom:8px"></div>'}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      ${box('Tổng khách',n)}
+      ${box('Đã chốt',nChot,'var(--won)')}
+      ${box('Tỷ lệ chốt',rate+'%','#1d6fb8')}
+      ${box('🔥 Nóng',nNong,'#e23d3d')}
+      ${box('☀️ Ấm',nAm,'#b07d00')}
+      ${box('❄️ Lạnh',nLanh,'#5b7a8c')}
+      ${box('Follow hôm nay',nToday,'#b07d00')}
+      ${box('Quá hạn',nOver,'var(--over)')}
+      ${box('Còn nợ',nNo,'var(--over)')}
+    </div>
+    <div style="font-weight:700;color:var(--teal-dark);font-size:13px;margin-bottom:8px">🍩 Tỉ lệ trạng thái khách (theo bộ lọc)</div>
+    ${statusDonutHTML(rows)}
+  </div>`;
+}
 function renderRevenue(allRows){ const el=document.getElementById('list-revenue'); if(!el) return;
   const rg=getRange('list'); const field=FILTERS.list.field;
   const inR=ds=>{ ds=(''+(ds||'')).slice(0,10); return ds>=rg.s && ds<=rg.e; };
@@ -2042,6 +2078,7 @@ function renderList(){
       <select id="fl-follow" onchange="renderList()"><option value="">Mọi ngày follow</option><option value="today">Hôm nay</option><option value="over">Quá hạn</option></select>
     </div>
     <div class="colbar"><span style="color:var(--muted);font-weight:700">⚙ Hiện cột:</span>${LIST_COLS.map(c=>`<label><input type="checkbox" id="colcb-${c.k}" ${COL_HIDE[c.k]?'':'checked'} onchange="toggleCol('${c.k}')"> ${c.label}</label>`).join('')}${(ME.role==='admin'||ME.role==='owner')?`<button class="btn ghost" type="button" onclick="exportList()" style="padding:5px 12px;margin-left:auto;white-space:nowrap">⬇️ Tải Excel</button>`:''}<button class="btn ghost" type="button" onclick="custResyncFull()" style="padding:5px 12px;white-space:nowrap" title="Tải mới toàn bộ khách từ máy chủ (dùng khi nghi dữ liệu lệch)">🔄 Tải lại toàn bộ</button></div>
+    <div id="list-kpi"></div>
     <div id="list-revenue"></div>
     <div class="card" style="padding:0" id="list-table"></div>`;
   }
@@ -2121,6 +2158,7 @@ function renderList(){
   t+=`</table>`;
   t+=pagerHTML(rows.length, LIST_PAGE, LIST_PAGE_SIZE, 'setListPage');
   document.getElementById('list-table').innerHTML=t;
+  renderSaleKPI(rows);
   renderRevenue(rows);
   applyColVis();
 }
