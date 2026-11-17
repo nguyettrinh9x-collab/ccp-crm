@@ -554,7 +554,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-17-ct';
+const APP_VERSION='2026-11-17-cu';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -1577,14 +1577,15 @@ function _ktStudioBlock(){
     h+=card('$'+Math.round(dt).toLocaleString('en-US'),'Doanh thu (đã chốt)','var(--won)');
     h+='</div>';
     if(!(ME&&ME.role==='sale')){
+      var _rg=getRange('dash'); var _od=function(c){return (c.ngay_chot||c.ngay_tao||'').slice(0,10);};
       var byS={};
-      base.forEach(function(c){ var nm=SALES[c.owner]||MKT[c.owner]||'(chưa gán)'; var o=byS[nm]=byS[nm]||{ktt:0,total:0}; o.total++; if(c.tt==='ktt')o.ktt++; });
-      var rows=Object.keys(byS).map(function(nm){return {sale:nm,ktt:byS[nm].ktt,total:byS[nm].total,pct:byS[nm].total?Math.round(100*byS[nm].ktt/byS[nm].total):0};}).filter(function(r){return r.ktt>0;}).sort(function(a,b){return b.ktt-a.ktt;});
+      base.forEach(function(c){ var nm=SALES[c.owner]||MKT[c.owner]||'(chưa gán)'; var o=byS[nm]=byS[nm]||{ktt:0,total:0,kttKy:0,totalKy:0}; o.total++; if(c.tt==='ktt')o.ktt++; var x=_od(c); if(x&&x>=_rg.s&&x<=_rg.e){ o.totalKy++; if(c.tt==='ktt')o.kttKy++; } });
+      var rows=Object.keys(byS).map(function(nm){var o=byS[nm];return {sale:nm,ktt:o.ktt,total:o.total,pct:o.total?Math.round(100*o.ktt/o.total):0,kttKy:o.kttKy,pctKy:o.totalKy?Math.round(100*o.kttKy/o.totalKy):0};}).filter(function(r){return r.ktt>0;}).sort(function(a,b){return b.ktt-a.ktt;});
       var maxK=Math.max.apply(null,rows.map(function(r){return r.ktt;}).concat([1]));
       h+='<h2 class="sec">🔴 Lead "chưa tương tác" (KTT) tồn theo sale</h2>';
-      h+='<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Sale</th><th>Lead chưa chạm (KTT)</th><th style="text-align:right">/ tổng lead</th></tr>';
-      rows.forEach(function(r){ h+='<tr><td><b>'+_mvEsc(r.sale)+'</b></td><td><b>'+r.ktt.toLocaleString('vi-VN')+'</b><div class="bar" style="max-width:320px"><div style="width:'+Math.round(100*r.ktt/maxK)+'%"></div></div></td><td style="text-align:right"><b>'+r.pct+'%</b></td></tr>'; });
-      h+='</table></div>';
+      h+='<div class="card" style="padding:0;overflow-x:auto"><table><tr><th>Sale</th><th>KTT toàn thời gian</th><th style="text-align:right">/ tổng</th><th>KTT trong kỳ</th><th style="text-align:right">/ tổng kỳ</th></tr>';
+      rows.forEach(function(r){ h+='<tr><td><b>'+_mvEsc(r.sale)+'</b></td><td><b>'+r.ktt.toLocaleString('vi-VN')+'</b><div class="bar" style="max-width:240px"><div style="width:'+Math.round(100*r.ktt/maxK)+'%"></div></div></td><td style="text-align:right"><b>'+r.pct+'%</b></td><td><b style="color:var(--teal-dark)">'+r.kttKy.toLocaleString('vi-VN')+'</b></td><td style="text-align:right">'+r.pctKy+'%</td></tr>'; });
+      h+='</table></div><p style="color:var(--muted);font-size:12px;margin-top:6px">KTT toàn thời gian = tổng khách chưa tương tác từ trước tới nay · KTT trong kỳ = khách chưa tương tác có ngày trong khoảng đã chọn (bộ lọc 📅 bên dưới).</p>';
     }
     return h;
   }catch(e){ return ''; }
