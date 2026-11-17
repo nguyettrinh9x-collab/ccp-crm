@@ -554,7 +554,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-17-cx';
+const APP_VERSION='2026-11-17-cy';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -2024,22 +2024,7 @@ function curSym(c){ const g=countryGroup(c&&c.quoc_gia); return g==='Euro'?'€'
 const RATE_VN={US:23500,Canada:16000,Euro:24500}; // tỷ giá quy đổi sang VNĐ
 function rateVN(c){ const g=countryGroup(c&&c.quoc_gia); return RATE_VN[g]||23500; } // Khác: tạm dùng tỷ giá USD
 function fmtCur(c,n){ n=Number(n)||0; return curSym(c)+n.toLocaleString('en-US'); }
-/* Biểu đồ cột số khách theo nhóm trạng thái (giữ icon + màu trạng thái cũ) */
-function statusBarHTML(rows){
-  const order=['kcnc','ktt','tuong_tac','web','khach_chan','da_chot','chot_nguoi','dang_care','hen'];
-  const cnt={}; rows.forEach(c=>{ const k=order.includes(c.tt)?c.tt:'kcnc'; cnt[k]=(cnt[k]||0)+1; });
-  const segs=order.filter(k=>cnt[k]).map(k=>({k,n:cnt[k]}));
-  if(!segs.length) return '<div class="empty">Chưa có khách trong bộ lọc.</div>';
-  const max=Math.max.apply(null,segs.map(s=>s.n)); const H=140;
-  const bars=segs.map(s=>{ const hgt=Math.max(3,Math.round(s.n/max*H));
-    return `<div style="flex:1;min-width:46px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end">
-      <div style="font-weight:800;font-size:14px;color:${TT_COLOR[s.k]||'#555'};margin-bottom:4px">${s.n}</div>
-      <div style="width:66%;height:${hgt}px;background:${TT_COLOR[s.k]||'#999'};border-radius:7px 7px 0 0"></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;line-height:1.2">${TT_ICON[s.k]||''} ${STATUS[s.k]||s.k}</div>
-    </div>`; }).join('');
-  return `<div style="display:flex;align-items:flex-end;gap:8px;height:${H+54}px;padding:6px 2px;border-bottom:1px solid var(--line)">${bars}</div>`;
-}
-/* Panel THỐNG KÊ TƯƠNG TÁC — hiện ngay trên trang Tất cả khách, theo bộ lọc (sale/MKT/quốc gia/kỳ) */
+/* Bảng CHỈ SỐ CHI TIẾT theo bộ lọc hiện tại (sale/MKT/quốc gia/kỳ) — hiện ngay trên trang Tất cả khách */
 function renderSaleKPI(rows){
   const el=document.getElementById('list-kpi'); if(!el) return;
   const fS=(document.getElementById('fl-sale')?.value)||(!fullView()?ME.id:'');
@@ -2047,33 +2032,39 @@ function renderSaleKPI(rows){
   const fQ=document.getElementById('fl-qg')?.value||'';
   const who=fS?(SALES[fS]||'—'):'Tất cả sale';
   const sub=[fM?('MKT: '+(MKT[fM]||fM)):'', fQ?('Quốc gia: '+fQ):''].filter(Boolean).join(' · ');
-  const rg=getRange('list'); const fmtD=d=>{d=(''+(d||'')).slice(0,10);const p=d.split('-');return p.length===3?(p[2]+'/'+p[1]):d;};
-  const dateLbl = (rg.s<='0001'||rg.e>='9000') ? 'Tất cả thời gian' : ('Từ '+fmtD(rg.s)+' đến '+(rg.e>=D(0)?'hôm nay ':'')+'('+fmtD(rg.e)+')');
   const n=rows.length;
-  const cnt={}; rows.forEach(c=>{ if(c.tt) cnt[c.tt]=(cnt[c.tt]||0)+1; });
   const nChot=rows.filter(c=>isChot(c.tt)).length;
-  const scard=(icon,lbl,val,bg,clr)=>`<div style="background:${bg};border-radius:14px;padding:13px 8px;text-align:center"><div style="font-size:22px;line-height:1">${icon}</div><div style="font-size:13px;font-weight:700;color:${clr};margin:6px 0 2px">${lbl}</div><div style="font-size:26px;font-weight:800;color:${clr}">${val}</div></div>`;
-  const cards=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px">
-    ${scard('👥','Tổng khách',n,'#e8f0fe','#1a3b8f')}
-    ${scard(TT_ICON.dang_care||'🩺','Đang care',cnt['dang_care']||0,'#fff6e0','#b07d00')}
-    ${scard(TT_ICON.tuong_tac||'💬','Tương tác',cnt['tuong_tac']||0,'#e7f7ec','#2f9e6e')}
-    ${scard(TT_ICON.ktt||'📞','KTT',cnt['ktt']||0,'#efe9fb','#6a3fa0')}
-    ${scard(TT_ICON.kcnc||'⏳','KCNC',cnt['kcnc']||0,'#feeede','#d9892a')}
-    ${scard('✅','Đã chốt',nChot,'#fde8ef','#d6447a')}
-  </div>`;
-  const panelHdr=t=>`<div style="background:#2f6fe0;color:#fff;font-weight:800;font-size:14px;padding:8px 12px;border-radius:9px;margin-bottom:12px">${t}</div>`;
-  const panels=`<div style="display:flex;gap:14px;flex-wrap:wrap">
-    <div class="card" style="flex:1;min-width:330px;margin:0">${panelHdr('Cơ cấu khách hàng (trên tổng '+n+')')}${statusDonutHTML(rows)}</div>
-    <div class="card" style="flex:1;min-width:330px;margin:0">${panelHdr('Số lượng khách theo nhóm')}${statusBarHTML(rows)}</div>
-  </div>`;
+  const rate=n?Math.round(nChot/n*100):0;
+  const nNong=rows.filter(c=>c.muc==='nong'&&!isChot(c.tt)).length;
+  const nAm=rows.filter(c=>c.muc==='am'&&!isChot(c.tt)).length;
+  const nLanh=rows.filter(c=>c.muc==='lanh'&&!isChot(c.tt)).length;
+  const nToday=rows.filter(c=>flag(c)==='warn').length;
+  const nOver=rows.filter(c=>flag(c)==='over').length;
+  const nNo=rows.filter(c=>Number(c.no_goc)>0).length;
+  const box=(icon,lbl,val,clr,extra)=>`<div style="background:#fff;border:1px solid #e7ece9;border-top:3px solid ${clr||'var(--teal-dark)'};border-radius:12px;padding:11px 8px 10px;text-align:center;box-shadow:0 1px 3px rgba(31,111,84,.06)"><div style="font-size:11px;color:var(--muted);white-space:nowrap;font-weight:600">${icon} ${lbl}</div><div style="font-size:22px;font-weight:800;color:${clr||'var(--teal-dark)'};line-height:1.3">${val}</div>${extra||''}</div>`;
+  const bar=`<div style="height:4px;background:#e8eef0;border-radius:3px;margin:5px 6px 0;overflow:hidden"><div style="height:100%;width:${Math.min(100,rate)}%;background:#1d6fb8"></div></div>`;
   const body=`
-    <div style="text-align:center;margin:10px 0 14px"><span style="background:#e8f0fe;color:#1a3b8f;font-weight:700;font-size:13px;padding:5px 16px;border-radius:999px">📅 ${dateLbl}${sub?' · '+sub:''}</span></div>
-    ${cards}${panels}`;
-  el.innerHTML=`<div class="card" style="padding:14px;margin-bottom:12px;border:1px solid #e3ece7;border-radius:16px;box-shadow:0 2px 10px rgba(31,111,84,.06)">
-    <div style="background:linear-gradient(135deg,#2f6fe0,#1e3a8a);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#fff">
-      <span style="font-weight:800;font-size:15px;letter-spacing:.3px">📊 THỐNG KÊ TƯƠNG TÁC KHÁCH HÀNG</span>
-      <span style="background:rgba(255,255,255,.22);font-weight:700;font-size:12px;padding:2px 12px;border-radius:999px">${who}</span>
-      <button class="btn ghost" type="button" onclick="toggleKPI()" style="margin-left:auto;padding:4px 12px;font-size:12px;background:rgba(255,255,255,.92);border:0">${KPI_OPEN?'▾ Ẩn':'▸ Hiện'}</button>
+    ${sub?`<div style="font-size:12px;color:var(--muted);margin-bottom:12px">${sub}</div>`:''}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(102px,1fr));gap:10px;margin-bottom:16px">
+      ${box('👥','Tổng khách',n,'var(--teal-dark)')}
+      ${box('✅','Đã chốt',nChot,'var(--won)')}
+      ${box('🎯','Tỷ lệ chốt',rate+'%','#1d6fb8',bar)}
+      ${box('🔥','Nóng',nNong,'#e23d3d')}
+      ${box('☀️','Ấm',nAm,'#d9892a')}
+      ${box('❄️','Lạnh',nLanh,'#5b7a8c')}
+      ${box('🔔','Follow nay',nToday,'#b07d00')}
+      ${box('⏰','Quá hạn',nOver,'var(--over)')}
+      ${box('💳','Còn nợ',nNo,'var(--over)')}
+    </div>
+    <div style="background:#fff;border:1px solid #e7ece9;border-radius:12px;padding:14px 16px;max-width:640px">
+      <div style="font-weight:700;color:var(--teal-dark);font-size:13px;margin-bottom:10px">🍩 Tỉ lệ trạng thái khách <span style="color:var(--muted);font-weight:500">(theo bộ lọc)</span></div>
+      ${statusDonutHTML(rows)}
+    </div>`;
+  el.innerHTML=`<div class="card" style="padding:16px;margin-bottom:12px;background:linear-gradient(135deg,#f3faf6 0%,#fff 60%);border:1px solid #e3ece7;border-radius:16px;box-shadow:0 2px 10px rgba(31,111,84,.06)">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:${KPI_OPEN?'12px':'0'}">
+      <span style="font-weight:800;color:var(--teal-dark);font-size:16px">📊 Chỉ số chi tiết</span>
+      <span style="background:var(--teal-dark);color:#fff;font-weight:700;font-size:12px;padding:2px 12px;border-radius:999px">${who}</span>
+      <button class="btn ghost" type="button" onclick="toggleKPI()" style="margin-left:auto;padding:4px 12px;font-size:12px">${KPI_OPEN?'▾ Ẩn':'▸ Hiện chỉ số'}</button>
     </div>
     ${KPI_OPEN?body:''}
   </div>`;
