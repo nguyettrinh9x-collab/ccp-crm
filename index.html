@@ -527,7 +527,7 @@ function applyMenu(){
 }
 function logout(){ if(ME)delete ME.uname; ME=null; location.reload(); }
 /* ===== Tự nhận bản CRM mới: tránh tab cũ ghi đè dữ liệu (vd lịch làm) ===== */
-const APP_VERSION='2026-11-17-cp';
+const APP_VERSION='2026-11-17-cq';
 async function checkAppVersion(){
   try{
     if(!window.sb) return;
@@ -853,7 +853,19 @@ const TITLES={dashboard:'Tổng quan',care:'Chăm sóc khách',add:'Thêm khách
 let LIST_MODE='all'; let LIST_ROWS=[]; let LIST_PAGE=1; let LIST_PAGE_SIZE=50;
 function setListPage(n){ LIST_PAGE=n; renderList(); const el=document.getElementById('list-table'); if(el){ el.scrollIntoView({behavior:'smooth',block:'start'}); } }
 function setListSize(v){ LIST_PAGE_SIZE = v==='all'?1000000:(Number(v)||50); LIST_PAGE=1; CARE_PAGE=1; try{localStorage.setItem('ccp_page_size',v);}catch(e){} renderList(); }
-(function(){ try{ const v=localStorage.getItem('ccp_page_size'); if(v){ LIST_PAGE_SIZE = v==='all'?1000000:(Number(v)||50); } }catch(e){} })();
+(function(){ try{
+  /* Mặc định 50 khách/trang. Chuyển 1 lần lựa chọn "Tất cả" cũ -> 50 cho đỡ kéo dài (chị vẫn chọn lại Tất cả được). */
+  if(localStorage.getItem('ccp_pagesize_mig')!=='1'){
+    if(localStorage.getItem('ccp_page_size')==='all'){ localStorage.setItem('ccp_page_size','50'); }
+    localStorage.setItem('ccp_pagesize_mig','1');
+  }
+  const v=localStorage.getItem('ccp_page_size'); if(v){ LIST_PAGE_SIZE = v==='all'?1000000:(Number(v)||50); }
+}catch(e){} })();
+/* Trạng thái ẩn/hiện các khối nhiều mục (nhớ theo máy) */
+let KPI_OPEN=(function(){try{return localStorage.getItem('kpi_open')!=='0';}catch(e){return true;}})();
+function toggleKPI(){ KPI_OPEN=!KPI_OPEN; try{localStorage.setItem('kpi_open',KPI_OPEN?'1':'0');}catch(e){} renderList(); }
+let COLBAR_OPEN=(function(){try{return localStorage.getItem('colbar_open')==='1';}catch(e){return false;}})();
+function toggleColbar(){ COLBAR_OPEN=!COLBAR_OPEN; try{localStorage.setItem('colbar_open',COLBAR_OPEN?'1':'0');}catch(e){} renderList(); }
 function pagerHTML(total,page,size,fnName){
   const pages=Math.max(1,Math.ceil(total/size)); if(pages<=1) return '';
   const p=Math.min(Math.max(1,page),pages);
@@ -2003,11 +2015,7 @@ function renderSaleKPI(rows){
   const nNo=rows.filter(c=>Number(c.no_goc)>0).length;
   const box=(icon,lbl,val,clr,extra)=>`<div style="background:#fff;border:1px solid #e7ece9;border-top:3px solid ${clr||'var(--teal-dark)'};border-radius:12px;padding:11px 8px 10px;text-align:center;box-shadow:0 1px 3px rgba(31,111,84,.06)"><div style="font-size:11px;color:var(--muted);white-space:nowrap;font-weight:600">${icon} ${lbl}</div><div style="font-size:22px;font-weight:800;color:${clr||'var(--teal-dark)'};line-height:1.3">${val}</div>${extra||''}</div>`;
   const bar=`<div style="height:4px;background:#e8eef0;border-radius:3px;margin:5px 6px 0;overflow:hidden"><div style="height:100%;width:${Math.min(100,rate)}%;background:#1d6fb8"></div></div>`;
-  el.innerHTML=`<div class="card" style="padding:16px;margin-bottom:12px;background:linear-gradient(135deg,#f3faf6 0%,#fff 60%);border:1px solid #e3ece7;border-radius:16px;box-shadow:0 2px 10px rgba(31,111,84,.06)">
-    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:${sub?'2px':'12px'}">
-      <span style="font-weight:800;color:var(--teal-dark);font-size:16px">📊 Chỉ số chi tiết</span>
-      <span style="background:var(--teal-dark);color:#fff;font-weight:700;font-size:12px;padding:2px 12px;border-radius:999px">${who}</span>
-    </div>
+  const body=`
     ${sub?`<div style="font-size:12px;color:var(--muted);margin-bottom:12px">${sub}</div>`:''}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(102px,1fr));gap:10px;margin-bottom:16px">
       ${box('👥','Tổng khách',n,'var(--teal-dark)')}
@@ -2023,7 +2031,14 @@ function renderSaleKPI(rows){
     <div style="background:#fff;border:1px solid #e7ece9;border-radius:12px;padding:14px 16px;max-width:640px">
       <div style="font-weight:700;color:var(--teal-dark);font-size:13px;margin-bottom:10px">🍩 Tỉ lệ trạng thái khách <span style="color:var(--muted);font-weight:500">(theo bộ lọc)</span></div>
       ${statusDonutHTML(rows)}
+    </div>`;
+  el.innerHTML=`<div class="card" style="padding:16px;margin-bottom:12px;background:linear-gradient(135deg,#f3faf6 0%,#fff 60%);border:1px solid #e3ece7;border-radius:16px;box-shadow:0 2px 10px rgba(31,111,84,.06)">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:${KPI_OPEN?'12px':'0'}">
+      <span style="font-weight:800;color:var(--teal-dark);font-size:16px">📊 Chỉ số chi tiết</span>
+      <span style="background:var(--teal-dark);color:#fff;font-weight:700;font-size:12px;padding:2px 12px;border-radius:999px">${who}</span>
+      <button class="btn ghost" type="button" onclick="toggleKPI()" style="margin-left:auto;padding:4px 12px;font-size:12px">${KPI_OPEN?'▾ Ẩn':'▸ Hiện chỉ số'}</button>
     </div>
+    ${KPI_OPEN?body:''}
   </div>`;
 }
 function renderRevenue(allRows){ const el=document.getElementById('list-revenue'); if(!el) return;
@@ -2083,7 +2098,7 @@ function renderList(){
       <select id="fl-chot" onchange="renderList()"><option value="">Đã &amp; chưa chốt</option><option value="chot">✅ Đã chốt</option><option value="chua">⏳ Chưa chốt</option></select>
       <select id="fl-follow" onchange="renderList()"><option value="">Mọi ngày follow</option><option value="today">Hôm nay</option><option value="over">Quá hạn</option></select>
     </div>
-    <div class="colbar"><span style="color:var(--muted);font-weight:700">⚙ Hiện cột:</span>${LIST_COLS.map(c=>`<label><input type="checkbox" id="colcb-${c.k}" ${COL_HIDE[c.k]?'':'checked'} onchange="toggleCol('${c.k}')"> ${c.label}</label>`).join('')}${(ME.role==='admin'||ME.role==='owner')?`<button class="btn ghost" type="button" onclick="exportList()" style="padding:5px 12px;margin-left:auto;white-space:nowrap">⬇️ Tải Excel</button>`:''}<button class="btn ghost" type="button" onclick="custResyncFull()" style="padding:5px 12px;white-space:nowrap" title="Tải mới toàn bộ khách từ máy chủ (dùng khi nghi dữ liệu lệch)">🔄 Tải lại toàn bộ</button></div>
+    <div class="colbar"><button class="btn ghost" type="button" onclick="toggleColbar()" style="padding:5px 12px;font-weight:700;white-space:nowrap" title="Chọn cột hiển thị">⚙ Hiện cột ${COLBAR_OPEN?'▾':'▸'}</button>${COLBAR_OPEN?LIST_COLS.map(c=>`<label><input type="checkbox" id="colcb-${c.k}" ${COL_HIDE[c.k]?'':'checked'} onchange="toggleCol('${c.k}')"> ${c.label}</label>`).join(''):''}${(ME.role==='admin'||ME.role==='owner')?`<button class="btn ghost" type="button" onclick="exportList()" style="padding:5px 12px;margin-left:auto;white-space:nowrap">⬇️ Tải Excel</button>`:''}<button class="btn ghost" type="button" onclick="custResyncFull()" style="padding:5px 12px;white-space:nowrap${(ME.role==='admin'||ME.role==='owner')?'':';margin-left:auto'}" title="Tải mới toàn bộ khách từ máy chủ (dùng khi nghi dữ liệu lệch)">🔄 Tải lại toàn bộ</button></div>
     <div id="list-kpi"></div>
     <div id="list-revenue"></div>
     <div class="card" style="padding:0" id="list-table"></div>`;
